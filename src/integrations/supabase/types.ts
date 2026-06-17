@@ -130,6 +130,39 @@ export type Database = {
           },
         ]
       }
+      support_materials: {
+        Row: {
+          answer_key_pdf_path: string | null
+          commented_test_pdf_path: string | null
+          created_at: string
+          grade: string
+          id: string
+          offer: string
+          support_material_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          answer_key_pdf_path?: string | null
+          commented_test_pdf_path?: string | null
+          created_at?: string
+          grade: string
+          id?: string
+          offer: string
+          support_material_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          answer_key_pdf_path?: string | null
+          commented_test_pdf_path?: string | null
+          created_at?: string
+          grade?: string
+          id?: string
+          offer?: string
+          support_material_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
