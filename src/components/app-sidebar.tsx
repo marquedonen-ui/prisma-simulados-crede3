@@ -1,5 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, BookOpen, ClipboardList, BarChart3, FileCheck } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
+import { Home, BookOpen, ClipboardList, BarChart3, FileCheck, Shield } from "lucide-react";
 
 import {
   Sidebar,
@@ -14,10 +16,11 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { getMyRole } from "@/lib/prisma.functions";
 import logoUrl from "@/assets/prisma-logo-white.png";
 import crede3LogoUrl from "@/assets/crede3-logo.png";
 
-const items = [
+const baseItems = [
   { title: "Página Inicial", url: "/painel", icon: Home },
   { title: "Tutoriais", url: "/tutoriais", icon: BookOpen },
   { title: "Avaliação Diagnóstica", url: "/avaliacao-diagnostica", icon: ClipboardList },
@@ -29,6 +32,11 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
+  const getRole = useServerFn(getMyRole);
+  const roleQ = useQuery({ queryKey: ["my-role"], queryFn: () => getRole() });
+  const items = roleQ.data?.isAdmin
+    ? [...baseItems, { title: "Administração", url: "/admin", icon: Shield }]
+    : baseItems;
 
   return (
     <Sidebar
