@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 
-export const Route = createFileRoute("/_authenticated/avaliacao-diagnostica")({
+export const Route = createFileRoute("/_authenticated/avaliacao-diagnostica/")({
   head: () => ({ meta: [{ title: "Avaliação Diagnóstica — PRISMA" }] }),
   component: Page,
 });

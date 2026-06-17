@@ -16,8 +16,8 @@ import { Route as AuthenticatedTutoriaisRouteImport } from './routes/_authentica
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedGabaritoRouteImport } from './routes/_authenticated/gabarito'
-import { Route as AuthenticatedAvaliacaoDiagnosticaRouteImport } from './routes/_authenticated/avaliacao-diagnostica'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAvaliacaoDiagnosticaIndexRouteImport } from './routes/_authenticated/avaliacao-diagnostica.index'
 import { Route as AuthenticatedAvaliacaoDiagnosticaIdRouteImport } from './routes/_authenticated/avaliacao-diagnostica.$id'
 
 const AlunoRoute = AlunoRouteImport.update({
@@ -54,45 +54,45 @@ const AuthenticatedGabaritoRoute = AuthenticatedGabaritoRouteImport.update({
   path: '/gabarito',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedAvaliacaoDiagnosticaRoute =
-  AuthenticatedAvaliacaoDiagnosticaRouteImport.update({
-    id: '/avaliacao-diagnostica',
-    path: '/avaliacao-diagnostica',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAvaliacaoDiagnosticaIndexRoute =
+  AuthenticatedAvaliacaoDiagnosticaIndexRouteImport.update({
+    id: '/avaliacao-diagnostica/',
+    path: '/avaliacao-diagnostica/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAvaliacaoDiagnosticaIdRoute =
   AuthenticatedAvaliacaoDiagnosticaIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => AuthenticatedAvaliacaoDiagnosticaRoute,
+    id: '/avaliacao-diagnostica/$id',
+    path: '/avaliacao-diagnostica/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/aluno': typeof AlunoRoute
   '/admin': typeof AuthenticatedAdminRoute
-  '/avaliacao-diagnostica': typeof AuthenticatedAvaliacaoDiagnosticaRouteWithChildren
   '/gabarito': typeof AuthenticatedGabaritoRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/tutoriais': typeof AuthenticatedTutoriaisRoute
   '/avaliacao-diagnostica/$id': typeof AuthenticatedAvaliacaoDiagnosticaIdRoute
+  '/avaliacao-diagnostica/': typeof AuthenticatedAvaliacaoDiagnosticaIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aluno': typeof AlunoRoute
   '/admin': typeof AuthenticatedAdminRoute
-  '/avaliacao-diagnostica': typeof AuthenticatedAvaliacaoDiagnosticaRouteWithChildren
   '/gabarito': typeof AuthenticatedGabaritoRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/tutoriais': typeof AuthenticatedTutoriaisRoute
   '/avaliacao-diagnostica/$id': typeof AuthenticatedAvaliacaoDiagnosticaIdRoute
+  '/avaliacao-diagnostica': typeof AuthenticatedAvaliacaoDiagnosticaIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -100,12 +100,12 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/aluno': typeof AlunoRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
-  '/_authenticated/avaliacao-diagnostica': typeof AuthenticatedAvaliacaoDiagnosticaRouteWithChildren
   '/_authenticated/gabarito': typeof AuthenticatedGabaritoRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
   '/_authenticated/tutoriais': typeof AuthenticatedTutoriaisRoute
   '/_authenticated/avaliacao-diagnostica/$id': typeof AuthenticatedAvaliacaoDiagnosticaIdRoute
+  '/_authenticated/avaliacao-diagnostica/': typeof AuthenticatedAvaliacaoDiagnosticaIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -113,35 +113,35 @@ export interface FileRouteTypes {
     | '/'
     | '/aluno'
     | '/admin'
-    | '/avaliacao-diagnostica'
     | '/gabarito'
     | '/painel'
     | '/relatorios'
     | '/tutoriais'
     | '/avaliacao-diagnostica/$id'
+    | '/avaliacao-diagnostica/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/aluno'
     | '/admin'
-    | '/avaliacao-diagnostica'
     | '/gabarito'
     | '/painel'
     | '/relatorios'
     | '/tutoriais'
     | '/avaliacao-diagnostica/$id'
+    | '/avaliacao-diagnostica'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/aluno'
     | '/_authenticated/admin'
-    | '/_authenticated/avaliacao-diagnostica'
     | '/_authenticated/gabarito'
     | '/_authenticated/painel'
     | '/_authenticated/relatorios'
     | '/_authenticated/tutoriais'
     | '/_authenticated/avaliacao-diagnostica/$id'
+    | '/_authenticated/avaliacao-diagnostica/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -201,13 +201,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGabaritoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/avaliacao-diagnostica': {
-      id: '/_authenticated/avaliacao-diagnostica'
-      path: '/avaliacao-diagnostica'
-      fullPath: '/avaliacao-diagnostica'
-      preLoaderRoute: typeof AuthenticatedAvaliacaoDiagnosticaRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
       path: '/admin'
@@ -215,48 +208,43 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/avaliacao-diagnostica/': {
+      id: '/_authenticated/avaliacao-diagnostica/'
+      path: '/avaliacao-diagnostica'
+      fullPath: '/avaliacao-diagnostica/'
+      preLoaderRoute: typeof AuthenticatedAvaliacaoDiagnosticaIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/avaliacao-diagnostica/$id': {
       id: '/_authenticated/avaliacao-diagnostica/$id'
-      path: '/$id'
+      path: '/avaliacao-diagnostica/$id'
       fullPath: '/avaliacao-diagnostica/$id'
       preLoaderRoute: typeof AuthenticatedAvaliacaoDiagnosticaIdRouteImport
-      parentRoute: typeof AuthenticatedAvaliacaoDiagnosticaRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
 
-interface AuthenticatedAvaliacaoDiagnosticaRouteChildren {
-  AuthenticatedAvaliacaoDiagnosticaIdRoute: typeof AuthenticatedAvaliacaoDiagnosticaIdRoute
-}
-
-const AuthenticatedAvaliacaoDiagnosticaRouteChildren: AuthenticatedAvaliacaoDiagnosticaRouteChildren =
-  {
-    AuthenticatedAvaliacaoDiagnosticaIdRoute:
-      AuthenticatedAvaliacaoDiagnosticaIdRoute,
-  }
-
-const AuthenticatedAvaliacaoDiagnosticaRouteWithChildren =
-  AuthenticatedAvaliacaoDiagnosticaRoute._addFileChildren(
-    AuthenticatedAvaliacaoDiagnosticaRouteChildren,
-  )
-
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
-  AuthenticatedAvaliacaoDiagnosticaRoute: typeof AuthenticatedAvaliacaoDiagnosticaRouteWithChildren
   AuthenticatedGabaritoRoute: typeof AuthenticatedGabaritoRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
   AuthenticatedTutoriaisRoute: typeof AuthenticatedTutoriaisRoute
+  AuthenticatedAvaliacaoDiagnosticaIdRoute: typeof AuthenticatedAvaliacaoDiagnosticaIdRoute
+  AuthenticatedAvaliacaoDiagnosticaIndexRoute: typeof AuthenticatedAvaliacaoDiagnosticaIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
-  AuthenticatedAvaliacaoDiagnosticaRoute:
-    AuthenticatedAvaliacaoDiagnosticaRouteWithChildren,
   AuthenticatedGabaritoRoute: AuthenticatedGabaritoRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
   AuthenticatedTutoriaisRoute: AuthenticatedTutoriaisRoute,
+  AuthenticatedAvaliacaoDiagnosticaIdRoute:
+    AuthenticatedAvaliacaoDiagnosticaIdRoute,
+  AuthenticatedAvaliacaoDiagnosticaIndexRoute:
+    AuthenticatedAvaliacaoDiagnosticaIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
