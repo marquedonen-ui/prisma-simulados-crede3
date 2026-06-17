@@ -1,29 +1,225 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { supabase } from "@/integrations/supabase/client";
+import { validateCode } from "@/lib/prisma.functions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+import logoUrl from "@/assets/prisma-logo.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "PRISMA — CREDE 3 | Plataforma Regional de Simulados" },
+      {
+        name: "description",
+        content:
+          "PRISMA: Plataforma Regional de Simulados e Monitoramento da Aprendizagem da CREDE 3. Acesse com suas credenciais ou código do aluno.",
+      },
+      { property: "og:title", content: "PRISMA — CREDE 3" },
+      {
+        property: "og:description",
+        content: "Plataforma Regional de Simulados e Monitoramento da Aprendizagem.",
+      },
     ],
   }),
-  component: Index,
+  component: LandingPage,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function LandingPage() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) navigate({ to: "/painel" });
+    });
+  }, [navigate]);
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="min-h-screen bg-gradient-to-br from-primary/95 via-primary to-[oklch(0.3_0.15_295)] text-primary-foreground">
+      <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-12 px-6 py-10 lg:grid-cols-2">
+        <header className="flex flex-col items-center text-center lg:items-start lg:text-left">
+          <div className="rounded-3xl bg-white/95 p-6 shadow-2xl ring-1 ring-white/40 backdrop-blur">
+            <img
+              src={logoUrl}
+              alt="Logomarca PRISMA — Plataforma Regional de Simulados e Monitoramento da Aprendizagem"
+              className="h-56 w-auto md:h-72"
+            />
+          </div>
+          <h1 className="mt-8 text-3xl font-bold tracking-tight md:text-4xl">
+            Plataforma Regional de Simulados e Monitoramento da Aprendizagem
+          </h1>
+          <p className="mt-3 max-w-md text-base text-primary-foreground/80">
+            CREDE 3 — acompanhamento de resultados de simulados regionais, com acesso para
+            professores e alunos.
+          </p>
+        </header>
+
+        <Card className="w-full border-white/10 bg-white text-foreground shadow-2xl">
+          <CardHeader>
+            <CardTitle className="text-2xl">Acessar a plataforma</CardTitle>
+            <CardDescription>Escolha o tipo de acesso abaixo.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="cred" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="cred">Credenciais</TabsTrigger>
+                <TabsTrigger value="code">Código do aluno</TabsTrigger>
+              </TabsList>
+              <TabsContent value="cred" className="pt-4">
+                <CredentialsForm />
+              </TabsContent>
+              <TabsContent value="code" className="pt-4">
+                <CodeForm />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
     </div>
+  );
+}
+
+function CredentialsForm() {
+  const navigate = useNavigate();
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [user, setUser] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const email = `${user.trim().toLowerCase()}@prof.ce.gov.br`;
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user.trim()) return toast.error("Informe o usuário.");
+    setLoading(true);
+    try {
+      if (mode === "signin") {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        toast.success("Bem-vindo(a)!");
+        navigate({ to: "/painel" });
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/painel`,
+            data: { full_name: fullName },
+          },
+        });
+        if (error) throw error;
+        toast.success("Cadastro criado. Você já pode entrar.");
+        setMode("signin");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha no acesso");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {mode === "signup" && (
+        <div className="space-y-1.5">
+          <Label htmlFor="full_name">Nome completo</Label>
+          <Input
+            id="full_name"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Maria da Silva"
+          />
+        </div>
+      )}
+      <div className="space-y-1.5">
+        <Label htmlFor="user">Usuário</Label>
+        <div className="flex items-stretch overflow-hidden rounded-md border border-input">
+          <Input
+            id="user"
+            value={user}
+            onChange={(e) => setUser(e.target.value.replace(/\s/g, ""))}
+            placeholder="seu.usuario"
+            className="border-0 shadow-none focus-visible:ring-0"
+            autoComplete="username"
+          />
+          <span className="flex items-center bg-muted px-3 text-sm text-muted-foreground">
+            @prof.ce.gov.br
+          </span>
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="password">Senha</Label>
+        <Input
+          id="password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete={mode === "signin" ? "current-password" : "new-password"}
+        />
+      </div>
+      <Button type="submit" disabled={loading} className="w-full">
+        {loading ? "Aguarde..." : mode === "signin" ? "Entrar" : "Criar conta"}
+      </Button>
+      <button
+        type="button"
+        onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+        className="block w-full text-center text-sm text-muted-foreground underline-offset-4 hover:underline"
+      >
+        {mode === "signin" ? "Não tem conta? Cadastrar-se" : "Já tem conta? Entrar"}
+      </button>
+    </form>
+  );
+}
+
+function CodeForm() {
+  const navigate = useNavigate();
+  const validate = useServerFn(validateCode);
+  const [code, setCode] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const result = await validate({ data: { code } });
+      sessionStorage.setItem("prisma:student", JSON.stringify(result));
+      toast.success(`Bem-vindo(a), ${result.school_name}`);
+      navigate({ to: "/aluno" });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Código inválido");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-1.5">
+        <Label htmlFor="code">Código de acesso</Label>
+        <Input
+          id="code"
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          placeholder="23012345-A7K9"
+          className="font-mono tracking-wider"
+          autoComplete="off"
+        />
+        <p className="text-xs text-muted-foreground">
+          O código é fornecido pela sua escola e formado pelo INEP + sufixo.
+        </p>
+      </div>
+      <Button type="submit" disabled={loading} className="w-full">
+        {loading ? "Verificando..." : "Acessar resultados"}
+      </Button>
+      <Link to="/" className="block text-center text-xs text-muted-foreground hover:underline">
+        Voltar
+      </Link>
+    </form>
   );
 }
