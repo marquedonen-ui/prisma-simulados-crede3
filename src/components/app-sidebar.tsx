@@ -13,7 +13,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import logoUrl from "@/assets/prisma-logo.png";
+import logoUrl from "@/assets/prisma-logo-white.png";
 
 const items = [
   { title: "Página Inicial", url: "/painel", icon: Home },
@@ -44,12 +44,12 @@ export function AppSidebar() {
         } as React.CSSProperties
       }
     >
-      <SidebarHeader>
-        <div className="flex items-center justify-center px-2 py-3">
+      <SidebarHeader className="p-0">
+        <div className="flex items-center justify-center">
           <img
             src={logoUrl}
             alt="PRISMA — CREDE 3"
-            className={collapsed ? "h-10 w-auto" : "h-32 w-auto"}
+            className={collapsed ? "h-12 w-auto" : "h-40 w-full object-cover"}
           />
         </div>
       </SidebarHeader>
