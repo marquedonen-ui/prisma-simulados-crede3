@@ -86,6 +86,7 @@
   --ring: oklch(0.55 0.13 240);
   /* Gradient stops from palette */
   --brand-green: #5ec272;
+  --brand-green-dark: #14532d;
   --brand-teal-green: #00b491;
   --brand-teal: #00a3ac;
   --brand-cyan: #008eb9;

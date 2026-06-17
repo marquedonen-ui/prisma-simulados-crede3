@@ -43,14 +43,14 @@ export function AppSidebar() {
       collapsible="icon"
       style={
         {
-          "--sidebar": "var(--brand-green)",
+          "--sidebar": "var(--brand-green-dark)",
           "--sidebar-foreground": "#ffffff",
-          "--sidebar-accent": "rgba(255,255,255,0.18)",
+          "--sidebar-accent": "rgba(255,255,255,0.14)",
           "--sidebar-accent-foreground": "#ffffff",
-          "--sidebar-border": "rgba(255,255,255,0.18)",
+          "--sidebar-border": "rgba(255,255,255,0.14)",
           "--sidebar-ring": "rgba(255,255,255,0.4)",
           "--sidebar-primary": "#ffffff",
-          "--sidebar-primary-foreground": "var(--brand-green)",
+          "--sidebar-primary-foreground": "var(--brand-green-dark)",
         } as React.CSSProperties
       }
     >
