@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      diagnostic_assessments: {
+        Row: {
+          answer_sheet_pdf_path: string | null
+          created_at: string
+          exam_pdf_path: string | null
+          grade: string
+          id: string
+          offer: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          answer_sheet_pdf_path?: string | null
+          created_at?: string
+          exam_pdf_path?: string | null
+          grade: string
+          id?: string
+          offer: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          answer_sheet_pdf_path?: string | null
+          created_at?: string
+          exam_pdf_path?: string | null
+          grade?: string
+          id?: string
+          offer?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
