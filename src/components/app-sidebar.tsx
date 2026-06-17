@@ -4,6 +4,7 @@ import { Home, BookOpen, ClipboardList, BarChart3, FileCheck } from "lucide-reac
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -14,6 +15,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import logoUrl from "@/assets/prisma-logo-white.png";
+import crede3LogoUrl from "@/assets/crede3-logo.png";
 
 const items = [
   { title: "Página Inicial", url: "/painel", icon: Home },
@@ -80,6 +82,16 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter className="p-0">
+        <div className="flex items-center justify-center bg-white p-3">
+          <img
+            src={crede3LogoUrl}
+            alt="CREDE 3"
+            className={collapsed ? "h-8 w-auto object-contain" : "h-16 w-auto object-contain"}
+          />
+        </div>
+      </SidebarFooter>
     </Sidebar>
   );
 }
