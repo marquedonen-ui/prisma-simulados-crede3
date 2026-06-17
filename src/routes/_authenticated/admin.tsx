@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner";
 import logoUrl from "@/assets/prisma-logo.png";
 import { AssessmentsManager } from "@/components/admin/assessments-manager";
+import { SupportMaterialsManager } from "@/components/admin/support-materials-manager";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Admin — PRISMA" }] }),
@@ -239,6 +240,8 @@ function AdminPage() {
         </Card>
 
         <AssessmentsManager />
+
+        <SupportMaterialsManager />
       </main>
     </div>
   );
