@@ -24,6 +24,25 @@ export const getMyRole = createServerFn({ method: "GET" })
     return { roles, isAdmin: roles.includes("admin"), userId: context.userId };
   });
 
+export const getMyProfile = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const [{ data: profile }, { data: rolesData }] = await Promise.all([
+      context.supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", context.userId)
+        .maybeSingle(),
+      context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
+    ]);
+    const roles = (rolesData ?? []).map((r) => r.role);
+    return {
+      fullName: profile?.full_name ?? null,
+      email: profile?.email ?? (context.claims?.email as string | undefined) ?? null,
+      roles,
+    };
+  });
+
 export const bootstrapFirstAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

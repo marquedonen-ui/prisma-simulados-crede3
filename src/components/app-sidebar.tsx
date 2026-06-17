@@ -16,7 +16,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { getMyRole } from "@/lib/prisma.functions";
+import { getMyRole, getMyProfile } from "@/lib/prisma.functions";
 import logoUrl from "@/assets/prisma-logo-white.png";
 import crede3LogoUrl from "@/assets/crede3-logo.png";
 
@@ -33,10 +33,26 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
   const getRole = useServerFn(getMyRole);
+  const getProfile = useServerFn(getMyProfile);
   const roleQ = useQuery({ queryKey: ["my-role"], queryFn: () => getRole() });
+  const profileQ = useQuery({ queryKey: ["my-profile"], queryFn: () => getProfile() });
   const items = roleQ.data?.isAdmin
     ? [...baseItems, { title: "Administração", url: "/admin", icon: Shield }]
     : baseItems;
+
+  const roleLabels: Record<string, string> = {
+    admin: "Administrador",
+    professor: "Professor",
+    aluno: "Aluno",
+  };
+  const profile = profileQ.data;
+  const roleLabel = profile?.roles?.[0] ? (roleLabels[profile.roles[0]] ?? profile.roles[0]) : null;
+  const initials = (profile?.fullName ?? profile?.email ?? "?")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase() ?? "")
+    .join("");
 
   return (
     <Sidebar
@@ -92,6 +108,37 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-0">
+        {profile && (
+          <div className="border-t border-sidebar-border px-3 py-3">
+            {collapsed ? (
+              <div
+                className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-xs font-semibold text-sidebar-foreground"
+                title={`${profile.fullName ?? profile.email ?? ""}${roleLabel ? ` · ${roleLabel}` : ""}`}
+              >
+                {initials || "?"}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-xs font-semibold text-sidebar-foreground">
+                  {initials || "?"}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-sidebar-foreground">
+                    {profile.fullName ?? "—"}
+                  </p>
+                  <p className="truncate text-xs text-sidebar-foreground/80">
+                    {profile.email ?? "—"}
+                  </p>
+                  {roleLabel && (
+                    <p className="truncate text-[11px] uppercase tracking-wide text-sidebar-foreground/70">
+                      {roleLabel}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         <div className="flex items-center justify-center bg-white p-3">
           <img
             src={crede3LogoUrl}
