@@ -40,7 +40,11 @@ function LandingPage() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/95 via-primary to-[oklch(0.3_0.15_295)] text-primary-foreground">
+    <div
+      className="min-h-screen text-primary-foreground"
+      style={{ background: "var(--gradient-brand)" }}
+    >
+
       <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-12 px-6 py-10 lg:grid-cols-2">
         <header className="flex flex-col items-center text-center lg:items-start lg:text-left">
           <div className="rounded-3xl bg-white/95 p-6 shadow-2xl ring-1 ring-white/40 backdrop-blur">
