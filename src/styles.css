@@ -63,39 +63,58 @@
 
 :root {
   --radius: 0.75rem;
-  --background: oklch(0.985 0.005 280);
-  --foreground: oklch(0.18 0.05 280);
+  --background: oklch(0.99 0.005 220);
+  --foreground: oklch(0.2 0.04 240);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.05 280);
+  --card-foreground: oklch(0.2 0.04 240);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.05 280);
-  --primary: oklch(0.42 0.18 275);
-  --primary-foreground: oklch(0.99 0.005 280);
-  --secondary: oklch(0.95 0.02 280);
-  --secondary-foreground: oklch(0.25 0.08 280);
-  --muted: oklch(0.96 0.012 280);
-  --muted-foreground: oklch(0.5 0.04 280);
-  --accent: oklch(0.7 0.18 195);
-  --accent-foreground: oklch(0.15 0.05 280);
+  --popover-foreground: oklch(0.2 0.04 240);
+  /* #0076B5 */
+  --primary: oklch(0.55 0.13 240);
+  --primary-foreground: oklch(0.99 0.005 220);
+  --secondary: oklch(0.95 0.02 220);
+  --secondary-foreground: oklch(0.25 0.06 240);
+  --muted: oklch(0.96 0.012 220);
+  --muted-foreground: oklch(0.5 0.03 240);
+  /* #00A3AC teal accent */
+  --accent: oklch(0.65 0.11 200);
+  --accent-foreground: oklch(0.15 0.04 240);
   --destructive: oklch(0.6 0.22 27);
-  --destructive-foreground: oklch(0.99 0.003 280);
-  --border: oklch(0.9 0.02 280);
-  --input: oklch(0.9 0.02 280);
-  --ring: oklch(0.55 0.18 275);
-  --chart-1: oklch(0.6 0.22 28);
-  --chart-2: oklch(0.75 0.18 75);
-  --chart-3: oklch(0.7 0.2 145);
-  --chart-4: oklch(0.55 0.2 220);
-  --chart-5: oklch(0.55 0.22 305);
-  --sidebar: oklch(0.99 0.005 280);
-  --sidebar-foreground: oklch(0.18 0.05 280);
-  --sidebar-primary: oklch(0.42 0.18 275);
-  --sidebar-primary-foreground: oklch(0.99 0.005 280);
-  --sidebar-accent: oklch(0.95 0.02 280);
-  --sidebar-accent-foreground: oklch(0.25 0.08 280);
-  --sidebar-border: oklch(0.9 0.02 280);
-  --sidebar-ring: oklch(0.55 0.18 275);
+  --destructive-foreground: oklch(0.99 0.005 220);
+  --border: oklch(0.9 0.02 220);
+  --input: oklch(0.9 0.02 220);
+  --ring: oklch(0.55 0.13 240);
+  /* Gradient stops from palette */
+  --brand-green: #5ec272;
+  --brand-teal-green: #00b491;
+  --brand-teal: #00a3ac;
+  --brand-cyan: #008eb9;
+  --brand-blue: #0076b5;
+  --brand-indigo: #3e5c9f;
+  --gradient-brand: linear-gradient(
+    135deg,
+    var(--brand-green) 0%,
+    var(--brand-teal-green) 20%,
+    var(--brand-teal) 40%,
+    var(--brand-cyan) 60%,
+    var(--brand-blue) 80%,
+    var(--brand-indigo) 100%
+  );
+  --chart-1: oklch(0.72 0.15 145);
+  --chart-2: oklch(0.68 0.13 175);
+  --chart-3: oklch(0.65 0.11 200);
+  --chart-4: oklch(0.6 0.12 225);
+  --chart-5: oklch(0.5 0.12 270);
+  --sidebar: oklch(0.99 0.005 220);
+  --sidebar-foreground: oklch(0.2 0.04 240);
+  --sidebar-primary: oklch(0.55 0.13 240);
+  --sidebar-primary-foreground: oklch(0.99 0.005 220);
+  --sidebar-accent: oklch(0.95 0.02 220);
+  --sidebar-accent-foreground: oklch(0.25 0.06 240);
+  --sidebar-border: oklch(0.9 0.02 220);
+  --sidebar-ring: oklch(0.55 0.13 240);
 }
+
 
 
 .dark {
