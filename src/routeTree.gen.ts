@@ -12,7 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AlunoRouteImport } from './routes/aluno'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedTutoriaisRouteImport } from './routes/_authenticated/tutoriais'
+import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
+import { Route as AuthenticatedGabaritoRouteImport } from './routes/_authenticated/gabarito'
+import { Route as AuthenticatedAvaliacaoDiagnosticaRouteImport } from './routes/_authenticated/avaliacao-diagnostica'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 
 const AlunoRoute = AlunoRouteImport.update({
@@ -29,11 +33,32 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedTutoriaisRoute = AuthenticatedTutoriaisRouteImport.update({
+  id: '/tutoriais',
+  path: '/tutoriais',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPainelRoute = AuthenticatedPainelRouteImport.update({
   id: '/painel',
   path: '/painel',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedGabaritoRoute = AuthenticatedGabaritoRouteImport.update({
+  id: '/gabarito',
+  path: '/gabarito',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAvaliacaoDiagnosticaRoute =
+  AuthenticatedAvaliacaoDiagnosticaRouteImport.update({
+    id: '/avaliacao-diagnostica',
+    path: '/avaliacao-diagnostica',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -44,13 +69,21 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/aluno': typeof AlunoRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/avaliacao-diagnostica': typeof AuthenticatedAvaliacaoDiagnosticaRoute
+  '/gabarito': typeof AuthenticatedGabaritoRoute
   '/painel': typeof AuthenticatedPainelRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/tutoriais': typeof AuthenticatedTutoriaisRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aluno': typeof AlunoRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/avaliacao-diagnostica': typeof AuthenticatedAvaliacaoDiagnosticaRoute
+  '/gabarito': typeof AuthenticatedGabaritoRoute
   '/painel': typeof AuthenticatedPainelRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/tutoriais': typeof AuthenticatedTutoriaisRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -58,20 +91,44 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/aluno': typeof AlunoRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/avaliacao-diagnostica': typeof AuthenticatedAvaliacaoDiagnosticaRoute
+  '/_authenticated/gabarito': typeof AuthenticatedGabaritoRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
+  '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/_authenticated/tutoriais': typeof AuthenticatedTutoriaisRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/aluno' | '/admin' | '/painel'
+  fullPaths:
+    | '/'
+    | '/aluno'
+    | '/admin'
+    | '/avaliacao-diagnostica'
+    | '/gabarito'
+    | '/painel'
+    | '/relatorios'
+    | '/tutoriais'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/aluno' | '/admin' | '/painel'
+  to:
+    | '/'
+    | '/aluno'
+    | '/admin'
+    | '/avaliacao-diagnostica'
+    | '/gabarito'
+    | '/painel'
+    | '/relatorios'
+    | '/tutoriais'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/aluno'
     | '/_authenticated/admin'
+    | '/_authenticated/avaliacao-diagnostica'
+    | '/_authenticated/gabarito'
     | '/_authenticated/painel'
+    | '/_authenticated/relatorios'
+    | '/_authenticated/tutoriais'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -103,11 +160,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/tutoriais': {
+      id: '/_authenticated/tutoriais'
+      path: '/tutoriais'
+      fullPath: '/tutoriais'
+      preLoaderRoute: typeof AuthenticatedTutoriaisRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/relatorios': {
+      id: '/_authenticated/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof AuthenticatedRelatoriosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/painel': {
       id: '/_authenticated/painel'
       path: '/painel'
       fullPath: '/painel'
       preLoaderRoute: typeof AuthenticatedPainelRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/gabarito': {
+      id: '/_authenticated/gabarito'
+      path: '/gabarito'
+      fullPath: '/gabarito'
+      preLoaderRoute: typeof AuthenticatedGabaritoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/avaliacao-diagnostica': {
+      id: '/_authenticated/avaliacao-diagnostica'
+      path: '/avaliacao-diagnostica'
+      fullPath: '/avaliacao-diagnostica'
+      preLoaderRoute: typeof AuthenticatedAvaliacaoDiagnosticaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin': {
@@ -122,12 +207,21 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAvaliacaoDiagnosticaRoute: typeof AuthenticatedAvaliacaoDiagnosticaRoute
+  AuthenticatedGabaritoRoute: typeof AuthenticatedGabaritoRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
+  AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
+  AuthenticatedTutoriaisRoute: typeof AuthenticatedTutoriaisRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAvaliacaoDiagnosticaRoute:
+    AuthenticatedAvaliacaoDiagnosticaRoute,
+  AuthenticatedGabaritoRoute: AuthenticatedGabaritoRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
+  AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
+  AuthenticatedTutoriaisRoute: AuthenticatedTutoriaisRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
