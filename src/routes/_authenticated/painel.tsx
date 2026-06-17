@@ -6,7 +6,7 @@ import { getMyRole, bootstrapFirstAdmin } from "@/lib/prisma.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
-import logoUrl from "@/assets/prisma-logo.png";
+import logoUrl from "@/assets/ceara-logo.png";
 
 export const Route = createFileRoute("/_authenticated/painel")({
   head: () => ({ meta: [{ title: "Painel — PRISMA" }] }),
@@ -39,7 +39,7 @@ function Painel() {
       <header className="border-b bg-card">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <img src={logoUrl} alt="PRISMA" className="h-10 w-auto" />
+            <img src={logoUrl} alt="Governo do Ceará" className="h-12 w-auto" />
             <div>
               <p className="text-sm font-semibold">PRISMA</p>
               <p className="text-xs text-muted-foreground">CREDE 3</p>

@@ -45,11 +45,15 @@ export function AppSidebar() {
       }
     >
       <SidebarHeader className="p-0">
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center bg-sidebar">
           <img
             src={logoUrl}
             alt="PRISMA — CREDE 3"
-            className={collapsed ? "h-12 w-auto" : "h-40 w-full object-cover"}
+            className={
+              collapsed
+                ? "h-12 w-auto object-contain"
+                : "block h-auto w-full object-contain"
+            }
           />
         </div>
       </SidebarHeader>
