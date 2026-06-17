@@ -45,14 +45,12 @@ export function AppSidebar() {
       }
     >
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-2">
-          <img src={logoUrl} alt="PRISMA" className="h-8 w-auto shrink-0 rounded bg-white/90 p-1" />
-          {!collapsed && (
-            <div className="leading-tight">
-              <p className="text-sm font-bold text-sidebar-foreground">PRISMA</p>
-              <p className="text-[10px] text-sidebar-foreground/80">CREDE 3</p>
-            </div>
-          )}
+        <div className="flex items-center justify-center px-2 py-3">
+          <img
+            src={logoUrl}
+            alt="PRISMA — CREDE 3"
+            className={collapsed ? "h-10 w-auto" : "h-32 w-auto"}
+          />
         </div>
       </SidebarHeader>
 
