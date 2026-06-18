@@ -3,7 +3,8 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 async function ensureProfessorOrAdmin(supabase: any, userId: string) {
-  const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  if (error) throw error;
   const roles = (data ?? []).map((r: { role: string }) => r.role);
   const allowed = ["admin", "professor", "professor_responsavel", "gestor"];
   if (!roles.some((r: string) => allowed.includes(r))) {
