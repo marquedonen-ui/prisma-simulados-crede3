@@ -346,6 +346,7 @@ export type Database = {
         Row: {
           answer_key_pdf_path: string | null
           commented_test_pdf_path: string | null
+          component: string | null
           created_at: string
           grade: string
           id: string
@@ -356,6 +357,7 @@ export type Database = {
         Insert: {
           answer_key_pdf_path?: string | null
           commented_test_pdf_path?: string | null
+          component?: string | null
           created_at?: string
           grade: string
           id?: string
@@ -366,6 +368,7 @@ export type Database = {
         Update: {
           answer_key_pdf_path?: string | null
           commented_test_pdf_path?: string | null
+          component?: string | null
           created_at?: string
           grade?: string
           id?: string
