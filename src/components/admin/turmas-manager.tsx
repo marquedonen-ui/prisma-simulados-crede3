@@ -131,9 +131,11 @@ export function TurmasManager({
                   <th className="px-3 py-2">Turma</th>
                   <th className="px-3 py-2">Ano</th>
                   <th className="px-3 py-2">Turno</th>
-                  <th className="px-3 py-2">Matrícula SIGE</th>
+                  <th className="px-3 py-2">Matrícula atual</th>
+                  <th className="px-3 py-2">SIGE</th>
                   <th className="px-3 py-2 text-right">Ações</th>
                 </tr>
+
               </thead>
               <tbody>
                 {(turmasQ.data ?? []).length === 0 && (
