@@ -43,12 +43,21 @@ export function ImportarRespostas({
 
   const importFn = useServerFn(importarRespostas);
   const listTurmasFn = useServerFn(listTurmas);
+  const countQuestoesFn = useServerFn(countQuestoes);
 
   const turmasQ = useQuery({
     queryKey: ["turmas", schoolId],
     queryFn: () => listTurmasFn({ data: { schoolId } }),
     enabled: !!schoolId,
   });
+
+  const questoesQ = useQuery({
+    queryKey: ["questoes-count", simuladoId],
+    queryFn: () => countQuestoesFn({ data: { simuladoId } }),
+    enabled: !!simuladoId,
+  });
+
+  const semQuestoes = !!simuladoId && questoesQ.data?.total === 0;
 
   const importar = useMutation({
     mutationFn: async () => {
