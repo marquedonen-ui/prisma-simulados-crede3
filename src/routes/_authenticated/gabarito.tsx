@@ -70,7 +70,7 @@ function Page() {
             )}
             {!q.isLoading && (q.data?.length ?? 0) === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
                   Nenhum material cadastrado.
                 </TableCell>
               </TableRow>
@@ -79,6 +79,7 @@ function Page() {
               <TableRow key={a.id}>
                 <TableCell className="font-medium">{a.offer}</TableCell>
                 <TableCell>{a.grade}</TableCell>
+                <TableCell>{(a as { component?: string | null }).component ?? "—"}</TableCell>
                 <TableCell>
                   {a.answer_key_pdf_path ? (
                     <Button
