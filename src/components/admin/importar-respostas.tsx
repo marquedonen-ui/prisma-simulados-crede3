@@ -6,7 +6,7 @@ import { Upload, Download, FileSpreadsheet, Loader2, CheckCircle2, BarChart3 } f
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
-import { importarRespostas } from "@/lib/offline.functions";
+import { importarRespostas, countQuestoes } from "@/lib/offline.functions";
 import { listTurmas } from "@/lib/turmas.functions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
