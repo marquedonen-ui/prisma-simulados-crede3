@@ -76,49 +76,68 @@ export function ImportarRespostas({
 
       if (!wb.SheetNames.length) throw new Error("Planilha sem abas.");
       const sheet = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, {
+
+      // Lê tudo como matriz (linhas x colunas) para suportar arquivos .xls
+      // exportados de sistemas (SIGE etc.) que costumam ter linhas de título,
+      // linhas em branco ou cabeçalhos mesclados antes do cabeçalho real.
+      const matrix = XLSX.utils.sheet_to_json<any[]>(sheet, {
+        header: 1,
         defval: "",
         raw: false,
+        blankrows: false,
       });
-      if (rows.length === 0) throw new Error("Planilha vazia.");
+      if (!matrix || matrix.length === 0) throw new Error("Planilha vazia.");
 
-      // Normaliza chaves de cabeçalho (remove acentos, espaços e caixa).
-      const norm = (s: string) =>
-        String(s)
+      const norm = (s: any) =>
+        String(s ?? "")
           .normalize("NFD")
           .replace(/[\u0300-\u036f]/g, "")
           .replace(/\s+/g, "")
           .toUpperCase();
 
       const matKeys = new Set(["MATRICULA", "MATR", "INSCRICAO", "INSC", "ID"]);
+      const isQKey = (k: string) => /^(?:Q|QUESTAO)?(\d{1,3})$/.test(k);
 
-      const linhas = rows
-        .map((row) => {
-          let matricula = "";
-          const respostas: Record<string, string> = {};
-          for (const [k, v] of Object.entries(row)) {
-            const key = norm(k);
-            if (!matricula && matKeys.has(key)) {
-              matricula = String(v ?? "").trim();
-            }
-            // Aceita Q1, Q01, QUESTAO1, ou apenas "1".
-            const m = key.match(/^(?:Q|QUESTAO)?(\d{1,3})$/);
-            if (m) {
-              const num = parseInt(m[1], 10);
-              if (num > 0) {
-                respostas[`Q${num}`] = String(v ?? "").trim().toUpperCase();
-              }
-            }
+      // Localiza a linha de cabeçalho (a primeira que contém uma coluna de matrícula).
+      let headerIdx = -1;
+      for (let i = 0; i < Math.min(matrix.length, 30); i++) {
+        const cells = matrix[i].map(norm);
+        if (cells.some((c) => matKeys.has(c)) && cells.some(isQKey)) {
+          headerIdx = i;
+          break;
+        }
+      }
+      // Fallback: usa a primeira linha como cabeçalho se nenhuma combinação foi achada.
+      if (headerIdx === -1) headerIdx = 0;
+
+      const headers = matrix[headerIdx].map(norm);
+      const matCol = headers.findIndex((h) => matKeys.has(h));
+
+      const linhas: Array<{ matricula: string; respostas: Record<string, string> }> = [];
+      for (let r = headerIdx + 1; r < matrix.length; r++) {
+        const row = matrix[r];
+        if (!row || row.length === 0) continue;
+        const matricula =
+          matCol >= 0 ? String(row[matCol] ?? "").trim() : "";
+        if (!matricula) continue;
+        const respostas: Record<string, string> = {};
+        for (let c = 0; c < headers.length; c++) {
+          const h = headers[c];
+          const m = h.match(/^(?:Q|QUESTAO)?(\d{1,3})$/);
+          if (!m) continue;
+          const num = parseInt(m[1], 10);
+          if (num > 0) {
+            respostas[`Q${num}`] = String(row[c] ?? "").trim().toUpperCase();
           }
-          if (!matricula) return null;
-          return { matricula, respostas };
-        })
-        .filter((x): x is { matricula: string; respostas: Record<string, string> } => !!x);
+        }
+        linhas.push({ matricula, respostas });
+      }
 
       if (linhas.length === 0)
         throw new Error(
           "Nenhuma linha válida. Verifique se há uma coluna 'matricula' e colunas Q1, Q2, ...",
         );
+
 
       return importFn({ data: { simuladoId, schoolId, linhas } });
     },
