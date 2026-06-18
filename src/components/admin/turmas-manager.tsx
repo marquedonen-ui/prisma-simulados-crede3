@@ -85,7 +85,7 @@ export function TurmasManager({
   });
 
   function openNew() {
-    setEditing({ nome: "", ano: String(new Date().getFullYear()), turno: "manha", matricula_sige: "", matricula_atual: "" });
+    setEditing({ nome: "", ano: String(new Date().getFullYear()), turno: "manha", matricula_atual: "" });
     setOpen(true);
   }
 
@@ -132,7 +132,6 @@ export function TurmasManager({
                   <th className="px-3 py-2">Ano</th>
                   <th className="px-3 py-2">Turno</th>
                   <th className="px-3 py-2">Matrícula atual</th>
-                  <th className="px-3 py-2">SIGE</th>
                   <th className="px-3 py-2 text-right">Ações</th>
                 </tr>
 
@@ -140,7 +139,7 @@ export function TurmasManager({
               <tbody>
                 {(turmasQ.data ?? []).length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
+                    <td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">
                       Nenhuma turma.
                     </td>
                   </tr>
@@ -151,7 +150,6 @@ export function TurmasManager({
                     <td className="px-3 py-2">{t.ano}</td>
                     <td className="px-3 py-2">{turnoLabel(t.turno)}</td>
                     <td className="px-3 py-2">{t.matricula_atual ?? "—"}</td>
-                    <td className="px-3 py-2">{t.matricula_sige ?? "—"}</td>
                     <td className="px-3 py-2 text-right">
                       <Button
                         size="icon"
@@ -226,25 +224,15 @@ export function TurmasManager({
                     </Select>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>Matrícula atual</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={editing.matricula_atual ?? ""}
-                      onChange={(e) => setEditing({ ...editing, matricula_atual: e.target.value })}
-                      placeholder="Ex.: 32"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Matrícula SIGE</Label>
-                    <Input
-                      value={editing.matricula_sige ?? ""}
-                      onChange={(e) => setEditing({ ...editing, matricula_sige: e.target.value })}
-                      placeholder="Opcional"
-                    />
-                  </div>
+                <div className="space-y-1.5">
+                  <Label>Matrícula atual</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={editing.matricula_atual ?? ""}
+                    onChange={(e) => setEditing({ ...editing, matricula_atual: e.target.value })}
+                    placeholder="Ex.: 32"
+                  />
                 </div>
 
                 <Button type="submit" disabled={upsert.isPending} className="w-full">
