@@ -11,7 +11,10 @@ async function ensureProfessorOrAdmin(supabase: any, userId: string) {
   }
 }
 
-/** Lista simulados que já têm respostas importadas (offline) ou online. */
+const idInput = (d: { simuladoId: string }) =>
+  z.object({ simuladoId: z.string().uuid() }).parse(d);
+
+/** Lista simulados que já têm respostas anônimas importadas. */
 export const listSimuladosComRespostas = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -21,166 +24,302 @@ export const listSimuladosComRespostas = createServerFn({ method: "GET" })
       .select("id, offer, subject, grade, created_at")
       .order("created_at", { ascending: false });
     if (error) throw error;
-    const ids = (simulados ?? []).map((s) => s.id);
+    const ids = (simulados ?? []).map((s: any) => s.id);
     if (ids.length === 0) return [];
     const { data: resp } = await context.supabase
       .from("respostas_alunos")
-      .select("simulado_id, aluno_id, usuario_id")
-      .in("simulado_id", ids);
-    return (simulados ?? []).map((s) => {
-      const rs = (resp ?? []).filter((r) => r.simulado_id === s.id);
-      const alunos = new Set(rs.map((r) => r.aluno_id ?? r.usuario_id));
+      .select("simulado_id, turma_id, numero_chamada")
+      .in("simulado_id", ids)
+      .not("turma_id", "is", null);
+    return (simulados ?? []).map((s: any) => {
+      const rs = (resp ?? []).filter((r: any) => r.simulado_id === s.id);
+      const alunos = new Set(rs.map((r: any) => `${r.turma_id}|${r.numero_chamada}`));
       return { ...s, total_respostas: rs.length, alunos_distintos: alunos.size };
     });
   });
 
-/** Relatório completo de um simulado: por aluno + por questão (descritor). */
-export const getRelatorioSimulado = createServerFn({ method: "GET" })
+type Faixas = { muito_critico: number; critico: number; intermediario: number; adequado: number };
+
+function faixaDeAcertos(n: number): keyof Faixas {
+  if (n <= 11) return "muito_critico";
+  if (n <= 22) return "critico";
+  if (n <= 34) return "intermediario";
+  return "adequado";
+}
+
+/**
+ * Carrega o dataset agregado: respostas + gabarito + turmas + escolas.
+ * Retorna por aluno (turma_id + numero_chamada), com acertos, total_respondidas
+ * e metadados (escola, município, matrícula da turma).
+ */
+async function carregarDataset(supabase: any, simuladoId: string) {
+  const { data: questoes, error: qErr } = await supabase
+    .from("questoes")
+    .select("id, resposta_correta")
+    .eq("simulado_id", simuladoId);
+  if (qErr) throw qErr;
+  const correct = new Map<string, string>(
+    (questoes ?? []).map((q: any) => [q.id, q.resposta_correta]),
+  );
+  const totalQuestoes = (questoes ?? []).length;
+
+  const { data: respostas, error: rErr } = await supabase
+    .from("respostas_alunos")
+    .select("turma_id, numero_chamada, questao_id, resposta_escolhida")
+    .eq("simulado_id", simuladoId)
+    .not("turma_id", "is", null)
+    .not("numero_chamada", "is", null);
+  if (rErr) throw rErr;
+
+  const turmaIds = Array.from(new Set((respostas ?? []).map((r: any) => r.turma_id)));
+  const { data: turmas } = turmaIds.length
+    ? await supabase
+        .from("turmas")
+        .select("id, nome, ano, matricula_atual, school_id, schools(id, name, city, inep)")
+        .in("id", turmaIds)
+    : { data: [] as any[] };
+  const turmaById = new Map((turmas ?? []).map((t: any) => [t.id, t]));
+
+  // Por aluno (turma+chamada)
+  const alunos = new Map<
+    string,
+    {
+      turma_id: string;
+      numero_chamada: number;
+      acertos: number;
+      respondidas: number;
+      escola: any;
+      turma: any;
+    }
+  >();
+  for (const r of respostas ?? []) {
+    const key = `${r.turma_id}|${r.numero_chamada}`;
+    let a = alunos.get(key);
+    if (!a) {
+      const turma: any = turmaById.get(r.turma_id);
+      a = {
+        turma_id: r.turma_id,
+        numero_chamada: r.numero_chamada,
+        acertos: 0,
+        respondidas: 0,
+        escola: turma?.schools ?? null,
+        turma,
+      };
+      alunos.set(key, a);
+    }
+    const alt = String(r.resposta_escolhida ?? "").toUpperCase();
+    if (["A", "B", "C", "D", "E"].includes(alt)) {
+      a.respondidas += 1;
+      if (correct.get(r.questao_id) === alt) a.acertos += 1;
+    }
+  }
+
+  return {
+    totalQuestoes,
+    alunos: Array.from(alunos.values()),
+    turmas: turmas ?? [],
+  };
+}
+
+const CITY_DESCONHECIDA = "Sem município";
+
+function cidadeDaEscola(escola: any): string {
+  return (escola?.city ?? "").trim() || CITY_DESCONHECIDA;
+}
+
+/** Padrão de desempenho — agregado por cidade e por escola dentro da cidade. */
+export const getPadraoDesempenho = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { simuladoId: string; turmaId?: string; schoolId?: string }) =>
-    z
-      .object({
-        simuladoId: z.string().uuid(),
-        turmaId: z.string().uuid().optional(),
-        schoolId: z.string().uuid().optional(),
-      })
-      .parse(d),
-  )
+  .inputValidator(idInput)
   .handler(async ({ data, context }) => {
     await ensureProfessorOrAdmin(context.supabase, context.userId);
+    const { alunos } = await carregarDataset(context.supabase, data.simuladoId);
 
-    const { data: simulado, error: sErr } = await context.supabase
-      .from("diagnostic_assessments")
-      .select("id, offer, subject, grade")
-      .eq("id", data.simuladoId)
-      .maybeSingle();
-    if (sErr) throw sErr;
-
-    const { data: questoes, error: qErr } = await context.supabase
-      .from("questoes")
-      .select("id, numero, enunciado, resposta_correta, pontos")
-      .eq("simulado_id", data.simuladoId)
-      .order("numero", { ascending: true });
-    if (qErr) throw qErr;
-    const correctById = new Map((questoes ?? []).map((q) => [q.id, q.resposta_correta]));
-    const numeroById = new Map((questoes ?? []).map((q) => [q.id, q.numero]));
-
-    const { data: respostas, error: rErr } = await context.supabase
-      .from("respostas_alunos")
-      .select("aluno_id, usuario_id, questao_id, resposta_escolhida")
-      .eq("simulado_id", data.simuladoId);
-    if (rErr) throw rErr;
-
-    const alunoIds = Array.from(
-      new Set((respostas ?? []).map((r) => r.aluno_id).filter((v): v is string => !!v)),
-    );
-
-    const { data: alunos } = alunoIds.length
-      ? await context.supabase
-          .from("alunos")
-          .select("id, nome, matricula, turma_id, school_id, turmas(nome, ano, turno), schools(name)")
-          .in("id", alunoIds)
-      : { data: [] as any[] };
-
-    let alunosFiltrados: any[] = alunos ?? [];
-    if (data.schoolId) alunosFiltrados = alunosFiltrados.filter((a) => a.school_id === data.schoolId);
-    if (data.turmaId) alunosFiltrados = alunosFiltrados.filter((a) => a.turma_id === data.turmaId);
-    const alunoMap = new Map(alunosFiltrados.map((a) => [a.id, a]));
-    const respostasFiltradas = (respostas ?? []).filter(
-      (r) => r.aluno_id && alunoMap.has(r.aluno_id),
-    );
-
-    const total_questoes = (questoes ?? []).length;
-
-    // Por aluno
-    const porAluno = new Map<
+    const porCidade = new Map<
       string,
-      { acertos: number; respondidas: number }
+      {
+        city: string;
+        faixas: Faixas;
+        total: number;
+        escolas: Map<string, { school_id: string; name: string; faixas: Faixas; total: number }>;
+      }
     >();
-    for (const r of respostasFiltradas) {
-      const key = r.aluno_id!;
-      const cur = porAluno.get(key) ?? { acertos: 0, respondidas: 0 };
-      cur.respondidas += 1;
-      if ((r.resposta_escolhida ?? "").toUpperCase() === correctById.get(r.questao_id))
-        cur.acertos += 1;
-      porAluno.set(key, cur);
-    }
 
-    const alunosOut = Array.from(porAluno.entries())
-      .map(([id, v]) => {
-        const a: any = alunoMap.get(id) ?? {};
-        return {
-          aluno_id: id,
-          nome: a.nome ?? "—",
-          matricula: a.matricula ?? "—",
-          turma: a.turmas ? `${a.turmas.nome} · ${a.turmas.ano}` : null,
-          escola: a.schools?.name ?? null,
-          acertos: v.acertos,
-          erros: Math.max(0, v.respondidas - v.acertos),
-          em_branco: Math.max(0, total_questoes - v.respondidas),
-          percentual: total_questoes ? Number(((v.acertos / total_questoes) * 100).toFixed(1)) : 0,
+    for (const a of alunos) {
+      const city = cidadeDaEscola(a.escola);
+      let bucket = porCidade.get(city);
+      if (!bucket) {
+        bucket = {
+          city,
+          faixas: { muito_critico: 0, critico: 0, intermediario: 0, adequado: 0 },
+          total: 0,
+          escolas: new Map(),
         };
-      })
-      .sort((a, b) => b.acertos - a.acertos);
-
-    // Por questão
-    const porQuestao = new Map<
-      string,
-      { A: number; B: number; C: number; D: number; E: number; acertos: number; total: number }
-    >();
-    for (const q of questoes ?? [])
-      porQuestao.set(q.id, { A: 0, B: 0, C: 0, D: 0, E: 0, acertos: 0, total: 0 });
-    for (const r of respostasFiltradas) {
-      const bucket = porQuestao.get(r.questao_id);
-      if (!bucket) continue;
-      const alt = (r.resposta_escolhida ?? "").toUpperCase() as "A" | "B" | "C" | "D" | "E";
-      if (["A", "B", "C", "D", "E"].includes(alt)) bucket[alt] += 1;
+        porCidade.set(city, bucket);
+      }
+      const fx = faixaDeAcertos(a.acertos);
+      bucket.faixas[fx] += 1;
       bucket.total += 1;
-      if (alt === correctById.get(r.questao_id)) bucket.acertos += 1;
+
+      const schoolId = a.escola?.id ?? "sem-escola";
+      let sb = bucket.escolas.get(schoolId);
+      if (!sb) {
+        sb = {
+          school_id: schoolId,
+          name: a.escola?.name ?? "Sem escola",
+          faixas: { muito_critico: 0, critico: 0, intermediario: 0, adequado: 0 },
+          total: 0,
+        };
+        bucket.escolas.set(schoolId, sb);
+      }
+      sb.faixas[fx] += 1;
+      sb.total += 1;
     }
 
-    const questoesOut = (questoes ?? []).map((q) => {
-      const b = porQuestao.get(q.id)!;
-      return {
-        numero: q.numero,
-        enunciado: q.enunciado,
-        resposta_correta: q.resposta_correta,
-        total_respostas: b.total,
-        acertos: b.acertos,
-        pct_acerto: b.total ? Number(((b.acertos / b.total) * 100).toFixed(1)) : 0,
-        distribuicao: { A: b.A, B: b.B, C: b.C, D: b.D, E: b.E },
-      };
-    });
+    return Array.from(porCidade.values())
+      .map((c) => ({
+        city: c.city,
+        total: c.total,
+        faixas: c.faixas,
+        escolas: Array.from(c.escolas.values()).sort((a, b) => a.name.localeCompare(b.name)),
+      }))
+      .sort((a, b) => a.city.localeCompare(b.city));
+  });
 
-    // Padrões de desempenho (faixas)
-    const faixas = { abaixo: 0, basico: 0, adequado: 0, avancado: 0 };
-    for (const a of alunosOut) {
-      if (a.percentual < 25) faixas.abaixo++;
-      else if (a.percentual < 50) faixas.basico++;
-      else if (a.percentual < 75) faixas.adequado++;
-      else faixas.avancado++;
+/** Conclusão — finalizou (≥1 resposta) vs. matriculados (turma.matricula_atual). */
+export const getConclusao = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(idInput)
+  .handler(async ({ data, context }) => {
+    await ensureProfessorOrAdmin(context.supabase, context.userId);
+    const { alunos, turmas } = await carregarDataset(context.supabase, data.simuladoId);
+
+    // Conta finalizados por turma (alunos com >=1 resposta).
+    const finPorTurma = new Map<string, number>();
+    for (const a of alunos) {
+      if (a.respondidas >= 1) {
+        finPorTurma.set(a.turma_id, (finPorTurma.get(a.turma_id) ?? 0) + 1);
+      }
     }
 
-    return {
-      simulado,
-      total_questoes,
-      total_alunos: alunosOut.length,
-      media_acertos: alunosOut.length
-        ? Number(
-            (
-              alunosOut.reduce((s, a) => s + a.acertos, 0) / alunosOut.length
-            ).toFixed(2),
-          )
-        : 0,
-      media_percentual: alunosOut.length
-        ? Number(
-            (
-              alunosOut.reduce((s, a) => s + a.percentual, 0) / alunosOut.length
-            ).toFixed(1),
-          )
-        : 0,
-      faixas,
-      alunos: alunosOut,
-      questoes: questoesOut,
-    };
+    // Cada turma contribui com sua matrícula (mesmo sem respostas, conta como 0 finalizados).
+    const porCidade = new Map<
+      string,
+      {
+        city: string;
+        finalizaram: number;
+        matriculados: number;
+        escolas: Map<
+          string,
+          { school_id: string; name: string; finalizaram: number; matriculados: number }
+        >;
+      }
+    >();
+
+    for (const t of turmas as any[]) {
+      const city = cidadeDaEscola(t.schools);
+      const fin = finPorTurma.get(t.id) ?? 0;
+      const mat = Math.max(fin, t.matricula_atual ?? 0);
+      let bucket = porCidade.get(city);
+      if (!bucket) {
+        bucket = { city, finalizaram: 0, matriculados: 0, escolas: new Map() };
+        porCidade.set(city, bucket);
+      }
+      bucket.finalizaram += fin;
+      bucket.matriculados += mat;
+      const sid = t.schools?.id ?? "sem-escola";
+      let sb = bucket.escolas.get(sid);
+      if (!sb) {
+        sb = {
+          school_id: sid,
+          name: t.schools?.name ?? "Sem escola",
+          finalizaram: 0,
+          matriculados: 0,
+        };
+        bucket.escolas.set(sid, sb);
+      }
+      sb.finalizaram += fin;
+      sb.matriculados += mat;
+    }
+
+    return Array.from(porCidade.values())
+      .map((c) => ({
+        city: c.city,
+        finalizaram: c.finalizaram,
+        matriculados: c.matriculados,
+        nao_finalizaram: Math.max(0, c.matriculados - c.finalizaram),
+        escolas: Array.from(c.escolas.values())
+          .map((e) => ({
+            ...e,
+            nao_finalizaram: Math.max(0, e.matriculados - e.finalizaram),
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      }))
+      .sort((a, b) => a.city.localeCompare(b.city));
+  });
+
+/** Acerto Médio — % de acerto vs % de erro (sobre respostas marcadas). */
+export const getAcertoMedio = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(idInput)
+  .handler(async ({ data, context }) => {
+    await ensureProfessorOrAdmin(context.supabase, context.userId);
+    const { alunos } = await carregarDataset(context.supabase, data.simuladoId);
+
+    const porCidade = new Map<
+      string,
+      {
+        city: string;
+        acertos: number;
+        respondidas: number;
+        escolas: Map<
+          string,
+          { school_id: string; name: string; acertos: number; respondidas: number }
+        >;
+      }
+    >();
+
+    for (const a of alunos) {
+      const city = cidadeDaEscola(a.escola);
+      let bucket = porCidade.get(city);
+      if (!bucket) {
+        bucket = { city, acertos: 0, respondidas: 0, escolas: new Map() };
+        porCidade.set(city, bucket);
+      }
+      bucket.acertos += a.acertos;
+      bucket.respondidas += a.respondidas;
+      const sid = a.escola?.id ?? "sem-escola";
+      let sb = bucket.escolas.get(sid);
+      if (!sb) {
+        sb = {
+          school_id: sid,
+          name: a.escola?.name ?? "Sem escola",
+          acertos: 0,
+          respondidas: 0,
+        };
+        bucket.escolas.set(sid, sb);
+      }
+      sb.acertos += a.acertos;
+      sb.respondidas += a.respondidas;
+    }
+
+    const pct = (a: number, b: number) => (b > 0 ? Number(((a / b) * 100).toFixed(1)) : 0);
+
+    return Array.from(porCidade.values())
+      .map((c) => ({
+        city: c.city,
+        acertos: c.acertos,
+        erros: Math.max(0, c.respondidas - c.acertos),
+        pct_acerto: pct(c.acertos, c.respondidas),
+        pct_erro: pct(c.respondidas - c.acertos, c.respondidas),
+        escolas: Array.from(c.escolas.values())
+          .map((e) => ({
+            ...e,
+            erros: Math.max(0, e.respondidas - e.acertos),
+            pct_acerto: pct(e.acertos, e.respondidas),
+            pct_erro: pct(e.respondidas - e.acertos, e.respondidas),
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      }))
+      .sort((a, b) => a.city.localeCompare(b.city));
   });
