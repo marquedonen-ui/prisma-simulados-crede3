@@ -52,29 +52,73 @@ export function ImportarRespostas({
   const importar = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error("Selecione uma planilha.");
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, { type: "array" });
+
+      // Detecta extensão para escolher o método de leitura mais compatível.
+      const nome = file.name.toLowerCase();
+      const ehXls = nome.endsWith(".xls");
+      const ehCsv = nome.endsWith(".csv");
+
+      let wb: XLSX.WorkBook;
+      try {
+        if (ehCsv) {
+          const txt = await file.text();
+          wb = XLSX.read(txt, { type: "string", raw: false });
+        } else {
+          // .xls (BIFF) e .xlsx — usa Uint8Array, compatível com ambos.
+          const buf = new Uint8Array(await file.arrayBuffer());
+          wb = XLSX.read(buf, { type: "array", cellDates: false, raw: false });
+        }
+      } catch (err) {
+        throw new Error(
+          `Não foi possível ler o arquivo${ehXls ? " .xls" : ""}. Tente salvar como .xlsx e enviar novamente.`,
+        );
+      }
+
+      if (!wb.SheetNames.length) throw new Error("Planilha sem abas.");
       const sheet = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
+      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, {
+        defval: "",
+        raw: false,
+      });
       if (rows.length === 0) throw new Error("Planilha vazia.");
+
+      // Normaliza chaves de cabeçalho (remove acentos, espaços e caixa).
+      const norm = (s: string) =>
+        String(s)
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/\s+/g, "")
+          .toUpperCase();
+
+      const matKeys = new Set(["MATRICULA", "MATR", "INSCRICAO", "INSC", "ID"]);
 
       const linhas = rows
         .map((row) => {
-          const matricula = String(
-            row["matricula"] ?? row["Matricula"] ?? row["Matrícula"] ?? row["MATRICULA"] ?? "",
-          ).trim();
-          if (!matricula) return null;
+          let matricula = "";
           const respostas: Record<string, string> = {};
           for (const [k, v] of Object.entries(row)) {
-            const key = String(k).trim().toUpperCase();
-            if (/^Q\d+$/.test(key)) respostas[key] = String(v ?? "").trim().toUpperCase();
+            const key = norm(k);
+            if (!matricula && matKeys.has(key)) {
+              matricula = String(v ?? "").trim();
+            }
+            // Aceita Q1, Q01, QUESTAO1, ou apenas "1".
+            const m = key.match(/^(?:Q|QUESTAO)?(\d{1,3})$/);
+            if (m) {
+              const num = parseInt(m[1], 10);
+              if (num > 0) {
+                respostas[`Q${num}`] = String(v ?? "").trim().toUpperCase();
+              }
+            }
           }
+          if (!matricula) return null;
           return { matricula, respostas };
         })
         .filter((x): x is { matricula: string; respostas: Record<string, string> } => !!x);
 
       if (linhas.length === 0)
-        throw new Error("Nenhuma linha válida (coluna 'matricula' obrigatória).");
+        throw new Error(
+          "Nenhuma linha válida. Verifique se há uma coluna 'matricula' e colunas Q1, Q2, ...",
+        );
 
       return importFn({ data: { simuladoId, schoolId, linhas } });
     },
