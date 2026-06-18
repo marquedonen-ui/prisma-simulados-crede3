@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Upload, Download, FileSpreadsheet, Loader2, CheckCircle2, BarChart3, CheckSquare } from "lucide-react";
+import { Upload, Download, FileSpreadsheet, Loader2, CheckCircle2, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
@@ -57,7 +57,6 @@ export function ImportarRespostas({
       if (!schoolId) throw new Error("Selecione a escola.");
       if (!turmaId) throw new Error("Selecione a turma em que a avaliação foi aplicada.");
 
-      // Detecta extensão para escolher o método de leitura mais compatível.
       const nome = file.name.toLowerCase();
       const ehXls = nome.endsWith(".xls");
       const ehCsv = nome.endsWith(".csv");
@@ -68,22 +67,18 @@ export function ImportarRespostas({
           const txt = await file.text();
           wb = XLSX.read(txt, { type: "string", raw: false });
         } else {
-          // .xls (BIFF) e .xlsx — usa Uint8Array, compatível com ambos.
           const buf = new Uint8Array(await file.arrayBuffer());
           wb = XLSX.read(buf, { type: "array", cellDates: false, raw: false });
         }
-      } catch (err) {
+      } catch {
         throw new Error(
-          `Não foi possível ler o arquivo${ehXls ? " .xls" : ""}. Verifique se é uma planilha válida no modelo Reports.`,
+          `Não foi possível ler o arquivo${ehXls ? " .xls" : ""}. Verifique se é uma planilha válida.`,
         );
       }
 
       if (!wb.SheetNames.length) throw new Error("Planilha sem abas.");
       const sheet = wb.Sheets[wb.SheetNames[0]];
 
-      // Lê tudo como matriz (linhas x colunas) para suportar arquivos .xls
-      // exportados de sistemas (SIGE etc.) que costumam ter linhas de título,
-      // linhas em branco ou cabeçalhos mesclados antes do cabeçalho real.
       const matrix = XLSX.utils.sheet_to_json<any[]>(sheet, {
         header: 1,
         defval: "",
@@ -99,47 +94,32 @@ export function ImportarRespostas({
           .replace(/[^A-Za-z0-9]/g, "")
           .toUpperCase();
 
-      const matKeys = new Set([
-        "MATRICULA",
-        "MATR",
-        "INSCRICAO",
-        "INSC",
-        "ID",
-        "NUMDALISTA",
-        "NUMERODALISTA",
-        "NDALISTA",
-        "NLISTA",
-        "CHAMADA",
-      ]);
-      // Reconhece tanto "Q1", "QUESTAO1" como o padrão SIGE "Q 1 Options".
+      // Identifica colunas Q N Options no cabeçalho.
       const qOptionsRe = /^Q(\d{1,3})(?:OPTIONS|OPTION|OPCOES|OPCAO|RESPOSTA|ALTERNATIVA)$/;
       const qSimpleRe = /^(?:Q|QUESTAO)(\d{1,3})$/;
       const isQKey = (k: string) => qOptionsRe.test(k) || qSimpleRe.test(k);
 
-      // Localiza a linha de cabeçalho (primeira que contém matrícula/lista + colunas Q).
       let headerIdx = -1;
       for (let i = 0; i < Math.min(matrix.length, 30); i++) {
         const cells = matrix[i].map(norm);
-        if (cells.some((c) => matKeys.has(c)) && cells.some(isQKey)) {
+        if (cells.some(isQKey)) {
           headerIdx = i;
           break;
         }
       }
-      if (headerIdx === -1) {
-        headerIdx = matrix.findIndex((row) => row.map(norm).some(isQKey));
-      }
       if (headerIdx === -1) headerIdx = 0;
 
       const headers = matrix[headerIdx].map(norm);
-      const matCol = headers.findIndex((h) => matKeys.has(h));
-      const chamadaFallbackCol = 2;
+      // Coluna C (índice 2) = número de chamada / identificação do aluno na turma.
+      const chamadaCol = 2;
 
-      const linhas: Array<{ matricula: string; respostas: Record<string, string> }> = [];
+      const linhas: Array<{ numero_chamada: number; respostas: Record<string, string> }> = [];
       for (let r = headerIdx + 1; r < matrix.length; r++) {
         const row = matrix[r];
         if (!row || row.length === 0) continue;
-        const matricula = String(row[matCol >= 0 ? matCol : chamadaFallbackCol] ?? "").trim();
-        if (!matricula) continue;
+        const rawChamada = String(row[chamadaCol] ?? "").trim();
+        const numero_chamada = parseInt(rawChamada.replace(/\D/g, ""), 10);
+        if (!numero_chamada || numero_chamada < 1) continue;
         const respostas: Record<string, string> = {};
         for (let c = 0; c < headers.length; c++) {
           const h = headers[c];
@@ -150,40 +130,27 @@ export function ImportarRespostas({
             respostas[`Q${num}`] = String(row[c] ?? "").trim().toUpperCase();
           }
         }
-        linhas.push({ matricula, respostas });
+        linhas.push({ numero_chamada, respostas });
       }
 
       if (linhas.length === 0)
         throw new Error(
-          "Nenhuma linha válida. Verifique se há uma coluna 'Núm. da lista' (matrícula) e colunas Q N Options.",
+          "Nenhuma linha válida. Verifique se a coluna C contém o nº de chamada e existem colunas Q N Options.",
         );
-
-
 
       return importFn({ data: { simuladoId, schoolId, turmaId, linhas } });
     },
     onSuccess: (r) => {
       setResultado(r);
-      const naoEnc = r.matriculas_nao_encontradas.length;
-      if (naoEnc > 0) {
-        toast.warning(
-          `Importação parcial: ${r.respostas_importadas} respostas. ${naoEnc} matrícula(s) não encontrada(s).`,
-        );
-      } else {
-        toast.success(
-          `${r.respostas_importadas} respostas de ${r.alunos_processados} aluno(s) importadas!`,
-        );
-      }
+      toast.success(
+        `${r.respostas_importadas} respostas de ${r.alunos_processados} aluno(s) importadas!`,
+      );
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Falha na importação"),
   });
 
   function baixarModelo() {
-    const numQuestoes = 20;
-    // Estrutura compatível com exportação do leitor de cartões (SIGE/Reports):
-    // A=Exame, B=Conjunto de exames, C=Núm. da lista, D=Nome, E=Total de marcas,
-    // F=Nota, G=Classificação, H=Respostas corretas, I=Respostas incorretas,
-    // J=Not attempted, K=Assunto 1, e a partir de L: trios "Q N Options", "Q N Key", "Q N Marks".
+    const numQuestoes = 45;
     const headers = [
       "Exame",
       "Conjunto de exames",
@@ -205,12 +172,12 @@ export function ImportarRespostas({
       "Simulado 1",
       "Conjunto A",
       1,
-      "Maria da Silva",
-      18,
-      9.0,
+      "Aluno 1",
+      40,
+      8.9,
       1,
-      18,
-      2,
+      40,
+      5,
       0,
       "Geral",
     ];
@@ -231,8 +198,8 @@ export function ImportarRespostas({
           <FileSpreadsheet className="h-5 w-5" /> Importar cartões-resposta (offline)
         </CardTitle>
         <CardDescription>
-          Faça upload da planilha preenchida pela escola. O sistema valida as matrículas e
-          importa as respostas para o simulado escolhido.
+          Faça upload da planilha preenchida pela escola. As respostas são vinculadas à turma
+          escolhida, sem necessidade de cadastro de alunos. A coluna C identifica o aluno (nº de chamada).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -301,7 +268,7 @@ export function ImportarRespostas({
               {turmasQ.data?.map((t: any) => (
                 <SelectItem key={t.id} value={t.id}>
                   {t.nome} · {t.ano} · {t.turno}
-                  {t.matricula_sige ? ` · SIGE ${t.matricula_sige}` : ""}
+                  {t.matricula_atual ? ` · ${t.matricula_atual} matric.` : ""}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -348,22 +315,12 @@ export function ImportarRespostas({
                     Importação bem sucedida!
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {resultado.respostas_importadas} respostas de {resultado.alunos_processados} aluno(s) foram importadas para o simulado ({resultado.total_questoes} questões).
+                    {resultado.respostas_importadas} respostas de {resultado.alunos_processados}{" "}
+                    aluno(s) foram importadas para o simulado ({resultado.total_questoes} questões).
                   </p>
                 </div>
               </div>
             </div>
-
-            {resultado.matriculas_nao_encontradas?.length > 0 && (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm">
-                <p className="font-medium text-destructive">
-                  {resultado.matriculas_nao_encontradas.length} matrícula(s) não encontrada(s):
-                </p>
-                <p className="mt-1 font-mono text-xs text-muted-foreground">
-                  {resultado.matriculas_nao_encontradas.join(", ")}
-                </p>
-              </div>
-            )}
 
             {resultado.detalhes_alunos?.length > 0 && (
               <div className="rounded-md border">
@@ -375,8 +332,7 @@ export function ImportarRespostas({
                     <thead className="sticky top-0 bg-muted text-left text-xs uppercase text-muted-foreground">
                       <tr>
                         <th className="px-3 py-2">#</th>
-                        <th className="px-3 py-2">Matrícula</th>
-                        <th className="px-3 py-2">Aluno</th>
+                        <th className="px-3 py-2">Nº chamada</th>
                         <th className="px-3 py-2 text-center">Acertos</th>
                         <th className="px-3 py-2 text-center">Erros</th>
                         <th className="px-3 py-2 text-center">Em branco</th>
@@ -388,13 +344,16 @@ export function ImportarRespostas({
                         const total = resultado.total_questoes || 1;
                         const pct = ((a.acertos / total) * 100).toFixed(1);
                         return (
-                          <tr key={`${a.matricula}-${i}`} className="border-t">
+                          <tr key={`${a.numero_chamada}-${i}`} className="border-t">
                             <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
-                            <td className="px-3 py-2 font-mono text-xs">{a.matricula}</td>
-                            <td className="px-3 py-2">{a.nome}</td>
-                            <td className="px-3 py-2 text-center font-semibold text-green-600">{a.acertos}</td>
+                            <td className="px-3 py-2 font-mono text-xs">{a.numero_chamada}</td>
+                            <td className="px-3 py-2 text-center font-semibold text-green-600">
+                              {a.acertos}
+                            </td>
                             <td className="px-3 py-2 text-center text-destructive">{a.erros}</td>
-                            <td className="px-3 py-2 text-center text-muted-foreground">{a.em_branco}</td>
+                            <td className="px-3 py-2 text-center text-muted-foreground">
+                              {a.em_branco}
+                            </td>
                             <td className="px-3 py-2 text-center">{pct}%</td>
                           </tr>
                         );
@@ -408,17 +367,12 @@ export function ImportarRespostas({
             <div className="rounded-md border bg-muted/40 p-4">
               <p className="text-sm font-semibold">Próximos passos</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Execute a correção automática para consolidar os resultados e, em seguida, acesse os relatórios.
+                Veja os relatórios consolidados por município, escola e padrão de desempenho.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <Button asChild size="sm" variant="outline">
-                  <Link to="/correcao">
-                    <CheckSquare className="mr-2 h-4 w-4" /> Corrigir simulados
-                  </Link>
-                </Button>
                 <Button asChild size="sm">
                   <Link to="/relatorios">
-                    <BarChart3 className="mr-2 h-4 w-4" /> Relatórios por Acerto e Padrões de Desempenho
+                    <BarChart3 className="mr-2 h-4 w-4" /> Ver relatórios
                   </Link>
                 </Button>
               </div>
