@@ -250,6 +250,10 @@ function AdminPage() {
           </CardContent>
         </Card>
 
+        <UsersManager schools={(schoolsQ.data ?? []) as any} />
+
+        <TurmasManager schools={(schoolsQ.data ?? []) as any} />
+
         <AssessmentsManager />
 
         <SupportMaterialsManager />
