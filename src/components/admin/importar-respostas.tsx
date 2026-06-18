@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Upload, Download, FileSpreadsheet, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
 import { importarRespostas } from "@/lib/offline.functions";
+import { listTurmas } from "@/lib/turmas.functions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -35,10 +36,18 @@ export function ImportarRespostas({
 }) {
   const [simuladoId, setSimuladoId] = useState("");
   const [schoolId, setSchoolId] = useState("");
+  const [turmaId, setTurmaId] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [resultado, setResultado] = useState<any>(null);
 
   const importFn = useServerFn(importarRespostas);
+  const listTurmasFn = useServerFn(listTurmas);
+
+  const turmasQ = useQuery({
+    queryKey: ["turmas", schoolId],
+    queryFn: () => listTurmasFn({ data: { schoolId } }),
+    enabled: !!schoolId,
+  });
 
   const importar = useMutation({
     mutationFn: async () => {
@@ -135,7 +144,13 @@ export function ImportarRespostas({
           </div>
           <div className="space-y-1.5">
             <Label>Escola</Label>
-            <Select value={schoolId} onValueChange={setSchoolId}>
+            <Select
+              value={schoolId}
+              onValueChange={(v) => {
+                setSchoolId(v);
+                setTurmaId("");
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione..." />
               </SelectTrigger>
@@ -151,6 +166,33 @@ export function ImportarRespostas({
         </div>
 
         <div className="space-y-1.5">
+          <Label>Turma em que a avaliação foi aplicada</Label>
+          <Select value={turmaId} onValueChange={setTurmaId} disabled={!schoolId}>
+            <SelectTrigger>
+              <SelectValue
+                placeholder={
+                  !schoolId
+                    ? "Selecione uma escola primeiro"
+                    : turmasQ.isLoading
+                      ? "Carregando turmas..."
+                      : (turmasQ.data?.length ?? 0) === 0
+                        ? "Nenhuma turma cadastrada para esta escola"
+                        : "Selecione a turma..."
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {turmasQ.data?.map((t: any) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.nome} · {t.ano} · {t.turno}
+                  {t.matricula_sige ? ` · SIGE ${t.matricula_sige}` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
           <Label>Planilha (.xlsx ou .csv)</Label>
           <input
             type="file"
@@ -162,7 +204,7 @@ export function ImportarRespostas({
 
         <Button
           onClick={() => importar.mutate()}
-          disabled={!file || !simuladoId || !schoolId || importar.isPending}
+          disabled={!file || !simuladoId || !schoolId || !turmaId || importar.isPending}
           className="w-full"
           size="lg"
         >
