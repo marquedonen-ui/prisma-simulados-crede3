@@ -85,7 +85,7 @@ export function TurmasManager({
   });
 
   function openNew() {
-    setEditing({ nome: "", ano: String(new Date().getFullYear()), turno: "manha", matricula_sige: "" });
+    setEditing({ nome: "", ano: String(new Date().getFullYear()), turno: "manha", matricula_sige: "", matricula_atual: "" });
     setOpen(true);
   }
 
