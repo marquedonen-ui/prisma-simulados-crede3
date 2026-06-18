@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import logoUrl from "@/assets/ceara-logo.png";
+import heroIllustration from "@/assets/prisma-hero.png";
 
 export const Route = createFileRoute("/_authenticated/painel")({
   head: () => ({ meta: [{ title: "Painel — PRISMA" }] }),
@@ -112,26 +113,39 @@ function Painel() {
       <main className="mx-auto max-w-6xl space-y-12 px-6 py-12">
         {/* Hero */}
         <section className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-primary/10 via-background to-background p-10 md:p-14">
-          <div className="inline-flex items-center gap-2 rounded-full border bg-background/60 px-3 py-1 text-xs font-medium text-primary backdrop-blur">
-            <Sparkles className="h-3.5 w-3.5" />
-            Plataforma Regional de Simulados
-          </div>
-          <h1 className="mt-5 text-5xl font-extrabold tracking-tight md:text-6xl">
-            PRISMA
-          </h1>
-          <p className="mt-3 max-w-2xl text-lg text-muted-foreground">
-            Sistema da CREDE 3 para aplicação, acompanhamento e análise das avaliações
-            diagnósticas das escolas da rede.
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Button asChild size="lg">
-              <Link to="/avaliacao-diagnostica">
-                Acessar avaliações <ArrowRight className="ml-1.5 h-4 w-4" />
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link to="/tutoriais">Ver tutoriais</Link>
-            </Button>
+          <div className="grid items-center gap-8 md:grid-cols-2">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border bg-background/60 px-3 py-1 text-xs font-medium text-primary backdrop-blur">
+                <Sparkles className="h-3.5 w-3.5" />
+                Plataforma Regional de Simulados
+              </div>
+              <h1 className="mt-5 text-5xl font-extrabold tracking-tight md:text-6xl">
+                PRISMA
+              </h1>
+              <p className="mt-3 max-w-2xl text-lg text-muted-foreground">
+                Sistema da CREDE 3 para aplicação, acompanhamento e análise das avaliações
+                diagnósticas das escolas da rede.
+              </p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Button asChild size="lg">
+                  <Link to="/avaliacao-diagnostica">
+                    Acessar avaliações <ArrowRight className="ml-1.5 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <Link to="/tutoriais">Ver tutoriais</Link>
+                </Button>
+              </div>
+            </div>
+            <div className="hidden md:flex justify-center">
+              <img
+                src={heroIllustration}
+                alt="Ilustração: diagnosticar, monitorar e apoiar a aprendizagem"
+                width={1024}
+                height={1024}
+                className="w-full max-w-md h-auto"
+              />
+            </div>
           </div>
         </section>
 
