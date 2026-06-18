@@ -46,9 +46,9 @@ export function AppSidebar() {
     aluno: "Aluno",
   };
   const profile = profileQ.data;
-  const rolePriority = ["admin", "professor", "aluno"];
+  const rolePriority = ["admin", "professor", "aluno"] as const;
   const primaryRole = profile?.roles
-    ? rolePriority.find((r) => profile.roles.includes(r)) ?? profile.roles[0]
+    ? rolePriority.find((r) => (profile.roles as string[]).includes(r)) ?? profile.roles[0]
     : null;
   const roleLabel = primaryRole ? (roleLabels[primaryRole] ?? primaryRole) : null;
   const initials = (profile?.fullName ?? profile?.email ?? "?")
