@@ -56,6 +56,7 @@ export const updateSupportMaterial = createServerFn({ method: "POST" })
         id: z.string().uuid(),
         offer: z.string().min(1),
         grade: z.string().min(1),
+        component: z.string().optional().nullable(),
         answer_key_pdf_path: z.string().optional().nullable(),
         commented_test_pdf_path: z.string().optional().nullable(),
         support_material_url: z.string().optional().nullable(),
@@ -68,6 +69,7 @@ export const updateSupportMaterial = createServerFn({ method: "POST" })
       .update({
         offer: data.offer,
         grade: data.grade,
+        component: data.component ?? null,
         answer_key_pdf_path: data.answer_key_pdf_path ?? null,
         commented_test_pdf_path: data.commented_test_pdf_path ?? null,
         support_material_url: data.support_material_url ?? null,
