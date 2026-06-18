@@ -10,7 +10,7 @@ export const listSupportMaterials = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("support_materials")
       .select(
-        "id, offer, grade, answer_key_pdf_path, commented_test_pdf_path, support_material_url, created_at",
+        "id, offer, grade, component, answer_key_pdf_path, commented_test_pdf_path, support_material_url, created_at",
       )
       .order("created_at", { ascending: false });
     if (error) throw error;
