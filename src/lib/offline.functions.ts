@@ -72,6 +72,20 @@ export const deleteQuestao = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const countQuestoes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { simuladoId: string }) =>
+    z.object({ simuladoId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { count, error } = await context.supabase
+      .from("questoes")
+      .select("id", { count: "exact", head: true })
+      .eq("simulado_id", data.simuladoId);
+    if (error) throw error;
+    return { total: count ?? 0 };
+  });
+
 // ============== ALUNOS ==============
 
 export const listAlunos = createServerFn({ method: "GET" })
