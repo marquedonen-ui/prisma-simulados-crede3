@@ -102,6 +102,7 @@ export function SupportMaterialsManager() {
 
       const payload = {
         offer, grade,
+        component: component.trim() || null,
         answer_key_pdf_path: finalKey,
         commented_test_pdf_path: finalTest,
         support_material_url: supportUrl.trim() || null,
