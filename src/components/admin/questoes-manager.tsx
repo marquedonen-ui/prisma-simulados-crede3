@@ -1,18 +1,13 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Pencil, ListChecks } from "lucide-react";
+import { ListChecks, Save } from "lucide-react";
 import { toast } from "sonner";
 
-import {
-  listQuestoes,
-  upsertQuestao,
-  deleteQuestao,
-} from "@/lib/offline.functions";
+import { listQuestoes, saveGabarito } from "@/lib/offline.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -27,37 +22,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type Simulado = { id: string; offer: string; subject: string; grade: string };
-
-const empty = {
-  numero: 1,
-  enunciado: "",
-  alternativa_a: "",
-  alternativa_b: "",
-  alternativa_c: "",
-  alternativa_d: "",
-  alternativa_e: "",
-  resposta_correta: "A" as "A" | "B" | "C" | "D" | "E",
-  pontos: 1,
-};
+type Letter = "A" | "B" | "C" | "D" | "E";
+const LETTERS: Letter[] = ["A", "B", "C", "D", "E"];
 
 export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
   const qc = useQueryClient();
   const [simuladoId, setSimuladoId] = useState<string>("");
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
+  const [total, setTotal] = useState<number>(20);
+  const [answers, setAnswers] = useState<Record<number, Letter>>({});
 
   const listFn = useServerFn(listQuestoes);
-  const upsertFn = useServerFn(upsertQuestao);
-  const delFn = useServerFn(deleteQuestao);
+  const saveFn = useServerFn(saveGabarito);
 
   const questoesQ = useQuery({
     queryKey: ["questoes", simuladoId],
@@ -65,47 +43,46 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
     enabled: !!simuladoId,
   });
 
-  const upsert = useMutation({
-    mutationFn: (payload: any) => upsertFn({ data: payload }),
+  // Hidrata estado ao trocar simulado / carregar dados
+  useEffect(() => {
+    const rows = questoesQ.data ?? [];
+    if (!simuladoId) {
+      setAnswers({});
+      return;
+    }
+    const map: Record<number, Letter> = {};
+    let max = 0;
+    for (const q of rows as any[]) {
+      map[q.numero] = q.resposta_correta as Letter;
+      if (q.numero > max) max = q.numero;
+    }
+    setAnswers(map);
+    if (max > 0) setTotal(max);
+  }, [simuladoId, questoesQ.data]);
+
+  const save = useMutation({
+    mutationFn: () => {
+      const payload = {
+        simulado_id: simuladoId,
+        total,
+        answers: Array.from({ length: total }, (_, i) => {
+          const n = i + 1;
+          return { numero: n, resposta_correta: (answers[n] ?? "A") as Letter };
+        }),
+      };
+      return saveFn({ data: payload });
+    },
     onSuccess: () => {
-      toast.success("Questão salva.");
-      setOpen(false);
-      setEditing(null);
+      toast.success("Gabarito salvo.");
       qc.invalidateQueries({ queryKey: ["questoes", simuladoId] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
-  const del = useMutation({
-    mutationFn: (id: string) => delFn({ data: { id } }),
-    onSuccess: () => {
-      toast.success("Questão removida.");
-      qc.invalidateQueries({ queryKey: ["questoes", simuladoId] });
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
-  });
-
-  function openNew() {
-    const nextNumero = (questoesQ.data?.length ?? 0) + 1;
-    setEditing({ ...empty, numero: nextNumero, simulado_id: simuladoId });
-    setOpen(true);
-  }
-
-  function openEdit(q: any) {
-    setEditing({ ...q, alternativa_e: q.alternativa_e ?? "" });
-    setOpen(true);
-  }
-
-  function save(e: React.FormEvent) {
-    e.preventDefault();
-    upsert.mutate({
-      ...editing,
-      simulado_id: simuladoId,
-      numero: Number(editing.numero),
-      pontos: Number(editing.pontos),
-      ordem: Number(editing.numero),
-    });
-  }
+  const marcadas = useMemo(
+    () => Array.from({ length: total }, (_, i) => i + 1).filter((n) => !!answers[n]).length,
+    [answers, total],
+  );
 
   return (
     <Card>
@@ -114,165 +91,104 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
           <ListChecks className="h-5 w-5" /> Gabarito / Questões por simulado
         </CardTitle>
         <CardDescription>
-          Cadastre o número da questão, alternativas, resposta correta e pontos.
+          Defina a quantidade total de questões e marque a alternativa correta de cada uma.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-          <Select value={simuladoId} onValueChange={setSimuladoId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione um simulado..." />
-            </SelectTrigger>
-            <SelectContent>
-              {simulados.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.offer} · {s.subject} · {s.grade}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button onClick={openNew} disabled={!simuladoId}>
-            <Plus className="mr-2 h-4 w-4" /> Nova questão
-          </Button>
+        <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
+          <div className="space-y-1.5">
+            <Label>Simulado</Label>
+            <Select value={simuladoId} onValueChange={setSimuladoId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione um simulado..." />
+              </SelectTrigger>
+              <SelectContent>
+                {simulados.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.offer} · {s.subject} · {s.grade}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Total de questões</Label>
+            <Input
+              type="number"
+              min={1}
+              max={200}
+              value={total}
+              onChange={(e) => setTotal(Math.max(1, Math.min(200, Number(e.target.value) || 1)))}
+              disabled={!simuladoId}
+            />
+          </div>
         </div>
 
         {simuladoId && (
-          <div className="max-h-96 overflow-auto rounded-md border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted text-left text-xs uppercase text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2">Nº</th>
-                  <th className="px-3 py-2">Enunciado</th>
-                  <th className="px-3 py-2 text-center">Resposta</th>
-                  <th className="px-3 py-2 text-right">Pontos</th>
-                  <th className="px-3 py-2 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(questoesQ.data ?? []).length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">
-                      Nenhuma questão cadastrada.
-                    </td>
-                  </tr>
-                )}
-                {questoesQ.data?.map((q: any) => (
-                  <tr key={q.id} className="border-t">
-                    <td className="px-3 py-2 font-mono">{q.numero}</td>
-                    <td className="max-w-md truncate px-3 py-2">{q.enunciado}</td>
-                    <td className="px-3 py-2 text-center">
-                      <Badge>{q.resposta_correta}</Badge>
-                    </td>
-                    <td className="px-3 py-2 text-right">{q.pontos}</td>
-                    <td className="px-3 py-2 text-right">
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(q)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => {
-                          if (confirm(`Remover questão ${q.numero}?`)) del.mutate(q.id);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+          <>
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>
+                Marcadas: <strong className="text-foreground">{marcadas}</strong> de{" "}
+                <strong className="text-foreground">{total}</strong>
+              </span>
+              <Button
+                size="sm"
+                onClick={() => save.mutate()}
+                disabled={save.isPending || questoesQ.isLoading}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                {save.isPending ? "Salvando..." : "Salvar gabarito"}
+              </Button>
+            </div>
 
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>
-                {editing?.id ? "Editar questão" : "Nova questão"}
-              </DialogTitle>
-            </DialogHeader>
-            {editing && (
-              <form onSubmit={save} className="space-y-3">
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>Nº</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={editing.numero}
-                      onChange={(e) =>
-                        setEditing({ ...editing, numero: Number(e.target.value) })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Resposta correta</Label>
-                    <Select
-                      value={editing.resposta_correta}
-                      onValueChange={(v) =>
-                        setEditing({ ...editing, resposta_correta: v as any })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {["A", "B", "C", "D", "E"].map((l) => (
-                          <SelectItem key={l} value={l}>
-                            {l}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Pontos</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={editing.pontos}
-                      onChange={(e) =>
-                        setEditing({ ...editing, pontos: Number(e.target.value) })
-                      }
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Enunciado</Label>
-                  <Textarea
-                    rows={3}
-                    value={editing.enunciado}
-                    onChange={(e) =>
-                      setEditing({ ...editing, enunciado: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                {(["a", "b", "c", "d", "e"] as const).map((l) => (
-                  <div key={l} className="space-y-1.5">
-                    <Label>
-                      Alternativa {l.toUpperCase()}
-                      {l === "e" && " (opcional)"}
-                    </Label>
-                    <Input
-                      value={editing[`alternativa_${l}`] ?? ""}
-                      onChange={(e) =>
-                        setEditing({ ...editing, [`alternativa_${l}`]: e.target.value })
-                      }
-                      required={l !== "e"}
-                    />
-                  </div>
-                ))}
-                <Button type="submit" disabled={upsert.isPending} className="w-full">
-                  {upsert.isPending ? "Salvando..." : "Salvar questão"}
-                </Button>
-              </form>
-            )}
-          </DialogContent>
-        </Dialog>
+            <div className="overflow-auto rounded-md border">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-muted text-xs uppercase text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Questão</th>
+                    {LETTERS.map((l) => (
+                      <th key={l} className="px-3 py-2 text-center">
+                        {l}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: total }, (_, i) => i + 1).map((n) => {
+                    const selected = answers[n];
+                    return (
+                      <tr key={n} className="border-t">
+                        <td className="px-3 py-1.5 font-mono font-medium">{n}</td>
+                        {LETTERS.map((l) => {
+                          const isSel = selected === l;
+                          return (
+                            <td key={l} className="px-3 py-1.5 text-center">
+                              <button
+                                type="button"
+                                aria-label={`Questão ${n} alternativa ${l}`}
+                                onClick={() =>
+                                  setAnswers((prev) => ({ ...prev, [n]: l }))
+                                }
+                                className={cn(
+                                  "inline-flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold transition",
+                                  isSel
+                                    ? "border-primary bg-primary text-primary-foreground shadow"
+                                    : "border-muted-foreground/30 bg-background text-muted-foreground hover:border-primary/60 hover:text-foreground",
+                                )}
+                              >
+                                {l}
+                              </button>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
