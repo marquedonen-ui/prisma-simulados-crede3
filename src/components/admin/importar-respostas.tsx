@@ -339,25 +339,90 @@ export function ImportarRespostas({
         </Button>
 
         {resultado && (
-          <div className="rounded-md border bg-muted/40 p-4 text-sm">
-            <p className="font-semibold">Resumo da importação</p>
-            <ul className="mt-2 space-y-1 text-muted-foreground">
-              <li>Respostas importadas: {resultado.respostas_importadas}</li>
-              <li>Alunos processados: {resultado.alunos_processados}</li>
-              <li>Total de questões do simulado: {resultado.total_questoes}</li>
-              {resultado.matriculas_nao_encontradas.length > 0 && (
-                <li className="text-destructive">
-                  Matrículas não encontradas:{" "}
-                  <span className="font-mono">
-                    {resultado.matriculas_nao_encontradas.join(", ")}
-                  </span>
-                </li>
-              )}
-            </ul>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Vá em <strong>Correção de Simulados</strong> no menu lateral e clique em
-              "Corrigir Automaticamente" para gerar os resultados.
-            </p>
+          <div className="space-y-4">
+            <div className="rounded-md border border-green-600/30 bg-green-600/10 p-4">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 text-green-600" />
+                <div className="flex-1">
+                  <p className="font-semibold text-green-700 dark:text-green-400">
+                    Importação bem sucedida!
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {resultado.respostas_importadas} respostas de {resultado.alunos_processados} aluno(s) foram importadas para o simulado ({resultado.total_questoes} questões).
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {resultado.matriculas_nao_encontradas?.length > 0 && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm">
+                <p className="font-medium text-destructive">
+                  {resultado.matriculas_nao_encontradas.length} matrícula(s) não encontrada(s):
+                </p>
+                <p className="mt-1 font-mono text-xs text-muted-foreground">
+                  {resultado.matriculas_nao_encontradas.join(", ")}
+                </p>
+              </div>
+            )}
+
+            {resultado.detalhes_alunos?.length > 0 && (
+              <div className="rounded-md border">
+                <div className="border-b bg-muted/40 px-3 py-2">
+                  <p className="text-sm font-semibold">Respostas importadas por aluno</p>
+                </div>
+                <div className="max-h-96 overflow-auto">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-muted text-left text-xs uppercase text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2">#</th>
+                        <th className="px-3 py-2">Matrícula</th>
+                        <th className="px-3 py-2">Aluno</th>
+                        <th className="px-3 py-2 text-center">Acertos</th>
+                        <th className="px-3 py-2 text-center">Erros</th>
+                        <th className="px-3 py-2 text-center">Em branco</th>
+                        <th className="px-3 py-2 text-center">% acerto</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {resultado.detalhes_alunos.map((a: any, i: number) => {
+                        const total = resultado.total_questoes || 1;
+                        const pct = ((a.acertos / total) * 100).toFixed(1);
+                        return (
+                          <tr key={`${a.matricula}-${i}`} className="border-t">
+                            <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
+                            <td className="px-3 py-2 font-mono text-xs">{a.matricula}</td>
+                            <td className="px-3 py-2">{a.nome}</td>
+                            <td className="px-3 py-2 text-center font-semibold text-green-600">{a.acertos}</td>
+                            <td className="px-3 py-2 text-center text-destructive">{a.erros}</td>
+                            <td className="px-3 py-2 text-center text-muted-foreground">{a.em_branco}</td>
+                            <td className="px-3 py-2 text-center">{pct}%</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-md border bg-muted/40 p-4">
+              <p className="text-sm font-semibold">Próximos passos</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Execute a correção automática para consolidar os resultados e, em seguida, acesse os relatórios.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button asChild size="sm" variant="outline">
+                  <Link to="/correcao">
+                    <CheckSquare className="mr-2 h-4 w-4" /> Corrigir simulados
+                  </Link>
+                </Button>
+                <Button asChild size="sm">
+                  <Link to="/relatorios">
+                    <BarChart3 className="mr-2 h-4 w-4" /> Relatórios por Acerto e Padrões de Desempenho
+                  </Link>
+                </Button>
+              </div>
+            </div>
           </div>
         )}
       </CardContent>
