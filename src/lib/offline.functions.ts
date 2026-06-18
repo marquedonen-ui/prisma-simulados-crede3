@@ -129,6 +129,7 @@ export const deleteAluno = createServerFn({ method: "POST" })
 const importSchema = z.object({
   simuladoId: z.string().uuid(),
   schoolId: z.string().uuid(),
+  turmaId: z.string().uuid().optional(),
   linhas: z
     .array(
       z.object({
@@ -156,14 +157,39 @@ export const importarRespostas = createServerFn({ method: "POST" })
     }
     const numToId = new Map<number, string>(questoes.map((q) => [q.numero, q.id]));
 
+    const normalizeIdentificador = (valor: string) => {
+      const limpo = String(valor ?? "").trim().replace(/\s+/g, "").replace(/\.0+$/, "");
+      return /^\d+$/.test(limpo) ? String(Number(limpo)) : limpo;
+    };
+    const variantesIdentificador = (valor: string) => {
+      const original = String(valor ?? "").trim();
+      const normalizado = normalizeIdentificador(original);
+      const variantes = new Set([original, normalizado]);
+      if (/^\d+$/.test(normalizado)) {
+        variantes.add(normalizado.padStart(2, "0"));
+        variantes.add(normalizado.padStart(3, "0"));
+        variantes.add(normalizado.padStart(4, "0"));
+      }
+      return Array.from(variantes).filter(Boolean);
+    };
+
     const matriculas = Array.from(new Set(data.linhas.map((l) => l.matricula.trim())));
+    const matriculasBusca = Array.from(new Set(matriculas.flatMap(variantesIdentificador)));
     const { data: alunos, error: aErr } = await context.supabase
       .from("alunos")
-      .select("id, matricula")
+      .select("id, matricula, turma_id")
       .eq("school_id", data.schoolId)
-      .in("matricula", matriculas);
+      .in("matricula", matriculasBusca);
     if (aErr) throw aErr;
-    const matToAlunoId = new Map((alunos ?? []).map((a) => [a.matricula, a.id]));
+    const alunosCandidatos = data.turmaId
+      ? (alunos ?? []).filter((a) => a.turma_id === data.turmaId)
+      : (alunos ?? []);
+    const alunosParaImportar = alunosCandidatos.length > 0 ? alunosCandidatos : (alunos ?? []);
+    const matToAlunoId = new Map<string, string>();
+    for (const aluno of alunosParaImportar) {
+      matToAlunoId.set(aluno.matricula, aluno.id);
+      matToAlunoId.set(normalizeIdentificador(aluno.matricula), aluno.id);
+    }
 
     const naoEncontradas: string[] = [];
     const inserir: Array<{
@@ -174,7 +200,7 @@ export const importarRespostas = createServerFn({ method: "POST" })
     }> = [];
 
     for (const linha of data.linhas) {
-      const aluno_id = matToAlunoId.get(linha.matricula.trim());
+      const aluno_id = matToAlunoId.get(linha.matricula.trim()) ?? matToAlunoId.get(normalizeIdentificador(linha.matricula));
       if (!aluno_id) {
         naoEncontradas.push(linha.matricula);
         continue;
