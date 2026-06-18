@@ -16,6 +16,7 @@ import { Route as AuthenticatedTutoriaisRouteImport } from './routes/_authentica
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedGabaritoRouteImport } from './routes/_authenticated/gabarito'
+import { Route as AuthenticatedCorrecaoRouteImport } from './routes/_authenticated/correcao'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAvaliacaoDiagnosticaIndexRouteImport } from './routes/_authenticated/avaliacao-diagnostica.index'
 import { Route as AuthenticatedAvaliacaoDiagnosticaIdRouteImport } from './routes/_authenticated/avaliacao-diagnostica.$id'
@@ -54,6 +55,11 @@ const AuthenticatedGabaritoRoute = AuthenticatedGabaritoRouteImport.update({
   path: '/gabarito',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCorrecaoRoute = AuthenticatedCorrecaoRouteImport.update({
+  id: '/correcao',
+  path: '/correcao',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/aluno': typeof AlunoRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/correcao': typeof AuthenticatedCorrecaoRoute
   '/gabarito': typeof AuthenticatedGabaritoRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
@@ -87,6 +94,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aluno': typeof AlunoRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/correcao': typeof AuthenticatedCorrecaoRoute
   '/gabarito': typeof AuthenticatedGabaritoRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
@@ -100,6 +108,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/aluno': typeof AlunoRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/correcao': typeof AuthenticatedCorrecaoRoute
   '/_authenticated/gabarito': typeof AuthenticatedGabaritoRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
     | '/'
     | '/aluno'
     | '/admin'
+    | '/correcao'
     | '/gabarito'
     | '/painel'
     | '/relatorios'
@@ -124,6 +134,7 @@ export interface FileRouteTypes {
     | '/'
     | '/aluno'
     | '/admin'
+    | '/correcao'
     | '/gabarito'
     | '/painel'
     | '/relatorios'
@@ -136,6 +147,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/aluno'
     | '/_authenticated/admin'
+    | '/_authenticated/correcao'
     | '/_authenticated/gabarito'
     | '/_authenticated/painel'
     | '/_authenticated/relatorios'
@@ -201,6 +213,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGabaritoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/correcao': {
+      id: '/_authenticated/correcao'
+      path: '/correcao'
+      fullPath: '/correcao'
+      preLoaderRoute: typeof AuthenticatedCorrecaoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
       path: '/admin'
@@ -227,6 +246,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedCorrecaoRoute: typeof AuthenticatedCorrecaoRoute
   AuthenticatedGabaritoRoute: typeof AuthenticatedGabaritoRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
@@ -237,6 +257,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedCorrecaoRoute: AuthenticatedCorrecaoRoute,
   AuthenticatedGabaritoRoute: AuthenticatedGabaritoRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,

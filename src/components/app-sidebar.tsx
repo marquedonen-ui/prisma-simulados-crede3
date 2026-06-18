@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Home, BookOpen, ClipboardList, BarChart3, FileCheck, Shield } from "lucide-react";
+import { Home, BookOpen, ClipboardList, BarChart3, FileCheck, Shield, CheckSquare } from "lucide-react";
 
 import {
   Sidebar,
@@ -36,9 +36,17 @@ export function AppSidebar() {
   const getProfile = useServerFn(getMyProfile);
   const roleQ = useQuery({ queryKey: ["my-role"], queryFn: () => getRole() });
   const profileQ = useQuery({ queryKey: ["my-profile"], queryFn: () => getProfile() });
-  const items = roleQ.data?.isAdmin
-    ? [...baseItems, { title: "Administração", url: "/admin", icon: Shield }]
-    : baseItems;
+  const isProfessor =
+    roleQ.data?.roles?.includes("professor") || roleQ.data?.roles?.includes("admin");
+  const items = [
+    ...baseItems,
+    ...(isProfessor
+      ? [{ title: "Correção de Simulados", url: "/correcao", icon: CheckSquare }]
+      : []),
+    ...(roleQ.data?.isAdmin
+      ? [{ title: "Administração", url: "/admin", icon: Shield }]
+      : []),
+  ];
 
   const roleLabels: Record<string, string> = {
     admin: "Administrador",
