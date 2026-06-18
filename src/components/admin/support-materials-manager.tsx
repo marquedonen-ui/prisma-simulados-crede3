@@ -36,6 +36,7 @@ type Row = {
   id: string;
   offer: string;
   grade: string;
+  component: string | null;
   answer_key_pdf_path: string | null;
   commented_test_pdf_path: string | null;
   support_material_url: string | null;
