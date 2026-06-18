@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      alunos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          matricula: string
+          nome: string
+          school_id: string
+          turma: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          matricula: string
+          nome: string
+          school_id: string
+          turma?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          matricula?: string
+          nome?: string
+          school_id?: string
+          turma?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alunos_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       diagnostic_assessments: {
         Row: {
           answer_sheet_pdf_path: string | null
@@ -132,30 +173,40 @@ export type Database = {
       }
       respostas_alunos: {
         Row: {
+          aluno_id: string | null
           data_resposta: string
           id: string
           questao_id: string
           resposta_escolhida: string
           simulado_id: string
-          usuario_id: string
+          usuario_id: string | null
         }
         Insert: {
+          aluno_id?: string | null
           data_resposta?: string
           id?: string
           questao_id: string
           resposta_escolhida: string
           simulado_id: string
-          usuario_id: string
+          usuario_id?: string | null
         }
         Update: {
+          aluno_id?: string | null
           data_resposta?: string
           id?: string
           questao_id?: string
           resposta_escolhida?: string
           simulado_id?: string
-          usuario_id?: string
+          usuario_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "respostas_alunos_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "respostas_alunos_questao_id_fkey"
             columns: ["questao_id"]
@@ -175,6 +226,7 @@ export type Database = {
       resultados_simulados: {
         Row: {
           acertos: number
+          aluno_id: string | null
           created_at: string
           data_finalizacao: string
           id: string
@@ -183,10 +235,11 @@ export type Database = {
           simulado_id: string
           total_questoes: number
           updated_at: string
-          usuario_id: string
+          usuario_id: string | null
         }
         Insert: {
           acertos?: number
+          aluno_id?: string | null
           created_at?: string
           data_finalizacao?: string
           id?: string
@@ -195,10 +248,11 @@ export type Database = {
           simulado_id: string
           total_questoes?: number
           updated_at?: string
-          usuario_id: string
+          usuario_id?: string | null
         }
         Update: {
           acertos?: number
+          aluno_id?: string | null
           created_at?: string
           data_finalizacao?: string
           id?: string
@@ -207,9 +261,16 @@ export type Database = {
           simulado_id?: string
           total_questoes?: number
           updated_at?: string
-          usuario_id?: string
+          usuario_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "resultados_simulados_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "resultados_simulados_simulado_id_fkey"
             columns: ["simulado_id"]
