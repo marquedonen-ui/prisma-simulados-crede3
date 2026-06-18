@@ -52,6 +52,9 @@ export function ImportarRespostas({
   const importar = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error("Selecione uma planilha.");
+      if (!simuladoId) throw new Error("Selecione o simulado.");
+      if (!schoolId) throw new Error("Selecione a escola.");
+      if (!turmaId) throw new Error("Selecione a turma em que a avaliação foi aplicada.");
 
       // Detecta extensão para escolher o método de leitura mais compatível.
       const nome = file.name.toLowerCase();
@@ -70,7 +73,7 @@ export function ImportarRespostas({
         }
       } catch (err) {
         throw new Error(
-          `Não foi possível ler o arquivo${ehXls ? " .xls" : ""}. Tente salvar como .xlsx e enviar novamente.`,
+          `Não foi possível ler o arquivo${ehXls ? " .xls" : ""}. Verifique se é uma planilha válida no modelo Reports.`,
         );
       }
 
@@ -92,7 +95,7 @@ export function ImportarRespostas({
         String(s ?? "")
           .normalize("NFD")
           .replace(/[\u0300-\u036f]/g, "")
-          .replace(/\s+/g, "")
+          .replace(/[^A-Za-z0-9]/g, "")
           .toUpperCase();
 
       const matKeys = new Set([
@@ -107,8 +110,8 @@ export function ImportarRespostas({
         "NLISTA",
         "CHAMADA",
       ]);
-      // Reconhece tanto "Q1", "QUESTAO1" como o padrão SIGE "Q 1 OPTIONS" / "Q1OPTIONS".
-      const qOptionsRe = /^Q(\d{1,3})OPTIONS$/;
+      // Reconhece tanto "Q1", "QUESTAO1" como o padrão SIGE "Q 1 Options".
+      const qOptionsRe = /^Q(\d{1,3})(?:OPTIONS|OPTION|OPCOES|OPCAO|RESPOSTA|ALTERNATIVA)$/;
       const qSimpleRe = /^(?:Q|QUESTAO)(\d{1,3})$/;
       const isQKey = (k: string) => qOptionsRe.test(k) || qSimpleRe.test(k);
 
@@ -121,16 +124,20 @@ export function ImportarRespostas({
           break;
         }
       }
+      if (headerIdx === -1) {
+        headerIdx = matrix.findIndex((row) => row.map(norm).some(isQKey));
+      }
       if (headerIdx === -1) headerIdx = 0;
 
       const headers = matrix[headerIdx].map(norm);
       const matCol = headers.findIndex((h) => matKeys.has(h));
+      const chamadaFallbackCol = 2;
 
       const linhas: Array<{ matricula: string; respostas: Record<string, string> }> = [];
       for (let r = headerIdx + 1; r < matrix.length; r++) {
         const row = matrix[r];
         if (!row || row.length === 0) continue;
-        const matricula = matCol >= 0 ? String(row[matCol] ?? "").trim() : "";
+        const matricula = String(row[matCol >= 0 ? matCol : chamadaFallbackCol] ?? "").trim();
         if (!matricula) continue;
         const respostas: Record<string, string> = {};
         for (let c = 0; c < headers.length; c++) {
@@ -152,7 +159,7 @@ export function ImportarRespostas({
 
 
 
-      return importFn({ data: { simuladoId, schoolId, linhas } });
+      return importFn({ data: { simuladoId, schoolId, turmaId, linhas } });
     },
     onSuccess: (r) => {
       setResultado(r);
@@ -301,18 +308,21 @@ export function ImportarRespostas({
         </div>
 
         <div className="space-y-1.5">
-          <Label>Planilha (.xlsx ou .csv)</Label>
+          <Label>Planilha (.xlsx, .xls ou .csv)</Label>
           <input
             type="file"
             accept=".xlsx,.xls,.csv"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            onChange={(e) => {
+              setResultado(null);
+              setFile(e.target.files?.[0] ?? null);
+            }}
             className="block w-full rounded-md border bg-background px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1 file:text-primary-foreground"
           />
         </div>
 
         <Button
           onClick={() => importar.mutate()}
-          disabled={!file || !simuladoId || !schoolId || !turmaId || importar.isPending}
+          disabled={importar.isPending}
           className="w-full"
           size="lg"
         >
