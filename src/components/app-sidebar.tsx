@@ -36,25 +36,27 @@ export function AppSidebar() {
   const getProfile = useServerFn(getMyProfile);
   const roleQ = useQuery({ queryKey: ["my-role"], queryFn: () => getRole() });
   const profileQ = useQuery({ queryKey: ["my-profile"], queryFn: () => getProfile() });
-  const isProfessor =
-    roleQ.data?.roles?.includes("professor") || roleQ.data?.roles?.includes("admin");
+  const roles: string[] = roleQ.data?.roles ?? [];
+  const isAdmin = roles.includes("admin");
+  const isProfResp = roles.includes("professor_responsavel");
+  const canCorrect = isAdmin || isProfResp || roles.includes("professor");
   const items = [
     ...baseItems,
-    ...(isProfessor
+    ...(canCorrect
       ? [{ title: "Correção de Simulados", url: "/correcao", icon: CheckSquare }]
       : []),
-    ...(roleQ.data?.isAdmin
-      ? [{ title: "Administração", url: "/admin", icon: Shield }]
-      : []),
+    ...(isAdmin ? [{ title: "Administração", url: "/admin", icon: Shield }] : []),
   ];
 
   const roleLabels: Record<string, string> = {
     admin: "Administrador",
+    professor_responsavel: "Professor responsável",
+    gestor: "Gestor escolar",
     professor: "Professor",
     aluno: "Aluno",
   };
   const profile = profileQ.data;
-  const rolePriority = ["admin", "professor", "aluno"] as const;
+  const rolePriority = ["admin", "professor_responsavel", "gestor", "professor", "aluno"] as const;
   const primaryRole = profile?.roles
     ? rolePriority.find((r) => (profile.roles as string[]).includes(r)) ?? profile.roles[0]
     : null;

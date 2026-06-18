@@ -23,6 +23,7 @@ export type Database = {
           nome: string
           school_id: string
           turma: string | null
+          turma_id: string | null
           updated_at: string
         }
         Insert: {
@@ -33,6 +34,7 @@ export type Database = {
           nome: string
           school_id: string
           turma?: string | null
+          turma_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -43,6 +45,7 @@ export type Database = {
           nome?: string
           school_id?: string
           turma?: string | null
+          turma_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -51,6 +54,13 @@ export type Database = {
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alunos_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
             referencedColumns: ["id"]
           },
         ]
@@ -97,20 +107,31 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          school_id: string | null
         }
         Insert: {
           created_at?: string
           email: string
           full_name?: string | null
           id: string
+          school_id?: string | null
         }
         Update: {
           created_at?: string
           email?: string
           full_name?: string | null
           id?: string
+          school_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       questoes: {
         Row: {
@@ -378,6 +399,44 @@ export type Database = {
         }
         Relationships: []
       }
+      turmas: {
+        Row: {
+          ano: string
+          created_at: string
+          id: string
+          nome: string
+          school_id: string
+          turno: Database["public"]["Enums"]["turno_turma"]
+          updated_at: string
+        }
+        Insert: {
+          ano: string
+          created_at?: string
+          id?: string
+          nome: string
+          school_id: string
+          turno?: Database["public"]["Enums"]["turno_turma"]
+          updated_at?: string
+        }
+        Update: {
+          ano?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          school_id?: string
+          turno?: Database["public"]["Enums"]["turno_turma"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turmas_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -419,6 +478,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_my_school: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -437,7 +497,13 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "professor" | "aluno"
+      app_role:
+        | "admin"
+        | "professor"
+        | "aluno"
+        | "professor_responsavel"
+        | "gestor"
+      turno_turma: "manha" | "tarde" | "noite" | "integral"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -565,7 +631,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "professor", "aluno"],
+      app_role: [
+        "admin",
+        "professor",
+        "aluno",
+        "professor_responsavel",
+        "gestor",
+      ],
+      turno_turma: ["manha", "tarde", "noite", "integral"],
     },
   },
 } as const

@@ -27,6 +27,8 @@ import { SupportMaterialsManager } from "@/components/admin/support-materials-ma
 import { QuestoesManager } from "@/components/admin/questoes-manager";
 import { AlunosManager } from "@/components/admin/alunos-manager";
 import { ImportarRespostas } from "@/components/admin/importar-respostas";
+import { UsersManager } from "@/components/admin/users-manager";
+import { TurmasManager } from "@/components/admin/turmas-manager";
 import { listAssessments } from "@/lib/assessments.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -247,6 +249,10 @@ function AdminPage() {
             )}
           </CardContent>
         </Card>
+
+        <UsersManager schools={(schoolsQ.data ?? []) as any} />
+
+        <TurmasManager schools={(schoolsQ.data ?? []) as any} />
 
         <AssessmentsManager />
 
