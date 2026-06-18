@@ -214,6 +214,11 @@ export function SupportMaterialsManager() {
               <Input value={grade} onChange={(e) => setGrade(e.target.value)} required
                 placeholder="Ex.: 1ª série" />
             </div>
+            <div className="space-y-1.5">
+              <Label>Componente</Label>
+              <Input value={component} onChange={(e) => setComponent(e.target.value)}
+                placeholder="Ex.: Língua Portuguesa, Matemática..." />
+            </div>
 
             <FileField
               label="Gabarito (PDF)"
