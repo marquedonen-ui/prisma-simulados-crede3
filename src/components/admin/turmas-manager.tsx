@@ -139,7 +139,7 @@ export function TurmasManager({
               <tbody>
                 {(turmasQ.data ?? []).length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
+                    <td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">
                       Nenhuma turma.
                     </td>
                   </tr>
