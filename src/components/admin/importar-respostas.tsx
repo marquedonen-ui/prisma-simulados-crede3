@@ -144,7 +144,13 @@ export function ImportarRespostas({
           </div>
           <div className="space-y-1.5">
             <Label>Escola</Label>
-            <Select value={schoolId} onValueChange={setSchoolId}>
+            <Select
+              value={schoolId}
+              onValueChange={(v) => {
+                setSchoolId(v);
+                setTurmaId("");
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione..." />
               </SelectTrigger>
@@ -160,6 +166,33 @@ export function ImportarRespostas({
         </div>
 
         <div className="space-y-1.5">
+          <Label>Turma em que a avaliação foi aplicada</Label>
+          <Select value={turmaId} onValueChange={setTurmaId} disabled={!schoolId}>
+            <SelectTrigger>
+              <SelectValue
+                placeholder={
+                  !schoolId
+                    ? "Selecione uma escola primeiro"
+                    : turmasQ.isLoading
+                      ? "Carregando turmas..."
+                      : (turmasQ.data?.length ?? 0) === 0
+                        ? "Nenhuma turma cadastrada para esta escola"
+                        : "Selecione a turma..."
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {turmasQ.data?.map((t: any) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.nome} · {t.ano} · {t.turno}
+                  {t.matricula_sige ? ` · SIGE ${t.matricula_sige}` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
           <Label>Planilha (.xlsx ou .csv)</Label>
           <input
             type="file"
@@ -171,7 +204,7 @@ export function ImportarRespostas({
 
         <Button
           onClick={() => importar.mutate()}
-          disabled={!file || !simuladoId || !schoolId || importar.isPending}
+          disabled={!file || !simuladoId || !schoolId || !turmaId || importar.isPending}
           className="w-full"
           size="lg"
         >
