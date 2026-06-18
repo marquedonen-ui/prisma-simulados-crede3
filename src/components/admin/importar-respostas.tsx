@@ -159,15 +159,47 @@ export function ImportarRespostas({
 
   function baixarModelo() {
     const numQuestoes = 20;
-    const headers = ["matricula", "nome", "turma"];
-    for (let i = 1; i <= numQuestoes; i++) headers.push(`Q${i}`);
+    // Estrutura compatível com exportação do leitor de cartões (SIGE/Reports):
+    // A=Exame, B=Conjunto de exames, C=Núm. da lista, D=Nome, E=Total de marcas,
+    // F=Nota, G=Classificação, H=Respostas corretas, I=Respostas incorretas,
+    // J=Not attempted, K=Assunto 1, e a partir de L: trios "Q N Options", "Q N Key", "Q N Marks".
+    const headers = [
+      "Exame",
+      "Conjunto de exames",
+      "Núm. da lista",
+      "Nome",
+      "Total de marcas",
+      "Nota",
+      "Classificação",
+      "Respostas corretas",
+      "Respostas incorretas",
+      "Not attempted",
+      "Assunto 1",
+    ];
+    for (let i = 1; i <= numQuestoes; i++) {
+      headers.push(`Q ${i} Options`, `Q ${i} Key`, `Q ${i} Marks`);
+    }
 
-    const exemplo = ["12345", "Maria da Silva", "9º A"];
-    for (let i = 1; i <= numQuestoes; i++) exemplo.push("A");
+    const exemplo: (string | number)[] = [
+      "Simulado 1",
+      "Conjunto A",
+      1,
+      "Maria da Silva",
+      18,
+      9.0,
+      1,
+      18,
+      2,
+      0,
+      "Geral",
+    ];
+    for (let i = 1; i <= numQuestoes; i++) {
+      exemplo.push("A", "A", 1);
+    }
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([headers, exemplo]);
-    XLSX.utils.book_append_sheet(wb, ws, "cartao-resposta");
+    XLSX.utils.book_append_sheet(wb, ws, "Reports");
     XLSX.writeFile(wb, "modelo-cartao-resposta.xlsx");
   }
 
