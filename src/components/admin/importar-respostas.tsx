@@ -2,11 +2,11 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Upload, Download, FileSpreadsheet, Loader2, CheckCircle2, BarChart3 } from "lucide-react";
+import { Upload, Download, FileSpreadsheet, Loader2, CheckCircle2, BarChart3, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
-import { importarRespostas } from "@/lib/offline.functions";
+import { importarRespostas, countQuestoes } from "@/lib/offline.functions";
 import { listTurmas } from "@/lib/turmas.functions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -43,12 +43,21 @@ export function ImportarRespostas({
 
   const importFn = useServerFn(importarRespostas);
   const listTurmasFn = useServerFn(listTurmas);
+  const countQuestoesFn = useServerFn(countQuestoes);
 
   const turmasQ = useQuery({
     queryKey: ["turmas", schoolId],
     queryFn: () => listTurmasFn({ data: { schoolId } }),
     enabled: !!schoolId,
   });
+
+  const questoesQ = useQuery({
+    queryKey: ["questoes-count", simuladoId],
+    queryFn: () => countQuestoesFn({ data: { simuladoId } }),
+    enabled: !!simuladoId,
+  });
+
+  const semQuestoes = !!simuladoId && questoesQ.data?.total === 0;
 
   const importar = useMutation({
     mutationFn: async () => {
@@ -248,6 +257,25 @@ export function ImportarRespostas({
           </div>
         </div>
 
+        {semQuestoes && (
+          <div className="flex items-start gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-4">
+            <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600" />
+            <div className="flex-1 text-sm">
+              <p className="font-semibold text-amber-700 dark:text-amber-400">
+                Este simulado ainda não tem questões cadastradas
+              </p>
+              <p className="mt-1 text-muted-foreground">
+                Cadastre as questões (com o gabarito A–E) antes de importar a planilha. Sem o
+                gabarito, o sistema não consegue validar as respostas e nenhuma será gravada.
+              </p>
+              <Button asChild size="sm" variant="outline" className="mt-2">
+                <Link to="/admin">Ir para o painel de administração</Link>
+              </Button>
+            </div>
+          </div>
+        )}
+
+
         <div className="space-y-1.5">
           <Label>Turma em que a avaliação foi aplicada</Label>
           <Select value={turmaId} onValueChange={setTurmaId} disabled={!schoolId}>
@@ -290,7 +318,7 @@ export function ImportarRespostas({
 
         <Button
           onClick={() => importar.mutate()}
-          disabled={importar.isPending}
+          disabled={importar.isPending || semQuestoes}
           className="w-full"
           size="lg"
         >

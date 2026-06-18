@@ -72,6 +72,20 @@ export const deleteQuestao = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const countQuestoes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { simuladoId: string }) =>
+    z.object({ simuladoId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { count, error } = await context.supabase
+      .from("questoes")
+      .select("id", { count: "exact", head: true })
+      .eq("simulado_id", data.simuladoId);
+    if (error) throw error;
+    return { total: count ?? 0 };
+  });
+
 // ============== ALUNOS ==============
 
 export const listAlunos = createServerFn({ method: "GET" })
@@ -145,105 +159,140 @@ export const importarRespostas = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => importSchema.parse(d))
   .handler(async ({ data, context }) => {
-    await ensureProfessorOrAdmin(context.supabase, context.userId);
-
-    const { data: questoes, error: qErr } = await context.supabase
-      .from("questoes")
-      .select("id, numero, resposta_correta")
-      .eq("simulado_id", data.simuladoId);
-    if (qErr) throw qErr;
-    if (!questoes || questoes.length === 0) {
-      throw new Error("Cadastre as questões deste simulado antes de importar respostas.");
-    }
-    const numToId = new Map<number, string>(questoes.map((q: any) => [q.numero, q.id]));
-    const correctById = new Map<string, string>(
-      questoes.map((q: any) => [q.id, q.resposta_correta]),
+    const tag = `[importarRespostas ${new Date().toISOString()}]`;
+    console.log(
+      `${tag} start user=${context.userId} simulado=${data.simuladoId} school=${data.schoolId} turma=${data.turmaId} linhas=${data.linhas.length}`,
     );
+    try {
+      await ensureProfessorOrAdmin(context.supabase, context.userId);
 
-    // Remove respostas anteriores desta turma+simulado para reimportação limpa.
-    await context.supabase
-      .from("respostas_alunos")
-      .delete()
-      .eq("simulado_id", data.simuladoId)
-      .eq("turma_id", data.turmaId);
-
-    const inserir: Array<{
-      simulado_id: string;
-      turma_id: string;
-      numero_chamada: number;
-      questao_id: string;
-      resposta_escolhida: string;
-    }> = [];
-
-    const statsPorAluno = new Map<
-      number,
-      { numero_chamada: number; respondidas: number; em_branco: number; acertos: number }
-    >();
-
-    for (const linha of data.linhas) {
-      let respondidas = 0;
-      let emBranco = 0;
-      let acertos = 0;
-      for (const [k, v] of Object.entries(linha.respostas)) {
-        const numero = Number(String(k).replace(/\D/g, ""));
-        const qid = numToId.get(numero);
-        if (!qid) continue;
-        const alt = String(v ?? "").trim().toUpperCase();
-        if (!["A", "B", "C", "D", "E"].includes(alt)) {
-          emBranco++;
-          continue;
-        }
-        respondidas++;
-        if (correctById.get(qid) === alt) acertos++;
-        inserir.push({
-          simulado_id: data.simuladoId,
-          turma_id: data.turmaId,
-          numero_chamada: linha.numero_chamada,
-          questao_id: qid,
-          resposta_escolhida: alt,
-        });
+      const { data: questoes, error: qErr } = await context.supabase
+        .from("questoes")
+        .select("id, numero, resposta_correta")
+        .eq("simulado_id", data.simuladoId);
+      if (qErr) {
+        console.error(`${tag} erro ao carregar questões`, qErr);
+        throw qErr;
       }
-      const prev = statsPorAluno.get(linha.numero_chamada);
-      if (prev) {
-        prev.respondidas += respondidas;
-        prev.em_branco += emBranco;
-        prev.acertos += acertos;
-      } else {
-        statsPorAluno.set(linha.numero_chamada, {
-          numero_chamada: linha.numero_chamada,
-          respondidas,
-          em_branco: emBranco,
-          acertos,
-        });
+      console.log(`${tag} questões cadastradas no simulado: ${questoes?.length ?? 0}`);
+      if (!questoes || questoes.length === 0) {
+        throw new Error("Cadastre as questões deste simulado antes de importar respostas.");
       }
-    }
-
-    if (inserir.length === 0) {
-      throw new Error(
-        "Nenhuma resposta válida encontrada. Verifique as colunas de alternativas (Q N Options).",
+      const numToId = new Map<number, string>(questoes.map((q: any) => [q.numero, q.id]));
+      const correctById = new Map<string, string>(
+        questoes.map((q: any) => [q.id, q.resposta_correta]),
       );
+
+      const { error: delErr, count: delCount } = await context.supabase
+        .from("respostas_alunos")
+        .delete({ count: "exact" })
+        .eq("simulado_id", data.simuladoId)
+        .eq("turma_id", data.turmaId);
+      if (delErr) {
+        console.error(`${tag} erro ao limpar respostas anteriores`, delErr);
+        throw delErr;
+      }
+      console.log(`${tag} respostas anteriores removidas: ${delCount ?? 0}`);
+
+      const inserir: Array<{
+        simulado_id: string;
+        turma_id: string;
+        numero_chamada: number;
+        questao_id: string;
+        resposta_escolhida: string;
+      }> = [];
+
+      const statsPorAluno = new Map<
+        number,
+        { numero_chamada: number; respondidas: number; em_branco: number; acertos: number }
+      >();
+
+      let questoesNaoEncontradas = 0;
+      for (const linha of data.linhas) {
+        let respondidas = 0;
+        let emBranco = 0;
+        let acertos = 0;
+        for (const [k, v] of Object.entries(linha.respostas)) {
+          const numero = Number(String(k).replace(/\D/g, ""));
+          const qid = numToId.get(numero);
+          if (!qid) {
+            questoesNaoEncontradas++;
+            continue;
+          }
+          const alt = String(v ?? "").trim().toUpperCase();
+          if (!["A", "B", "C", "D", "E"].includes(alt)) {
+            emBranco++;
+            continue;
+          }
+          respondidas++;
+          if (correctById.get(qid) === alt) acertos++;
+          inserir.push({
+            simulado_id: data.simuladoId,
+            turma_id: data.turmaId,
+            numero_chamada: linha.numero_chamada,
+            questao_id: qid,
+            resposta_escolhida: alt,
+          });
+        }
+        const prev = statsPorAluno.get(linha.numero_chamada);
+        if (prev) {
+          prev.respondidas += respondidas;
+          prev.em_branco += emBranco;
+          prev.acertos += acertos;
+        } else {
+          statsPorAluno.set(linha.numero_chamada, {
+            numero_chamada: linha.numero_chamada,
+            respondidas,
+            em_branco: emBranco,
+            acertos,
+          });
+        }
+      }
+
+      console.log(
+        `${tag} parsing: alunos=${statsPorAluno.size} inserir=${inserir.length} questoes_ignoradas=${questoesNaoEncontradas}`,
+      );
+
+      if (inserir.length === 0) {
+        throw new Error(
+          "Nenhuma resposta válida encontrada. Verifique as colunas de alternativas (Q N Options).",
+        );
+      }
+
+      const { error: upErr } = await context.supabase
+        .from("respostas_alunos")
+        .insert(inserir);
+      if (upErr) {
+        console.error(
+          `${tag} erro ao inserir respostas (code=${(upErr as any).code} message=${upErr.message} details=${(upErr as any).details} hint=${(upErr as any).hint})`,
+        );
+        throw upErr;
+      }
+
+      console.log(
+        `${tag} sucesso: ${inserir.length} respostas inseridas para ${statsPorAluno.size} aluno(s)`,
+      );
+
+      const detalhes_alunos = Array.from(statsPorAluno.values())
+        .map((s) => ({
+          numero_chamada: s.numero_chamada,
+          respondidas: s.respondidas,
+          acertos: s.acertos,
+          erros: Math.max(0, s.respondidas - s.acertos),
+          em_branco: s.em_branco,
+        }))
+        .sort((a, b) => b.acertos - a.acertos);
+
+      return {
+        respostas_importadas: inserir.length,
+        alunos_processados: statsPorAluno.size,
+        total_questoes: questoes.length,
+        detalhes_alunos,
+      };
+    } catch (err) {
+      console.error(`${tag} FALHOU`, err instanceof Error ? err.message : err);
+      throw err;
     }
-
-    const { error: upErr } = await context.supabase
-      .from("respostas_alunos")
-      .insert(inserir);
-    if (upErr) throw upErr;
-
-    const detalhes_alunos = Array.from(statsPorAluno.values())
-      .map((s) => ({
-        numero_chamada: s.numero_chamada,
-        respondidas: s.respondidas,
-        acertos: s.acertos,
-        erros: Math.max(0, s.respondidas - s.acertos),
-        em_branco: s.em_branco,
-      }))
-      .sort((a, b) => b.acertos - a.acertos);
-
-    return {
-      respostas_importadas: inserir.length,
-      alunos_processados: statsPorAluno.size,
-      total_questoes: questoes.length,
-      detalhes_alunos,
-    };
   });
+
 
