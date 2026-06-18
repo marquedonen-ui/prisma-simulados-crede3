@@ -95,10 +95,24 @@ export function ImportarRespostas({
           .replace(/\s+/g, "")
           .toUpperCase();
 
-      const matKeys = new Set(["MATRICULA", "MATR", "INSCRICAO", "INSC", "ID"]);
-      const isQKey = (k: string) => /^(?:Q|QUESTAO)?(\d{1,3})$/.test(k);
+      const matKeys = new Set([
+        "MATRICULA",
+        "MATR",
+        "INSCRICAO",
+        "INSC",
+        "ID",
+        "NUMDALISTA",
+        "NUMERODALISTA",
+        "NDALISTA",
+        "NLISTA",
+        "CHAMADA",
+      ]);
+      // Reconhece tanto "Q1", "QUESTAO1" como o padrão SIGE "Q 1 OPTIONS" / "Q1OPTIONS".
+      const qOptionsRe = /^Q(\d{1,3})OPTIONS$/;
+      const qSimpleRe = /^(?:Q|QUESTAO)(\d{1,3})$/;
+      const isQKey = (k: string) => qOptionsRe.test(k) || qSimpleRe.test(k);
 
-      // Localiza a linha de cabeçalho (a primeira que contém uma coluna de matrícula).
+      // Localiza a linha de cabeçalho (primeira que contém matrícula/lista + colunas Q).
       let headerIdx = -1;
       for (let i = 0; i < Math.min(matrix.length, 30); i++) {
         const cells = matrix[i].map(norm);
@@ -107,7 +121,6 @@ export function ImportarRespostas({
           break;
         }
       }
-      // Fallback: usa a primeira linha como cabeçalho se nenhuma combinação foi achada.
       if (headerIdx === -1) headerIdx = 0;
 
       const headers = matrix[headerIdx].map(norm);
@@ -117,15 +130,14 @@ export function ImportarRespostas({
       for (let r = headerIdx + 1; r < matrix.length; r++) {
         const row = matrix[r];
         if (!row || row.length === 0) continue;
-        const matricula =
-          matCol >= 0 ? String(row[matCol] ?? "").trim() : "";
+        const matricula = matCol >= 0 ? String(row[matCol] ?? "").trim() : "";
         if (!matricula) continue;
         const respostas: Record<string, string> = {};
         for (let c = 0; c < headers.length; c++) {
           const h = headers[c];
-          const m = h.match(/^(?:Q|QUESTAO)?(\d{1,3})$/);
-          if (!m) continue;
-          const num = parseInt(m[1], 10);
+          const mo = h.match(qOptionsRe) || h.match(qSimpleRe);
+          if (!mo) continue;
+          const num = parseInt(mo[1], 10);
           if (num > 0) {
             respostas[`Q${num}`] = String(row[c] ?? "").trim().toUpperCase();
           }
@@ -135,8 +147,9 @@ export function ImportarRespostas({
 
       if (linhas.length === 0)
         throw new Error(
-          "Nenhuma linha válida. Verifique se há uma coluna 'matricula' e colunas Q1, Q2, ...",
+          "Nenhuma linha válida. Verifique se há uma coluna 'Núm. da lista' (matrícula) e colunas Q N Options.",
         );
+
 
 
       return importFn({ data: { simuladoId, schoolId, linhas } });
