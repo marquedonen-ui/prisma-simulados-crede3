@@ -1,0 +1,1 @@
+ALTER TABLE public.turmas ADD COLUMN IF NOT EXISTS matricula_sige text;

@@ -404,6 +404,7 @@ export type Database = {
           ano: string
           created_at: string
           id: string
+          matricula_sige: string | null
           nome: string
           school_id: string
           turno: Database["public"]["Enums"]["turno_turma"]
@@ -413,6 +414,7 @@ export type Database = {
           ano: string
           created_at?: string
           id?: string
+          matricula_sige?: string | null
           nome: string
           school_id: string
           turno?: Database["public"]["Enums"]["turno_turma"]
@@ -422,6 +424,7 @@ export type Database = {
           ano?: string
           created_at?: string
           id?: string
+          matricula_sige?: string | null
           nome?: string
           school_id?: string
           turno?: Database["public"]["Enums"]["turno_turma"]
