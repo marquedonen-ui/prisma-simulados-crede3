@@ -1,0 +1,1 @@
+ALTER TABLE public.support_materials ADD COLUMN IF NOT EXISTS component text;

@@ -36,6 +36,7 @@ type Row = {
   id: string;
   offer: string;
   grade: string;
+  component: string | null;
   answer_key_pdf_path: string | null;
   commented_test_pdf_path: string | null;
   support_material_url: string | null;
@@ -54,6 +55,7 @@ export function SupportMaterialsManager() {
   const [editing, setEditing] = useState<Row | null>(null);
   const [offer, setOffer] = useState("");
   const [grade, setGrade] = useState("");
+  const [component, setComponent] = useState("");
   const [supportUrl, setSupportUrl] = useState("");
   const [keyFile, setKeyFile] = useState<File | null>(null);
   const [testFile, setTestFile] = useState<File | null>(null);
@@ -63,7 +65,7 @@ export function SupportMaterialsManager() {
 
   function resetForm() {
     setEditing(null);
-    setOffer(""); setGrade(""); setSupportUrl("");
+    setOffer(""); setGrade(""); setComponent(""); setSupportUrl("");
     setKeyFile(null); setTestFile(null);
     setKeyPath(null); setTestPath(null);
   }
@@ -72,6 +74,7 @@ export function SupportMaterialsManager() {
   function openEdit(r: Row) {
     setEditing(r);
     setOffer(r.offer); setGrade(r.grade);
+    setComponent(r.component ?? "");
     setSupportUrl(r.support_material_url ?? "");
     setKeyPath(r.answer_key_pdf_path); setTestPath(r.commented_test_pdf_path);
     setKeyFile(null); setTestFile(null);
@@ -99,6 +102,7 @@ export function SupportMaterialsManager() {
 
       const payload = {
         offer, grade,
+        component: component.trim() || null,
         answer_key_pdf_path: finalKey,
         commented_test_pdf_path: finalTest,
         support_material_url: supportUrl.trim() || null,
@@ -150,6 +154,7 @@ export function SupportMaterialsManager() {
               <TableRow>
                 <TableHead>Oferta</TableHead>
                 <TableHead>Série</TableHead>
+                <TableHead>Componente</TableHead>
                 <TableHead>Gabarito</TableHead>
                 <TableHead>Teste comentado</TableHead>
                 <TableHead>Mat. apoio</TableHead>
@@ -159,7 +164,7 @@ export function SupportMaterialsManager() {
             <TableBody>
               {q.data?.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-6 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="py-6 text-center text-muted-foreground">
                     Nenhum material ainda.
                   </TableCell>
                 </TableRow>
@@ -168,6 +173,7 @@ export function SupportMaterialsManager() {
                 <TableRow key={a.id}>
                   <TableCell className="font-medium">{a.offer}</TableCell>
                   <TableCell>{a.grade}</TableCell>
+                  <TableCell>{(a as Row).component ?? "—"}</TableCell>
                   <TableCell>{a.answer_key_pdf_path ? "✓" : "—"}</TableCell>
                   <TableCell>{a.commented_test_pdf_path ? "✓" : "—"}</TableCell>
                   <TableCell>{a.support_material_url ? "✓" : "—"}</TableCell>
@@ -207,6 +213,11 @@ export function SupportMaterialsManager() {
               <Label>Série</Label>
               <Input value={grade} onChange={(e) => setGrade(e.target.value)} required
                 placeholder="Ex.: 1ª série" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Componente</Label>
+              <Input value={component} onChange={(e) => setComponent(e.target.value)}
+                placeholder="Ex.: Língua Portuguesa, Matemática..." />
             </div>
 
             <FileField

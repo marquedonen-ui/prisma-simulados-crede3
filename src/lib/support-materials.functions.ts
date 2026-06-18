@@ -10,7 +10,7 @@ export const listSupportMaterials = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("support_materials")
       .select(
-        "id, offer, grade, answer_key_pdf_path, commented_test_pdf_path, support_material_url, created_at",
+        "id, offer, grade, component, answer_key_pdf_path, commented_test_pdf_path, support_material_url, created_at",
       )
       .order("created_at", { ascending: false });
     if (error) throw error;
@@ -24,6 +24,7 @@ export const createSupportMaterial = createServerFn({ method: "POST" })
       .object({
         offer: z.string().min(1),
         grade: z.string().min(1),
+        component: z.string().optional().nullable(),
         answer_key_pdf_path: z.string().optional().nullable(),
         commented_test_pdf_path: z.string().optional().nullable(),
         support_material_url: z.string().optional().nullable(),
@@ -36,6 +37,7 @@ export const createSupportMaterial = createServerFn({ method: "POST" })
       .insert({
         offer: data.offer,
         grade: data.grade,
+        component: data.component ?? null,
         answer_key_pdf_path: data.answer_key_pdf_path ?? null,
         commented_test_pdf_path: data.commented_test_pdf_path ?? null,
         support_material_url: data.support_material_url ?? null,
@@ -54,6 +56,7 @@ export const updateSupportMaterial = createServerFn({ method: "POST" })
         id: z.string().uuid(),
         offer: z.string().min(1),
         grade: z.string().min(1),
+        component: z.string().optional().nullable(),
         answer_key_pdf_path: z.string().optional().nullable(),
         commented_test_pdf_path: z.string().optional().nullable(),
         support_material_url: z.string().optional().nullable(),
@@ -66,6 +69,7 @@ export const updateSupportMaterial = createServerFn({ method: "POST" })
       .update({
         offer: data.offer,
         grade: data.grade,
+        component: data.component ?? null,
         answer_key_pdf_path: data.answer_key_pdf_path ?? null,
         commented_test_pdf_path: data.commented_test_pdf_path ?? null,
         support_material_url: data.support_material_url ?? null,
