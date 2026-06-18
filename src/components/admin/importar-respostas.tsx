@@ -36,10 +36,18 @@ export function ImportarRespostas({
 }) {
   const [simuladoId, setSimuladoId] = useState("");
   const [schoolId, setSchoolId] = useState("");
+  const [turmaId, setTurmaId] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [resultado, setResultado] = useState<any>(null);
 
   const importFn = useServerFn(importarRespostas);
+  const listTurmasFn = useServerFn(listTurmas);
+
+  const turmasQ = useQuery({
+    queryKey: ["turmas", schoolId],
+    queryFn: () => listTurmasFn({ data: { schoolId } }),
+    enabled: !!schoolId,
+  });
 
   const importar = useMutation({
     mutationFn: async () => {
