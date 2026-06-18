@@ -318,7 +318,7 @@ export function ImportarRespostas({
 
         <Button
           onClick={() => importar.mutate()}
-          disabled={importar.isPending}
+          disabled={importar.isPending || semQuestoes}
           className="w-full"
           size="lg"
         >
