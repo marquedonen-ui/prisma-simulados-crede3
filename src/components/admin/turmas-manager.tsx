@@ -222,6 +222,14 @@ export function TurmasManager({
                     </Select>
                   </div>
                 </div>
+                <div className="space-y-1.5">
+                  <Label>Matrícula Atual (SIGE)</Label>
+                  <Input
+                    value={editing.matricula_sige ?? ""}
+                    onChange={(e) => setEditing({ ...editing, matricula_sige: e.target.value })}
+                    placeholder="Ex.: 32"
+                  />
+                </div>
                 <Button type="submit" disabled={upsert.isPending} className="w-full">
                   {upsert.isPending ? "Salvando..." : "Salvar"}
                 </Button>
