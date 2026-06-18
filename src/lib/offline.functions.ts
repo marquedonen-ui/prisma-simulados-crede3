@@ -5,7 +5,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 async function ensureProfessorOrAdmin(supabase: any, userId: string) {
   const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
   const roles = (data ?? []).map((r: { role: string }) => r.role);
-  if (!roles.includes("admin") && !roles.includes("professor")) {
+  const allowed = ["admin", "professor", "professor_responsavel"];
+  if (!roles.some((r: string) => allowed.includes(r))) {
     throw new Error("Acesso restrito a professores e administradores.");
   }
 }
