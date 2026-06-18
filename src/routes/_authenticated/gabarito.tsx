@@ -54,6 +54,7 @@ function Page() {
             <TableRow>
               <TableHead>Oferta</TableHead>
               <TableHead>Série</TableHead>
+              <TableHead>Componente</TableHead>
               <TableHead>Gabarito</TableHead>
               <TableHead>Teste comentado</TableHead>
               <TableHead>Material de Apoio</TableHead>
@@ -62,7 +63,7 @@ function Page() {
           <TableBody>
             {q.isLoading && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
                   Carregando…
                 </TableCell>
               </TableRow>
