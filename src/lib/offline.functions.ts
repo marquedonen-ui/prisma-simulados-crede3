@@ -124,21 +124,21 @@ export const deleteAluno = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// ============== IMPORTAR RESPOSTAS (offline) ==============
+// ============== IMPORTAR RESPOSTAS (offline, anônimas por turma) ==============
 
 const importSchema = z.object({
   simuladoId: z.string().uuid(),
   schoolId: z.string().uuid(),
-  turmaId: z.string().uuid().optional(),
+  turmaId: z.string().uuid(),
   linhas: z
     .array(
       z.object({
-        matricula: z.string().trim().min(1).max(50),
+        numero_chamada: z.number().int().min(1).max(9999),
         respostas: z.record(z.string(), z.string()),
       }),
     )
     .min(1)
-    .max(2000),
+    .max(5000),
 });
 
 export const importarRespostas = createServerFn({ method: "POST" })
@@ -149,69 +149,41 @@ export const importarRespostas = createServerFn({ method: "POST" })
 
     const { data: questoes, error: qErr } = await context.supabase
       .from("questoes")
-      .select("id, numero")
+      .select("id, numero, resposta_correta")
       .eq("simulado_id", data.simuladoId);
     if (qErr) throw qErr;
     if (!questoes || questoes.length === 0) {
       throw new Error("Cadastre as questões deste simulado antes de importar respostas.");
     }
-    const numToId = new Map<number, string>(questoes.map((q) => [q.numero, q.id]));
+    const numToId = new Map<number, string>(questoes.map((q: any) => [q.numero, q.id]));
+    const correctById = new Map<string, string>(
+      questoes.map((q: any) => [q.id, q.resposta_correta]),
+    );
 
-    const normalizeIdentificador = (valor: string) => {
-      const limpo = String(valor ?? "").trim().replace(/\s+/g, "").replace(/\.0+$/, "");
-      return /^\d+$/.test(limpo) ? String(Number(limpo)) : limpo;
-    };
-    const variantesIdentificador = (valor: string) => {
-      const original = String(valor ?? "").trim();
-      const normalizado = normalizeIdentificador(original);
-      const variantes = new Set([original, normalizado]);
-      if (/^\d+$/.test(normalizado)) {
-        variantes.add(normalizado.padStart(2, "0"));
-        variantes.add(normalizado.padStart(3, "0"));
-        variantes.add(normalizado.padStart(4, "0"));
-      }
-      return Array.from(variantes).filter(Boolean);
-    };
+    // Remove respostas anteriores desta turma+simulado para reimportação limpa.
+    await context.supabase
+      .from("respostas_alunos")
+      .delete()
+      .eq("simulado_id", data.simuladoId)
+      .eq("turma_id", data.turmaId);
 
-    const matriculas = Array.from(new Set(data.linhas.map((l) => l.matricula.trim())));
-    const matriculasBusca = Array.from(new Set(matriculas.flatMap(variantesIdentificador)));
-    const { data: alunos, error: aErr } = await context.supabase
-      .from("alunos")
-      .select("id, matricula, turma_id")
-      .eq("school_id", data.schoolId)
-      .in("matricula", matriculasBusca);
-    if (aErr) throw aErr;
-    const alunosCandidatos = data.turmaId
-      ? (alunos ?? []).filter((a) => a.turma_id === data.turmaId)
-      : (alunos ?? []);
-    const alunosParaImportar = alunosCandidatos.length > 0 ? alunosCandidatos : (alunos ?? []);
-    const matToAlunoId = new Map<string, string>();
-    for (const aluno of alunosParaImportar) {
-      matToAlunoId.set(aluno.matricula, aluno.id);
-      matToAlunoId.set(normalizeIdentificador(aluno.matricula), aluno.id);
-    }
-
-    const naoEncontradas: string[] = [];
     const inserir: Array<{
-      aluno_id: string;
       simulado_id: string;
+      turma_id: string;
+      numero_chamada: number;
       questao_id: string;
       resposta_escolhida: string;
     }> = [];
 
     const statsPorAluno = new Map<
-      string,
-      { matricula: string; aluno_id: string; respondidas: number; em_branco: number }
+      number,
+      { numero_chamada: number; respondidas: number; em_branco: number; acertos: number }
     >();
 
     for (const linha of data.linhas) {
-      const aluno_id = matToAlunoId.get(linha.matricula.trim()) ?? matToAlunoId.get(normalizeIdentificador(linha.matricula));
-      if (!aluno_id) {
-        naoEncontradas.push(linha.matricula);
-        continue;
-      }
       let respondidas = 0;
       let emBranco = 0;
+      let acertos = 0;
       for (const [k, v] of Object.entries(linha.respostas)) {
         const numero = Number(String(k).replace(/\D/g, ""));
         const qid = numToId.get(numero);
@@ -222,75 +194,56 @@ export const importarRespostas = createServerFn({ method: "POST" })
           continue;
         }
         respondidas++;
+        if (correctById.get(qid) === alt) acertos++;
         inserir.push({
-          aluno_id,
           simulado_id: data.simuladoId,
+          turma_id: data.turmaId,
+          numero_chamada: linha.numero_chamada,
           questao_id: qid,
           resposta_escolhida: alt,
         });
       }
-      const prev = statsPorAluno.get(aluno_id);
+      const prev = statsPorAluno.get(linha.numero_chamada);
       if (prev) {
         prev.respondidas += respondidas;
         prev.em_branco += emBranco;
+        prev.acertos += acertos;
       } else {
-        statsPorAluno.set(aluno_id, { matricula: linha.matricula, aluno_id, respondidas, em_branco: emBranco });
+        statsPorAluno.set(linha.numero_chamada, {
+          numero_chamada: linha.numero_chamada,
+          respondidas,
+          em_branco: emBranco,
+          acertos,
+        });
       }
     }
 
     if (inserir.length === 0) {
       throw new Error(
-        "Nenhuma resposta válida encontrada. Verifique matrículas e colunas Q1, Q2…",
+        "Nenhuma resposta válida encontrada. Verifique as colunas de alternativas (Q N Options).",
       );
     }
 
     const { error: upErr } = await context.supabase
       .from("respostas_alunos")
-      .upsert(inserir, { onConflict: "aluno_id,questao_id" });
+      .insert(inserir);
     if (upErr) throw upErr;
 
-    const alunoIds = Array.from(statsPorAluno.keys());
-    const { data: alunosInfo } = await context.supabase
-      .from("alunos")
-      .select("id, nome, matricula")
-      .in("id", alunoIds.length ? alunoIds : ["00000000-0000-0000-0000-000000000000"]);
-    const infoById = new Map((alunosInfo ?? []).map((a: any) => [a.id, a]));
-
-    const correctById = new Map(questoes.map((q: any) => [q.id, (q as any).resposta_correta]));
-    // recarrega gabarito
-    const { data: gabRows } = await context.supabase
-      .from("questoes")
-      .select("id, resposta_correta")
-      .eq("simulado_id", data.simuladoId);
-    for (const g of gabRows ?? []) correctById.set((g as any).id, (g as any).resposta_correta);
-
-    const acertosPorAluno = new Map<string, number>();
-    for (const r of inserir) {
-      if (correctById.get(r.questao_id) === r.resposta_escolhida) {
-        acertosPorAluno.set(r.aluno_id, (acertosPorAluno.get(r.aluno_id) ?? 0) + 1);
-      }
-    }
-
     const detalhes_alunos = Array.from(statsPorAluno.values())
-      .map((s) => {
-        const info: any = infoById.get(s.aluno_id) ?? {};
-        const acertos = acertosPorAluno.get(s.aluno_id) ?? 0;
-        return {
-          matricula: info.matricula ?? s.matricula,
-          nome: info.nome ?? "—",
-          respondidas: s.respondidas,
-          acertos,
-          erros: Math.max(0, s.respondidas - acertos),
-          em_branco: s.em_branco,
-        };
-      })
+      .map((s) => ({
+        numero_chamada: s.numero_chamada,
+        respondidas: s.respondidas,
+        acertos: s.acertos,
+        erros: Math.max(0, s.respondidas - s.acertos),
+        em_branco: s.em_branco,
+      }))
       .sort((a, b) => b.acertos - a.acertos);
 
     return {
       respostas_importadas: inserir.length,
-      alunos_processados: matriculas.length - naoEncontradas.length,
-      matriculas_nao_encontradas: naoEncontradas,
+      alunos_processados: statsPorAluno.size,
       total_questoes: questoes.length,
       detalhes_alunos,
     };
   });
+

@@ -197,27 +197,33 @@ export type Database = {
           aluno_id: string | null
           data_resposta: string
           id: string
+          numero_chamada: number | null
           questao_id: string
           resposta_escolhida: string
           simulado_id: string
+          turma_id: string | null
           usuario_id: string | null
         }
         Insert: {
           aluno_id?: string | null
           data_resposta?: string
           id?: string
+          numero_chamada?: number | null
           questao_id: string
           resposta_escolhida: string
           simulado_id: string
+          turma_id?: string | null
           usuario_id?: string | null
         }
         Update: {
           aluno_id?: string | null
           data_resposta?: string
           id?: string
+          numero_chamada?: number | null
           questao_id?: string
           resposta_escolhida?: string
           simulado_id?: string
+          turma_id?: string | null
           usuario_id?: string | null
         }
         Relationships: [
@@ -240,6 +246,13 @@ export type Database = {
             columns: ["simulado_id"]
             isOneToOne: false
             referencedRelation: "diagnostic_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "respostas_alunos_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
             referencedColumns: ["id"]
           },
         ]
@@ -404,6 +417,7 @@ export type Database = {
           ano: string
           created_at: string
           id: string
+          matricula_atual: number | null
           matricula_sige: string | null
           nome: string
           school_id: string
@@ -414,6 +428,7 @@ export type Database = {
           ano: string
           created_at?: string
           id?: string
+          matricula_atual?: number | null
           matricula_sige?: string | null
           nome: string
           school_id: string
@@ -424,6 +439,7 @@ export type Database = {
           ano?: string
           created_at?: string
           id?: string
+          matricula_atual?: number | null
           matricula_sige?: string | null
           nome?: string
           school_id?: string
