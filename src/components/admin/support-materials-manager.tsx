@@ -154,6 +154,7 @@ export function SupportMaterialsManager() {
               <TableRow>
                 <TableHead>Oferta</TableHead>
                 <TableHead>Série</TableHead>
+                <TableHead>Componente</TableHead>
                 <TableHead>Gabarito</TableHead>
                 <TableHead>Teste comentado</TableHead>
                 <TableHead>Mat. apoio</TableHead>
@@ -163,7 +164,7 @@ export function SupportMaterialsManager() {
             <TableBody>
               {q.data?.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-6 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="py-6 text-center text-muted-foreground">
                     Nenhum material ainda.
                   </TableCell>
                 </TableRow>
@@ -172,6 +173,7 @@ export function SupportMaterialsManager() {
                 <TableRow key={a.id}>
                   <TableCell className="font-medium">{a.offer}</TableCell>
                   <TableCell>{a.grade}</TableCell>
+                  <TableCell>{(a as Row).component ?? "—"}</TableCell>
                   <TableCell>{a.answer_key_pdf_path ? "✓" : "—"}</TableCell>
                   <TableCell>{a.commented_test_pdf_path ? "✓" : "—"}</TableCell>
                   <TableCell>{a.support_material_url ? "✓" : "—"}</TableCell>
