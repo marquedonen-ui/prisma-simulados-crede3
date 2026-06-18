@@ -92,7 +92,7 @@ export function ImportarRespostas({
         String(s ?? "")
           .normalize("NFD")
           .replace(/[\u0300-\u036f]/g, "")
-          .replace(/\s+/g, "")
+          .replace(/[^A-Za-z0-9]/g, "")
           .toUpperCase();
 
       const matKeys = new Set([
@@ -107,8 +107,8 @@ export function ImportarRespostas({
         "NLISTA",
         "CHAMADA",
       ]);
-      // Reconhece tanto "Q1", "QUESTAO1" como o padrão SIGE "Q 1 OPTIONS" / "Q1OPTIONS".
-      const qOptionsRe = /^Q(\d{1,3})OPTIONS$/;
+      // Reconhece tanto "Q1", "QUESTAO1" como o padrão SIGE "Q 1 Options".
+      const qOptionsRe = /^Q(\d{1,3})(?:OPTIONS|OPTION|OPCOES|OPCAO|RESPOSTA|ALTERNATIVA)$/;
       const qSimpleRe = /^(?:Q|QUESTAO)(\d{1,3})$/;
       const isQKey = (k: string) => qOptionsRe.test(k) || qSimpleRe.test(k);
 
@@ -121,16 +121,20 @@ export function ImportarRespostas({
           break;
         }
       }
+      if (headerIdx === -1) {
+        headerIdx = matrix.findIndex((row) => row.map(norm).some(isQKey));
+      }
       if (headerIdx === -1) headerIdx = 0;
 
       const headers = matrix[headerIdx].map(norm);
       const matCol = headers.findIndex((h) => matKeys.has(h));
+      const chamadaFallbackCol = 2;
 
       const linhas: Array<{ matricula: string; respostas: Record<string, string> }> = [];
       for (let r = headerIdx + 1; r < matrix.length; r++) {
         const row = matrix[r];
         if (!row || row.length === 0) continue;
-        const matricula = matCol >= 0 ? String(row[matCol] ?? "").trim() : "";
+        const matricula = String(row[matCol >= 0 ? matCol : chamadaFallbackCol] ?? "").trim();
         if (!matricula) continue;
         const respostas: Record<string, string> = {};
         for (let c = 0; c < headers.length; c++) {
