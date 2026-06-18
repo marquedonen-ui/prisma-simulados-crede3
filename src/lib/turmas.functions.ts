@@ -12,7 +12,7 @@ export const listTurmas = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("turmas")
-      .select("id, school_id, nome, ano, turno, matricula_sige, schools(name, inep)")
+      .select("id, school_id, nome, ano, turno, matricula_sige, matricula_atual, schools(name, inep, city)")
       .order("ano", { ascending: false })
       .order("nome", { ascending: true });
     if (data.schoolId) q = q.eq("school_id", data.schoolId);
@@ -28,7 +28,17 @@ const turmaSchema = z.object({
   ano: z.string().trim().min(1).max(20),
   turno: z.enum(TURNOS),
   matricula_sige: z.string().trim().max(50).optional().nullable().transform((v) => (v ? v : null)),
+  matricula_atual: z
+    .union([z.number().int().min(0).max(9999), z.string()])
+    .optional()
+    .nullable()
+    .transform((v) => {
+      if (v === null || v === undefined || v === "") return null;
+      const n = typeof v === "number" ? v : parseInt(String(v), 10);
+      return Number.isFinite(n) ? n : null;
+    }),
 });
+
 
 export const upsertTurma = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
