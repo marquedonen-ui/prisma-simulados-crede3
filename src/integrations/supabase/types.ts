@@ -19,6 +19,7 @@ export type Database = {
           answer_sheet_pdf_path: string | null
           created_at: string
           exam_pdf_path: string | null
+          gabarito_liberado: boolean
           grade: string
           id: string
           offer: string
@@ -29,6 +30,7 @@ export type Database = {
           answer_sheet_pdf_path?: string | null
           created_at?: string
           exam_pdf_path?: string | null
+          gabarito_liberado?: boolean
           grade: string
           id?: string
           offer: string
@@ -39,6 +41,7 @@ export type Database = {
           answer_sheet_pdf_path?: string | null
           created_at?: string
           exam_pdf_path?: string | null
+          gabarito_liberado?: boolean
           grade?: string
           id?: string
           offer?: string
@@ -67,6 +70,154 @@ export type Database = {
           id?: string
         }
         Relationships: []
+      }
+      questoes: {
+        Row: {
+          alternativa_a: string
+          alternativa_b: string
+          alternativa_c: string
+          alternativa_d: string
+          alternativa_e: string | null
+          created_at: string
+          enunciado: string
+          id: string
+          numero: number
+          ordem: number
+          pontos: number
+          resposta_correta: string
+          simulado_id: string
+          updated_at: string
+        }
+        Insert: {
+          alternativa_a: string
+          alternativa_b: string
+          alternativa_c: string
+          alternativa_d: string
+          alternativa_e?: string | null
+          created_at?: string
+          enunciado: string
+          id?: string
+          numero: number
+          ordem?: number
+          pontos?: number
+          resposta_correta: string
+          simulado_id: string
+          updated_at?: string
+        }
+        Update: {
+          alternativa_a?: string
+          alternativa_b?: string
+          alternativa_c?: string
+          alternativa_d?: string
+          alternativa_e?: string | null
+          created_at?: string
+          enunciado?: string
+          id?: string
+          numero?: number
+          ordem?: number
+          pontos?: number
+          resposta_correta?: string
+          simulado_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questoes_simulado_id_fkey"
+            columns: ["simulado_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostic_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      respostas_alunos: {
+        Row: {
+          data_resposta: string
+          id: string
+          questao_id: string
+          resposta_escolhida: string
+          simulado_id: string
+          usuario_id: string
+        }
+        Insert: {
+          data_resposta?: string
+          id?: string
+          questao_id: string
+          resposta_escolhida: string
+          simulado_id: string
+          usuario_id: string
+        }
+        Update: {
+          data_resposta?: string
+          id?: string
+          questao_id?: string
+          resposta_escolhida?: string
+          simulado_id?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "respostas_alunos_questao_id_fkey"
+            columns: ["questao_id"]
+            isOneToOne: false
+            referencedRelation: "questoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "respostas_alunos_simulado_id_fkey"
+            columns: ["simulado_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostic_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resultados_simulados: {
+        Row: {
+          acertos: number
+          created_at: string
+          data_finalizacao: string
+          id: string
+          percentual: number
+          pontuacao_obtida: number
+          simulado_id: string
+          total_questoes: number
+          updated_at: string
+          usuario_id: string
+        }
+        Insert: {
+          acertos?: number
+          created_at?: string
+          data_finalizacao?: string
+          id?: string
+          percentual?: number
+          pontuacao_obtida?: number
+          simulado_id: string
+          total_questoes?: number
+          updated_at?: string
+          usuario_id: string
+        }
+        Update: {
+          acertos?: number
+          created_at?: string
+          data_finalizacao?: string
+          id?: string
+          percentual?: number
+          pontuacao_obtida?: number
+          simulado_id?: string
+          total_questoes?: number
+          updated_at?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resultados_simulados_simulado_id_fkey"
+            columns: ["simulado_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostic_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       schools: {
         Row: {
