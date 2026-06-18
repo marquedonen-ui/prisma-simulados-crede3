@@ -86,6 +86,67 @@ export const countQuestoes = createServerFn({ method: "GET" })
     return { total: count ?? 0 };
   });
 
+// Bulk-save gabarito (apenas número + resposta correta) para um simulado.
+// Preenche enunciado/alternativas com placeholder "—" para satisfazer NOT NULL.
+const gabaritoSchema = z.object({
+  simulado_id: z.string().uuid(),
+  total: z.number().int().min(1).max(500),
+  answers: z
+    .array(
+      z.object({
+        numero: z.number().int().min(1).max(500),
+        resposta_correta: z.enum(["A", "B", "C", "D", "E"]),
+      }),
+    )
+    .min(1),
+});
+
+export const saveGabarito = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => gabaritoSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    await ensureProfessorOrAdmin(context.supabase, context.userId);
+
+    // Remove questões com número > total
+    await context.supabase
+      .from("questoes")
+      .delete()
+      .eq("simulado_id", data.simulado_id)
+      .gt("numero", data.total);
+
+    // Carrega existentes para preservar enunciado/alternativas se houver
+    const { data: existing, error: exErr } = await context.supabase
+      .from("questoes")
+      .select("id, numero, enunciado, alternativa_a, alternativa_b, alternativa_c, alternativa_d, alternativa_e, pontos")
+      .eq("simulado_id", data.simulado_id);
+    if (exErr) throw exErr;
+    const byNumero = new Map<number, any>((existing ?? []).map((r: any) => [r.numero, r]));
+
+    const rows = data.answers.map((a) => {
+      const prev = byNumero.get(a.numero);
+      return {
+        id: prev?.id,
+        simulado_id: data.simulado_id,
+        numero: a.numero,
+        ordem: a.numero,
+        enunciado: prev?.enunciado || "—",
+        alternativa_a: prev?.alternativa_a || "—",
+        alternativa_b: prev?.alternativa_b || "—",
+        alternativa_c: prev?.alternativa_c || "—",
+        alternativa_d: prev?.alternativa_d || "—",
+        alternativa_e: prev?.alternativa_e ?? null,
+        pontos: prev?.pontos ?? 1,
+        resposta_correta: a.resposta_correta,
+      };
+    });
+
+    const { error } = await context.supabase
+      .from("questoes")
+      .upsert(rows, { onConflict: "simulado_id,numero" });
+    if (error) throw error;
+    return { ok: true, total: data.total };
+  });
+
 // ============== ALUNOS ==============
 
 export const listAlunos = createServerFn({ method: "GET" })
