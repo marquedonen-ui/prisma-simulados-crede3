@@ -148,6 +148,7 @@ export function TurmasManager({
                     <td className="px-3 py-2 font-medium">{t.nome}</td>
                     <td className="px-3 py-2">{t.ano}</td>
                     <td className="px-3 py-2">{turnoLabel(t.turno)}</td>
+                    <td className="px-3 py-2">{t.matricula_sige ?? "—"}</td>
                     <td className="px-3 py-2 text-right">
                       <Button
                         size="icon"
