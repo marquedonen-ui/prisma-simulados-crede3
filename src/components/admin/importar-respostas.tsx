@@ -269,9 +269,7 @@ export function ImportarRespostas({
                 gabarito, o sistema não consegue validar as respostas e nenhuma será gravada.
               </p>
               <Button asChild size="sm" variant="outline" className="mt-2">
-                <Link to="/admin" search={{ tab: "questoes" }}>
-                  Cadastrar questões
-                </Link>
+                <Link to="/admin">Ir para o painel de administração</Link>
               </Button>
             </div>
           </div>
