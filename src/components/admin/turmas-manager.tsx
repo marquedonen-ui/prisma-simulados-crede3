@@ -226,14 +226,27 @@ export function TurmasManager({
                     </Select>
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label>Matrícula Atual (SIGE)</Label>
-                  <Input
-                    value={editing.matricula_sige ?? ""}
-                    onChange={(e) => setEditing({ ...editing, matricula_sige: e.target.value })}
-                    placeholder="Ex.: 32"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Matrícula atual</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={editing.matricula_atual ?? ""}
+                      onChange={(e) => setEditing({ ...editing, matricula_atual: e.target.value })}
+                      placeholder="Ex.: 32"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Matrícula SIGE</Label>
+                    <Input
+                      value={editing.matricula_sige ?? ""}
+                      onChange={(e) => setEditing({ ...editing, matricula_sige: e.target.value })}
+                      placeholder="Opcional"
+                    />
+                  </div>
                 </div>
+
                 <Button type="submit" disabled={upsert.isPending} className="w-full">
                   {upsert.isPending ? "Salvando..." : "Salvar"}
                 </Button>
