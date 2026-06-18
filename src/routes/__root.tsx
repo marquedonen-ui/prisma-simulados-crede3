@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "PRISMA" },
+      { name: "description", content: "PRISMA is a regional simulation and learning monitoring platform." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "PRISMA" },
+      { property: "og:description", content: "PRISMA is a regional simulation and learning monitoring platform." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "PRISMA" },
+      { name: "twitter:description", content: "PRISMA is a regional simulation and learning monitoring platform." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2c6389a9-e404-4b48-812c-625cceb2627a/id-preview-43ce3cb3--1f8338c9-8f81-40e5-a80b-681a94df1628.lovable.app-1781804939827.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2c6389a9-e404-4b48-812c-625cceb2627a/id-preview-43ce3cb3--1f8338c9-8f81-40e5-a80b-681a94df1628.lovable.app-1781804939827.png" },
     ],
     links: [
       {
