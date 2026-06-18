@@ -24,6 +24,10 @@ import { toast } from "sonner";
 import logoUrl from "@/assets/prisma-logo.png";
 import { AssessmentsManager } from "@/components/admin/assessments-manager";
 import { SupportMaterialsManager } from "@/components/admin/support-materials-manager";
+import { QuestoesManager } from "@/components/admin/questoes-manager";
+import { AlunosManager } from "@/components/admin/alunos-manager";
+import { ImportarRespostas } from "@/components/admin/importar-respostas";
+import { listAssessments } from "@/lib/assessments.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Admin — PRISMA" }] }),
@@ -41,6 +45,11 @@ function AdminPage() {
 
   const roleQ = useQuery({ queryKey: ["my-role"], queryFn: () => getRole({}) });
   const schoolsQ = useQuery({ queryKey: ["schools"], queryFn: () => listFn({}) });
+  const listAssessFn = useServerFn(listAssessments);
+  const assessmentsQ = useQuery({
+    queryKey: ["assessments-all"],
+    queryFn: () => listAssessFn({}),
+  });
 
   const [name, setName] = useState("");
   const [inep, setInep] = useState("");
@@ -242,6 +251,15 @@ function AdminPage() {
         <AssessmentsManager />
 
         <SupportMaterialsManager />
+
+        <QuestoesManager simulados={(assessmentsQ.data ?? []) as any} />
+
+        <AlunosManager schools={(schoolsQ.data ?? []) as any} />
+
+        <ImportarRespostas
+          simulados={(assessmentsQ.data ?? []) as any}
+          schools={(schoolsQ.data ?? []) as any}
+        />
       </main>
     </div>
   );
