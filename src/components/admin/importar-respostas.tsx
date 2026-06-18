@@ -257,6 +257,27 @@ export function ImportarRespostas({
           </div>
         </div>
 
+        {semQuestoes && (
+          <div className="flex items-start gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-4">
+            <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600" />
+            <div className="flex-1 text-sm">
+              <p className="font-semibold text-amber-700 dark:text-amber-400">
+                Este simulado ainda não tem questões cadastradas
+              </p>
+              <p className="mt-1 text-muted-foreground">
+                Cadastre as questões (com o gabarito A–E) antes de importar a planilha. Sem o
+                gabarito, o sistema não consegue validar as respostas e nenhuma será gravada.
+              </p>
+              <Button asChild size="sm" variant="outline" className="mt-2">
+                <Link to="/admin" search={{ tab: "questoes" }}>
+                  Cadastrar questões
+                </Link>
+              </Button>
+            </div>
+          </div>
+        )}
+
+
         <div className="space-y-1.5">
           <Label>Turma em que a avaliação foi aplicada</Label>
           <Select value={turmaId} onValueChange={setTurmaId} disabled={!schoolId}>
