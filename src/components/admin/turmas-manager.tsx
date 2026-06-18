@@ -140,7 +140,7 @@ export function TurmasManager({
               <tbody>
                 {(turmasQ.data ?? []).length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">
+                    <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
                       Nenhuma turma.
                     </td>
                   </tr>
@@ -150,6 +150,7 @@ export function TurmasManager({
                     <td className="px-3 py-2 font-medium">{t.nome}</td>
                     <td className="px-3 py-2">{t.ano}</td>
                     <td className="px-3 py-2">{turnoLabel(t.turno)}</td>
+                    <td className="px-3 py-2">{t.matricula_atual ?? "—"}</td>
                     <td className="px-3 py-2">{t.matricula_sige ?? "—"}</td>
                     <td className="px-3 py-2 text-right">
                       <Button
@@ -174,6 +175,7 @@ export function TurmasManager({
                     </td>
                   </tr>
                 ))}
+
               </tbody>
             </table>
           </div>
