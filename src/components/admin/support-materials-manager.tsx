@@ -55,6 +55,7 @@ export function SupportMaterialsManager() {
   const [editing, setEditing] = useState<Row | null>(null);
   const [offer, setOffer] = useState("");
   const [grade, setGrade] = useState("");
+  const [component, setComponent] = useState("");
   const [supportUrl, setSupportUrl] = useState("");
   const [keyFile, setKeyFile] = useState<File | null>(null);
   const [testFile, setTestFile] = useState<File | null>(null);
@@ -64,7 +65,7 @@ export function SupportMaterialsManager() {
 
   function resetForm() {
     setEditing(null);
-    setOffer(""); setGrade(""); setSupportUrl("");
+    setOffer(""); setGrade(""); setComponent(""); setSupportUrl("");
     setKeyFile(null); setTestFile(null);
     setKeyPath(null); setTestPath(null);
   }
@@ -73,6 +74,7 @@ export function SupportMaterialsManager() {
   function openEdit(r: Row) {
     setEditing(r);
     setOffer(r.offer); setGrade(r.grade);
+    setComponent(r.component ?? "");
     setSupportUrl(r.support_material_url ?? "");
     setKeyPath(r.answer_key_pdf_path); setTestPath(r.commented_test_pdf_path);
     setKeyFile(null); setTestFile(null);
