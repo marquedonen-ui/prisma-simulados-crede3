@@ -25,7 +25,7 @@ import logoUrl from "@/assets/prisma-logo.png";
 import { AssessmentsManager } from "@/components/admin/assessments-manager";
 import { SupportMaterialsManager } from "@/components/admin/support-materials-manager";
 import { QuestoesManager } from "@/components/admin/questoes-manager";
-import { AlunosManager } from "@/components/admin/alunos-manager";
+
 import { ImportarRespostas } from "@/components/admin/importar-respostas";
 import { UsersManager } from "@/components/admin/users-manager";
 import { TurmasManager } from "@/components/admin/turmas-manager";
@@ -259,8 +259,6 @@ function AdminPage() {
         <SupportMaterialsManager />
 
         <QuestoesManager simulados={(assessmentsQ.data ?? []) as any} />
-
-        <AlunosManager schools={(schoolsQ.data ?? []) as any} />
 
         <ImportarRespostas
           simulados={(assessmentsQ.data ?? []) as any}
