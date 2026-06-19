@@ -125,13 +125,19 @@ export function ImportarRespostas({
       let chamadaCol = headers.findIndex((h) => chamadaPatterns.some((p) => h === p || h.includes(p)));
       if (chamadaCol === -1) chamadaCol = 2;
 
-      const linhas: Array<{ numero_chamada: number; respostas: Record<string, string> }> = [];
+      // Auto-detect coluna de nome do aluno. Fallback: coluna D (índice 3).
+      const nomePatterns = ["NOMEDOALUNO", "NOMEALUNO", "NOME", "ALUNO", "ESTUDANTE", "PARTICIPANTE"];
+      let nomeCol = headers.findIndex((h) => nomePatterns.some((p) => h === p || h.includes(p)));
+      if (nomeCol === -1) nomeCol = 3;
+
+      const linhas: Array<{ numero_chamada: number; nome?: string; respostas: Record<string, string> }> = [];
       for (let r = headerIdx + 1; r < matrix.length; r++) {
         const row = matrix[r];
         if (!row || row.length === 0) continue;
         const rawChamada = String(row[chamadaCol] ?? "").trim();
         const numero_chamada = parseInt(rawChamada.replace(/\D/g, ""), 10);
         if (!numero_chamada || numero_chamada < 1) continue;
+        const nome = String(row[nomeCol] ?? "").trim().slice(0, 200) || undefined;
         const respostas: Record<string, string> = {};
         for (let c = 0; c < headers.length; c++) {
           const h = headers[c];
@@ -142,7 +148,7 @@ export function ImportarRespostas({
             respostas[`Q${num}`] = String(row[c] ?? "").trim().toUpperCase();
           }
         }
-        linhas.push({ numero_chamada, respostas });
+        linhas.push({ numero_chamada, nome, respostas });
       }
 
       if (linhas.length === 0)
