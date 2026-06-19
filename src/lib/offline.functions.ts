@@ -425,7 +425,7 @@ export const listImportacoes = createServerFn({ method: "GET" })
       turmaIds.length
         ? context.supabase
             .from("turmas")
-            .select("id, name, schools(name, inep)")
+            .select("id, nome, schools(name, inep)")
             .in("id", turmaIds)
         : Promise.resolve({ data: [], error: null } as any),
     ]);
@@ -445,7 +445,7 @@ export const listImportacoes = createServerFn({ method: "GET" })
           simulado: s
             ? `${s.offer ?? ""} · ${s.subject ?? ""} · ${s.grade ?? ""}`
             : "(simulado removido)",
-          turma: t?.name ?? "(turma removida)",
+          turma: t?.nome ?? "(turma removida)",
           escola: t?.schools?.name ?? "—",
           inep: t?.schools?.inep ?? "",
           alunos: i._alunos.size,
