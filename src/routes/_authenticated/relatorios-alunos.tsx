@@ -393,12 +393,17 @@ function Page() {
                           <TableRow key={`${a.turma_id}-${a.numero_chamada}`}>
                             <TableCell>
                               <div className="font-medium">
-                                {a.nome ?? `Aluno nº ${a.numero_chamada}`}
+                                {a.nome ?? (
+                                  <span className="italic text-muted-foreground">
+                                    Nome não informado
+                                  </span>
+                                )}
                               </div>
                               <div className="text-xs text-muted-foreground">
                                 Nº de chamada: {a.numero_chamada}
                               </div>
                             </TableCell>
+
                             <TableCell>
                               <div className="text-sm">{a.school_name}</div>
                               <div className="text-xs text-muted-foreground">
