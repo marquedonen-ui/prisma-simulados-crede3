@@ -317,24 +317,47 @@ export function ImportarRespostas({
             }}
             className="block w-full rounded-md border bg-background px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1 file:text-primary-foreground"
           />
+          {file && (
+            <p className="text-xs text-muted-foreground">
+              Arquivo selecionado: <span className="font-medium text-foreground">{file.name}</span>{" "}
+              ({(file.size / 1024).toFixed(1)} KB)
+            </p>
+          )}
         </div>
 
-        <Button
-          onClick={() => importar.mutate()}
-          disabled={importar.isPending || semQuestoes}
-          className="w-full"
-          size="lg"
-        >
-          {importar.isPending ? (
+        {(() => {
+          const faltam: string[] = [];
+          if (!simuladoId) faltam.push("simulado");
+          if (!schoolId) faltam.push("escola");
+          if (!turmaId) faltam.push("turma");
+          if (!file) faltam.push("planilha");
+          const podeImportar = faltam.length === 0 && !semQuestoes && !importar.isPending;
+          return (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Importando...
+              {faltam.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Para importar, selecione: <span className="font-medium">{faltam.join(", ")}</span>.
+                </p>
+              )}
+              <Button
+                onClick={() => importar.mutate()}
+                disabled={!podeImportar}
+                className="w-full"
+                size="lg"
+              >
+                {importar.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Importando...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" /> Importar respostas
+                  </>
+                )}
+              </Button>
             </>
-          ) : (
-            <>
-              <Upload className="mr-2 h-4 w-4" /> Importar respostas
-            </>
-          )}
-        </Button>
+          );
+        })()}
 
         {resultado && (
           <div className="space-y-4">
