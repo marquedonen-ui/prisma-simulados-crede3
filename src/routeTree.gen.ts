@@ -13,6 +13,7 @@ import { Route as AlunoRouteImport } from './routes/aluno'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTutoriaisRouteImport } from './routes/_authenticated/tutoriais'
+import { Route as AuthenticatedRelatoriosAlunosRouteImport } from './routes/_authenticated/relatorios-alunos'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedGabaritoRouteImport } from './routes/_authenticated/gabarito'
@@ -40,6 +41,12 @@ const AuthenticatedTutoriaisRoute = AuthenticatedTutoriaisRouteImport.update({
   path: '/tutoriais',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRelatoriosAlunosRoute =
+  AuthenticatedRelatoriosAlunosRouteImport.update({
+    id: '/relatorios-alunos',
+    path: '/relatorios-alunos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
@@ -86,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/gabarito': typeof AuthenticatedGabaritoRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/relatorios-alunos': typeof AuthenticatedRelatoriosAlunosRoute
   '/tutoriais': typeof AuthenticatedTutoriaisRoute
   '/avaliacao-diagnostica/$id': typeof AuthenticatedAvaliacaoDiagnosticaIdRoute
   '/avaliacao-diagnostica/': typeof AuthenticatedAvaliacaoDiagnosticaIndexRoute
@@ -98,6 +106,7 @@ export interface FileRoutesByTo {
   '/gabarito': typeof AuthenticatedGabaritoRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/relatorios-alunos': typeof AuthenticatedRelatoriosAlunosRoute
   '/tutoriais': typeof AuthenticatedTutoriaisRoute
   '/avaliacao-diagnostica/$id': typeof AuthenticatedAvaliacaoDiagnosticaIdRoute
   '/avaliacao-diagnostica': typeof AuthenticatedAvaliacaoDiagnosticaIndexRoute
@@ -112,6 +121,7 @@ export interface FileRoutesById {
   '/_authenticated/gabarito': typeof AuthenticatedGabaritoRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/_authenticated/relatorios-alunos': typeof AuthenticatedRelatoriosAlunosRoute
   '/_authenticated/tutoriais': typeof AuthenticatedTutoriaisRoute
   '/_authenticated/avaliacao-diagnostica/$id': typeof AuthenticatedAvaliacaoDiagnosticaIdRoute
   '/_authenticated/avaliacao-diagnostica/': typeof AuthenticatedAvaliacaoDiagnosticaIndexRoute
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/gabarito'
     | '/painel'
     | '/relatorios'
+    | '/relatorios-alunos'
     | '/tutoriais'
     | '/avaliacao-diagnostica/$id'
     | '/avaliacao-diagnostica/'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/gabarito'
     | '/painel'
     | '/relatorios'
+    | '/relatorios-alunos'
     | '/tutoriais'
     | '/avaliacao-diagnostica/$id'
     | '/avaliacao-diagnostica'
@@ -151,6 +163,7 @@ export interface FileRouteTypes {
     | '/_authenticated/gabarito'
     | '/_authenticated/painel'
     | '/_authenticated/relatorios'
+    | '/_authenticated/relatorios-alunos'
     | '/_authenticated/tutoriais'
     | '/_authenticated/avaliacao-diagnostica/$id'
     | '/_authenticated/avaliacao-diagnostica/'
@@ -190,6 +203,13 @@ declare module '@tanstack/react-router' {
       path: '/tutoriais'
       fullPath: '/tutoriais'
       preLoaderRoute: typeof AuthenticatedTutoriaisRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/relatorios-alunos': {
+      id: '/_authenticated/relatorios-alunos'
+      path: '/relatorios-alunos'
+      fullPath: '/relatorios-alunos'
+      preLoaderRoute: typeof AuthenticatedRelatoriosAlunosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/relatorios': {
@@ -250,6 +270,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedGabaritoRoute: typeof AuthenticatedGabaritoRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
+  AuthenticatedRelatoriosAlunosRoute: typeof AuthenticatedRelatoriosAlunosRoute
   AuthenticatedTutoriaisRoute: typeof AuthenticatedTutoriaisRoute
   AuthenticatedAvaliacaoDiagnosticaIdRoute: typeof AuthenticatedAvaliacaoDiagnosticaIdRoute
   AuthenticatedAvaliacaoDiagnosticaIndexRoute: typeof AuthenticatedAvaliacaoDiagnosticaIndexRoute
@@ -261,6 +282,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedGabaritoRoute: AuthenticatedGabaritoRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
+  AuthenticatedRelatoriosAlunosRoute: AuthenticatedRelatoriosAlunosRoute,
   AuthenticatedTutoriaisRoute: AuthenticatedTutoriaisRoute,
   AuthenticatedAvaliacaoDiagnosticaIdRoute:
     AuthenticatedAvaliacaoDiagnosticaIdRoute,
