@@ -505,7 +505,7 @@ export const updateImportacaoAluno = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await ensureProfessorOrAdmin(context.supabase, context.userId);
-    const patch: Record<string, any> = {};
+    const patch: { nome?: string | null; numero_chamada?: number } = {};
     if (data.nome !== undefined) patch.nome = data.nome && data.nome.length ? data.nome : null;
     if (data.novoNumero !== undefined && data.novoNumero !== data.numeroChamada) {
       patch.numero_chamada = data.novoNumero;
