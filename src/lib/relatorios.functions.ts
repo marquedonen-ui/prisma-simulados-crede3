@@ -66,11 +66,12 @@ async function carregarDataset(supabase: any, simuladoId: string) {
 
   const { data: respostas, error: rErr } = await supabase
     .from("respostas_alunos")
-    .select("turma_id, numero_chamada, questao_id, resposta_escolhida")
+    .select("turma_id, numero_chamada, nome, questao_id, resposta_escolhida")
     .eq("simulado_id", simuladoId)
     .not("turma_id", "is", null)
     .not("numero_chamada", "is", null);
   if (rErr) throw rErr;
+
 
   const turmaIds = Array.from(new Set((respostas ?? []).map((r: any) => r.turma_id)));
   const { data: turmas } = turmaIds.length
