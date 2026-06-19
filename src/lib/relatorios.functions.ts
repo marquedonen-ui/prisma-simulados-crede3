@@ -66,11 +66,12 @@ async function carregarDataset(supabase: any, simuladoId: string) {
 
   const { data: respostas, error: rErr } = await supabase
     .from("respostas_alunos")
-    .select("turma_id, numero_chamada, questao_id, resposta_escolhida")
+    .select("turma_id, numero_chamada, nome, questao_id, resposta_escolhida")
     .eq("simulado_id", simuladoId)
     .not("turma_id", "is", null)
     .not("numero_chamada", "is", null);
   if (rErr) throw rErr;
+
 
   const turmaIds = Array.from(new Set((respostas ?? []).map((r: any) => r.turma_id)));
   const { data: turmas } = turmaIds.length
@@ -87,6 +88,7 @@ async function carregarDataset(supabase: any, simuladoId: string) {
     {
       turma_id: string;
       numero_chamada: number;
+      nome: string | null;
       acertos: number;
       respondidas: number;
       escola: any;
@@ -101,6 +103,7 @@ async function carregarDataset(supabase: any, simuladoId: string) {
       a = {
         turma_id: r.turma_id,
         numero_chamada: r.numero_chamada,
+        nome: r.nome ?? null,
         acertos: 0,
         respondidas: 0,
         escola: turma?.schools ?? null,
@@ -108,6 +111,7 @@ async function carregarDataset(supabase: any, simuladoId: string) {
       };
       alunos.set(key, a);
     }
+    if (!a.nome && r.nome) a.nome = r.nome;
     const alt = String(r.resposta_escolhida ?? "").toUpperCase();
     if (["A", "B", "C", "D", "E"].includes(alt)) {
       a.respondidas += 1;
@@ -121,6 +125,7 @@ async function carregarDataset(supabase: any, simuladoId: string) {
     turmas: turmas ?? [],
   };
 }
+
 
 const CITY_DESCONHECIDA = "Sem município";
 
@@ -323,4 +328,50 @@ export const getAcertoMedio = createServerFn({ method: "GET" })
           .sort((a, b) => a.name.localeCompare(b.name)),
       }))
       .sort((a, b) => a.city.localeCompare(b.city));
+  });
+
+/** Resultados individuais por aluno, com filtros aplicados no cliente. */
+export const getResultadosAlunos = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(idInput)
+  .handler(async ({ data, context }) => {
+    await ensureProfessorOrAdmin(context.supabase, context.userId);
+    const { alunos, totalQuestoes } = await carregarDataset(
+      context.supabase,
+      data.simuladoId,
+    );
+
+    return {
+      totalQuestoes,
+      alunos: alunos
+        .map((a) => {
+          const fx = faixaDeAcertos(a.acertos);
+          const pct = totalQuestoes > 0 ? (a.acertos / totalQuestoes) * 100 : 0;
+          return {
+            turma_id: a.turma_id,
+            turma_nome: a.turma?.nome ?? "—",
+            numero_chamada: a.numero_chamada,
+            nome: a.nome,
+            acertos: a.acertos,
+            respondidas: a.respondidas,
+            total_questoes: totalQuestoes,
+            pct_acerto: Number(pct.toFixed(1)),
+            padrao: fx as
+              | "muito_critico"
+              | "critico"
+              | "intermediario"
+              | "adequado",
+            school_id: a.escola?.id ?? null,
+            school_name: a.escola?.name ?? "Sem escola",
+            city: cidadeDaEscola(a.escola),
+          };
+        })
+        .sort(
+          (a, b) =>
+            a.school_name.localeCompare(b.school_name) ||
+            a.turma_nome.localeCompare(b.turma_nome) ||
+            (a.nome ?? "").localeCompare(b.nome ?? "") ||
+            a.numero_chamada - b.numero_chamada,
+        ),
+    };
   });

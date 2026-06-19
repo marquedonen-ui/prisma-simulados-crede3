@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Home, BookOpen, ClipboardList, BarChart3, FileCheck, Shield, CheckSquare } from "lucide-react";
+import { Home, BookOpen, ClipboardList, BarChart3, FileCheck, Shield, CheckSquare, Users } from "lucide-react";
 
 import {
   Sidebar,
@@ -25,6 +25,8 @@ const baseItems = [
   { title: "Tutoriais", url: "/tutoriais", icon: BookOpen },
   { title: "Avaliação Diagnóstica", url: "/avaliacao-diagnostica", icon: ClipboardList },
   { title: "Relatórios por Acerto e Padrões de Desempenho", url: "/relatorios", icon: BarChart3 },
+  { title: "Resultados por Aluno", url: "/relatorios-alunos", icon: Users },
+
   { title: "Gabarito e Material de Apoio", url: "/gabarito", icon: FileCheck },
 ];
 
