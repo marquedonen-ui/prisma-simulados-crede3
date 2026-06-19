@@ -393,6 +393,7 @@ export function ImportarRespostas({
                       <tr>
                         <th className="px-3 py-2">#</th>
                         <th className="px-3 py-2">Nº chamada</th>
+                        <th className="px-3 py-2">Nome do aluno</th>
                         <th className="px-3 py-2 text-center">Acertos</th>
                         <th className="px-3 py-2 text-center">Erros</th>
                         <th className="px-3 py-2 text-center">Em branco</th>
@@ -407,6 +408,13 @@ export function ImportarRespostas({
                           <tr key={`${a.numero_chamada}-${i}`} className="border-t">
                             <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
                             <td className="px-3 py-2 font-mono text-xs">{a.numero_chamada}</td>
+                            <td className="px-3 py-2">
+                              {a.nome ? (
+                                a.nome
+                              ) : (
+                                <span className="text-muted-foreground italic">—</span>
+                              )}
+                            </td>
                             <td className="px-3 py-2 text-center font-semibold text-green-600">
                               {a.acertos}
                             </td>
