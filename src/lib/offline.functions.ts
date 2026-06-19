@@ -266,7 +266,7 @@ export const importarRespostas = createServerFn({ method: "POST" })
 
       const statsPorAluno = new Map<
         number,
-        { numero_chamada: number; respondidas: number; em_branco: number; acertos: number }
+        { numero_chamada: number; nome?: string; respondidas: number; em_branco: number; acertos: number }
       >();
 
       let questoesNaoEncontradas = 0;
