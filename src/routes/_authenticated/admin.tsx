@@ -6,20 +6,11 @@ import {
   getMyRole,
   listSchools,
   createSchool,
-  generateCodes,
-  listSchoolCodes,
 } from "@/lib/prisma.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 import logoUrl from "@/assets/prisma-logo.png";
 import { AssessmentsManager } from "@/components/admin/assessments-manager";
