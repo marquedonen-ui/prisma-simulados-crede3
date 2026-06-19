@@ -18,6 +18,7 @@ import { SupportMaterialsManager } from "@/components/admin/support-materials-ma
 import { QuestoesManager } from "@/components/admin/questoes-manager";
 
 import { ImportarRespostas } from "@/components/admin/importar-respostas";
+import { ImportacoesManager } from "@/components/admin/importacoes-manager";
 import { UsersManager } from "@/components/admin/users-manager";
 import { TurmasManager } from "@/components/admin/turmas-manager";
 import { listAssessments } from "@/lib/assessments.functions";
