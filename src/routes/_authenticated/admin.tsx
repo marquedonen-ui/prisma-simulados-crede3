@@ -33,8 +33,6 @@ function AdminPage() {
   const getRole = useServerFn(getMyRole);
   const listFn = useServerFn(listSchools);
   const createFn = useServerFn(createSchool);
-  const genFn = useServerFn(generateCodes);
-  const codesFn = useServerFn(listSchoolCodes);
 
   const roleQ = useQuery({ queryKey: ["my-role"], queryFn: () => getRole({}) });
   const schoolsQ = useQuery({ queryKey: ["schools"], queryFn: () => listFn({}) });
@@ -47,8 +45,6 @@ function AdminPage() {
   const [name, setName] = useState("");
   const [inep, setInep] = useState("");
   const [city, setCity] = useState("");
-  const [selectedSchool, setSelectedSchool] = useState<string>("");
-  const [qty, setQty] = useState(10);
 
   const create = useMutation({
     mutationFn: () => createFn({ data: { name, inep, city } }),
@@ -58,21 +54,6 @@ function AdminPage() {
       qc.invalidateQueries({ queryKey: ["schools"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
-  });
-
-  const generate = useMutation({
-    mutationFn: () => genFn({ data: { schoolId: selectedSchool, quantity: qty } }),
-    onSuccess: () => {
-      toast.success(`${qty} código(s) gerado(s).`);
-      qc.invalidateQueries({ queryKey: ["codes", selectedSchool] });
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
-  });
-
-  const codesQ = useQuery({
-    queryKey: ["codes", selectedSchool],
-    queryFn: () => codesFn({ data: { schoolId: selectedSchool } }),
-    enabled: !!selectedSchool,
   });
 
   if (roleQ.isLoading) return <div className="p-10 text-center">Carregando...</div>;
