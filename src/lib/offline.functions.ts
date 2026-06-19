@@ -340,6 +340,7 @@ export const importarRespostas = createServerFn({ method: "POST" })
       const detalhes_alunos = Array.from(statsPorAluno.values())
         .map((s) => ({
           numero_chamada: s.numero_chamada,
+          nome: s.nome ?? null,
           respondidas: s.respondidas,
           acertos: s.acertos,
           erros: Math.max(0, s.respondidas - s.acertos),
