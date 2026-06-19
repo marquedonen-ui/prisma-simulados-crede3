@@ -1,0 +1,1 @@
+ALTER TABLE public.respostas_alunos ADD COLUMN IF NOT EXISTS nome text;

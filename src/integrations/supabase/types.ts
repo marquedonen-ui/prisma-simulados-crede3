@@ -197,6 +197,7 @@ export type Database = {
           aluno_id: string | null
           data_resposta: string
           id: string
+          nome: string | null
           numero_chamada: number | null
           questao_id: string
           resposta_escolhida: string
@@ -208,6 +209,7 @@ export type Database = {
           aluno_id?: string | null
           data_resposta?: string
           id?: string
+          nome?: string | null
           numero_chamada?: number | null
           questao_id: string
           resposta_escolhida: string
@@ -219,6 +221,7 @@ export type Database = {
           aluno_id?: string | null
           data_resposta?: string
           id?: string
+          nome?: string | null
           numero_chamada?: number | null
           questao_id?: string
           resposta_escolhida?: string
