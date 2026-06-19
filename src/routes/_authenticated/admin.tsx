@@ -162,6 +162,8 @@ function AdminPage() {
           simulados={(assessmentsQ.data ?? []) as any}
           schools={(schoolsQ.data ?? []) as any}
         />
+
+        <ImportacoesManager />
       </main>
     </div>
   );
