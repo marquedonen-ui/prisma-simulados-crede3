@@ -88,6 +88,7 @@ async function carregarDataset(supabase: any, simuladoId: string) {
     {
       turma_id: string;
       numero_chamada: number;
+      nome: string | null;
       acertos: number;
       respondidas: number;
       escola: any;
@@ -102,6 +103,7 @@ async function carregarDataset(supabase: any, simuladoId: string) {
       a = {
         turma_id: r.turma_id,
         numero_chamada: r.numero_chamada,
+        nome: r.nome ?? null,
         acertos: 0,
         respondidas: 0,
         escola: turma?.schools ?? null,
@@ -109,6 +111,7 @@ async function carregarDataset(supabase: any, simuladoId: string) {
       };
       alunos.set(key, a);
     }
+    if (!a.nome && r.nome) a.nome = r.nome;
     const alt = String(r.resposta_escolhida ?? "").toUpperCase();
     if (["A", "B", "C", "D", "E"].includes(alt)) {
       a.respondidas += 1;
@@ -122,6 +125,7 @@ async function carregarDataset(supabase: any, simuladoId: string) {
     turmas: turmas ?? [],
   };
 }
+
 
 const CITY_DESCONHECIDA = "Sem município";
 
