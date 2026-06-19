@@ -119,8 +119,11 @@ export function ImportarRespostas({
       if (headerIdx === -1) headerIdx = 0;
 
       const headers = matrix[headerIdx].map(norm);
-      // Coluna C (índice 2) = número de chamada / identificação do aluno na turma.
-      const chamadaCol = 2;
+
+      // Auto-detect coluna de nº de chamada. Fallback: coluna C (índice 2).
+      const chamadaPatterns = ["NUMDALISTA", "NUMLISTA", "NLISTA", "LISTA", "CHAMADA", "NUMCHAMADA", "NCHAMADA"];
+      let chamadaCol = headers.findIndex((h) => chamadaPatterns.some((p) => h === p || h.includes(p)));
+      if (chamadaCol === -1) chamadaCol = 2;
 
       const linhas: Array<{ numero_chamada: number; respostas: Record<string, string> }> = [];
       for (let r = headerIdx + 1; r < matrix.length; r++) {
@@ -144,7 +147,7 @@ export function ImportarRespostas({
 
       if (linhas.length === 0)
         throw new Error(
-          "Nenhuma linha válida. Verifique se a coluna C contém o nº de chamada e existem colunas Q N Options.",
+          "Nenhuma linha válida. Verifique se há coluna 'Núm. da lista' (ou nº de chamada na coluna C) e colunas 'Q N Options'.",
         );
 
       return importFn({ data: { simuladoId, schoolId, turmaId, linhas } });
