@@ -6,20 +6,11 @@ import {
   getMyRole,
   listSchools,
   createSchool,
-  generateCodes,
-  listSchoolCodes,
 } from "@/lib/prisma.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 import logoUrl from "@/assets/prisma-logo.png";
 import { AssessmentsManager } from "@/components/admin/assessments-manager";
@@ -42,8 +33,6 @@ function AdminPage() {
   const getRole = useServerFn(getMyRole);
   const listFn = useServerFn(listSchools);
   const createFn = useServerFn(createSchool);
-  const genFn = useServerFn(generateCodes);
-  const codesFn = useServerFn(listSchoolCodes);
 
   const roleQ = useQuery({ queryKey: ["my-role"], queryFn: () => getRole({}) });
   const schoolsQ = useQuery({ queryKey: ["schools"], queryFn: () => listFn({}) });
@@ -56,8 +45,6 @@ function AdminPage() {
   const [name, setName] = useState("");
   const [inep, setInep] = useState("");
   const [city, setCity] = useState("");
-  const [selectedSchool, setSelectedSchool] = useState<string>("");
-  const [qty, setQty] = useState(10);
 
   const create = useMutation({
     mutationFn: () => createFn({ data: { name, inep, city } }),
@@ -67,21 +54,6 @@ function AdminPage() {
       qc.invalidateQueries({ queryKey: ["schools"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
-  });
-
-  const generate = useMutation({
-    mutationFn: () => genFn({ data: { schoolId: selectedSchool, quantity: qty } }),
-    onSuccess: () => {
-      toast.success(`${qty} código(s) gerado(s).`);
-      qc.invalidateQueries({ queryKey: ["codes", selectedSchool] });
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
-  });
-
-  const codesQ = useQuery({
-    queryKey: ["codes", selectedSchool],
-    queryFn: () => codesFn({ data: { schoolId: selectedSchool } }),
-    enabled: !!selectedSchool,
   });
 
   if (roleQ.isLoading) return <div className="p-10 text-center">Carregando...</div>;
@@ -174,81 +146,6 @@ function AdminPage() {
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Gerar códigos de alunos</CardTitle>
-            <CardDescription>Formato: INEP + sufixo aleatório (ex.: 23012345-A7K9)</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-[1fr_140px_auto]">
-              <div className="space-y-1.5">
-                <Label>Escola</Label>
-                <Select value={selectedSchool} onValueChange={setSelectedSchool}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
-                    {schoolsQ.data?.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name} ({s.inep})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Quantidade</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={500}
-                  value={qty}
-                  onChange={(e) => setQty(Number(e.target.value))}
-                />
-              </div>
-              <div className="flex items-end">
-                <Button
-                  disabled={!selectedSchool || generate.isPending}
-                  onClick={() => generate.mutate()}
-                  className="w-full"
-                >
-                  {generate.isPending ? "Gerando..." : "Gerar"}
-                </Button>
-              </div>
-            </div>
-
-            {selectedSchool && (
-              <div>
-                <h3 className="mb-2 text-sm font-semibold">Códigos da escola</h3>
-                <div className="max-h-80 overflow-auto rounded-md border">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted text-left text-xs uppercase text-muted-foreground">
-                      <tr>
-                        <th className="px-3 py-2">Código</th>
-                        <th className="px-3 py-2">Aluno</th>
-                        <th className="px-3 py-2">Último acesso</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {codesQ.data?.length === 0 && (
-                        <tr><td colSpan={3} className="px-3 py-4 text-center text-muted-foreground">
-                          Nenhum código ainda.
-                        </td></tr>
-                      )}
-                      {codesQ.data?.map((c) => (
-                        <tr key={c.id} className="border-t">
-                          <td className="px-3 py-2 font-mono">{c.code}</td>
-                          <td className="px-3 py-2">{c.student_name ?? "—"}</td>
-                          <td className="px-3 py-2 text-xs text-muted-foreground">
-                            {c.last_used_at ? new Date(c.last_used_at).toLocaleString("pt-BR") : "—"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
         <UsersManager schools={(schoolsQ.data ?? []) as any} />
 
