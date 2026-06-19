@@ -260,6 +260,7 @@ export const importarRespostas = createServerFn({ method: "POST" })
         simulado_id: string;
         turma_id: string;
         numero_chamada: number;
+        nome: string | null;
         questao_id: string;
         resposta_escolhida: string;
       }> = [];
@@ -292,10 +293,12 @@ export const importarRespostas = createServerFn({ method: "POST" })
             simulado_id: data.simuladoId,
             turma_id: data.turmaId,
             numero_chamada: linha.numero_chamada,
+            nome: linha.nome ?? null,
             questao_id: qid,
             resposta_escolhida: alt,
           });
         }
+
         const prev = statsPorAluno.get(linha.numero_chamada);
         if (prev) {
           prev.respondidas += respondidas;
