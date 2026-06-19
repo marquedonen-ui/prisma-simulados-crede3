@@ -8,6 +8,7 @@ import {
   listImportacoes,
   listImportacaoAlunos,
   deleteImportacao,
+  deleteTodasImportacoes,
   deleteImportacaoAluno,
   updateImportacaoAluno,
 } from "@/lib/offline.functions";
@@ -54,6 +55,7 @@ export function ImportacoesManager() {
   const qc = useQueryClient();
   const listFn = useServerFn(listImportacoes);
   const delLoteFn = useServerFn(deleteImportacao);
+  const delTudoFn = useServerFn(deleteTodasImportacoes);
 
   const lotesQ = useQuery({
     queryKey: ["importacoes"],
@@ -67,6 +69,15 @@ export function ImportacoesManager() {
       delLoteFn({ data: { simuladoId: l.simulado_id, turmaId: l.turma_id } }),
     onSuccess: (r) => {
       toast.success(`Lote excluído (${r.removidas} respostas).`);
+      qc.invalidateQueries({ queryKey: ["importacoes"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
+
+  const delTudo = useMutation({
+    mutationFn: () => delTudoFn({}),
+    onSuccess: (r) => {
+      toast.success(`Importações zeradas (${r.removidas} respostas removidas).`);
       qc.invalidateQueries({ queryKey: ["importacoes"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
@@ -90,9 +101,35 @@ export function ImportacoesManager() {
           </div>
         )}
         {lotesQ.data?.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            Nenhuma importação encontrada.
-          </p>
+          <div className="space-y-3 rounded-md border border-destructive/30 bg-destructive/5 p-4">
+            <p className="text-sm text-muted-foreground">
+              Nenhum lote apareceu na listagem. Se você quer limpar os dados de teste já importados, use a opção abaixo.
+            </p>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" disabled={delTudo.isPending}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Zerar todas as importações
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Zerar todas as respostas importadas?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Todas as respostas importadas por planilha serão removidas do sistema. Essa ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => delTudo.mutate()}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Zerar importações
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         )}
         <div className="space-y-2">
           {(lotesQ.data ?? []).map((l) => {
