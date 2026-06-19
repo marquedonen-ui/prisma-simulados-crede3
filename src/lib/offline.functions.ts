@@ -209,6 +209,7 @@ const importSchema = z.object({
     .array(
       z.object({
         numero_chamada: z.number().int().min(1).max(9999),
+        nome: z.string().trim().max(200).optional(),
         respostas: z.record(z.string(), z.string()),
       }),
     )
@@ -265,7 +266,7 @@ export const importarRespostas = createServerFn({ method: "POST" })
 
       const statsPorAluno = new Map<
         number,
-        { numero_chamada: number; respondidas: number; em_branco: number; acertos: number }
+        { numero_chamada: number; nome?: string; respondidas: number; em_branco: number; acertos: number }
       >();
 
       let questoesNaoEncontradas = 0;
@@ -300,9 +301,11 @@ export const importarRespostas = createServerFn({ method: "POST" })
           prev.respondidas += respondidas;
           prev.em_branco += emBranco;
           prev.acertos += acertos;
+          if (!prev.nome && linha.nome) prev.nome = linha.nome;
         } else {
           statsPorAluno.set(linha.numero_chamada, {
             numero_chamada: linha.numero_chamada,
+            nome: linha.nome,
             respondidas,
             em_branco: emBranco,
             acertos,
@@ -337,6 +340,7 @@ export const importarRespostas = createServerFn({ method: "POST" })
       const detalhes_alunos = Array.from(statsPorAluno.values())
         .map((s) => ({
           numero_chamada: s.numero_chamada,
+          nome: s.nome ?? null,
           respondidas: s.respondidas,
           acertos: s.acertos,
           erros: Math.max(0, s.respondidas - s.acertos),
