@@ -371,28 +371,28 @@ export const listImportacoes = createServerFn({ method: "GET" })
     await ensureProfessorOrAdmin(context.supabase, context.userId);
     const { data, error } = await context.supabase
       .from("respostas_alunos")
-      .select(
-        "simulado_id, turma_id, numero_chamada, data_resposta, diagnostic_assessments!inner(offer, subject, grade), turmas!inner(name, schools(name, inep))",
-      )
+      .select("simulado_id, turma_id, numero_chamada, data_resposta")
       .not("turma_id", "is", null)
-      .order("data_resposta", { ascending: false })
-      .limit(20000);
+      .limit(50000);
     if (error) throw error;
 
-    const map = new Map<string, any>();
+    const map = new Map<
+      string,
+      {
+        simulado_id: string;
+        turma_id: string;
+        _alunos: Set<number>;
+        respostas: number;
+        ultima: string;
+      }
+    >();
     for (const r of (data ?? []) as any[]) {
       const key = `${r.simulado_id}::${r.turma_id}`;
-      const s = r.diagnostic_assessments;
-      const t = r.turmas;
       let item = map.get(key);
       if (!item) {
         item = {
           simulado_id: r.simulado_id,
           turma_id: r.turma_id,
-          simulado: `${s?.offer ?? ""} · ${s?.subject ?? ""} · ${s?.grade ?? ""}`,
-          turma: t?.name ?? "",
-          escola: t?.schools?.name ?? "",
-          inep: t?.schools?.inep ?? "",
           _alunos: new Set<number>(),
           respostas: 0,
           ultima: r.data_resposta,
@@ -403,18 +403,51 @@ export const listImportacoes = createServerFn({ method: "GET" })
       item.respostas++;
       if (r.data_resposta > item.ultima) item.ultima = r.data_resposta;
     }
-    return Array.from(map.values()).map((i: any) => ({
-      simulado_id: i.simulado_id,
-      turma_id: i.turma_id,
-      simulado: i.simulado,
-      turma: i.turma,
-      escola: i.escola,
-      inep: i.inep,
-      alunos: i._alunos.size,
-      respostas: i.respostas,
-      ultima: i.ultima,
-    }));
+
+    const simIds = Array.from(new Set(Array.from(map.values()).map((i) => i.simulado_id)));
+    const turmaIds = Array.from(new Set(Array.from(map.values()).map((i) => i.turma_id)));
+
+    const [simRes, turmaRes] = await Promise.all([
+      simIds.length
+        ? context.supabase
+            .from("diagnostic_assessments")
+            .select("id, offer, subject, grade")
+            .in("id", simIds)
+        : Promise.resolve({ data: [], error: null } as any),
+      turmaIds.length
+        ? context.supabase
+            .from("turmas")
+            .select("id, name, schools(name, inep)")
+            .in("id", turmaIds)
+        : Promise.resolve({ data: [], error: null } as any),
+    ]);
+    if (simRes.error) throw simRes.error;
+    if (turmaRes.error) throw turmaRes.error;
+
+    const simMap = new Map<string, any>((simRes.data ?? []).map((s: any) => [s.id, s]));
+    const turmaMap = new Map<string, any>((turmaRes.data ?? []).map((t: any) => [t.id, t]));
+
+    return Array.from(map.values())
+      .map((i) => {
+        const s = simMap.get(i.simulado_id);
+        const t = turmaMap.get(i.turma_id);
+        return {
+          simulado_id: i.simulado_id,
+          turma_id: i.turma_id,
+          simulado: s
+            ? `${s.offer ?? ""} · ${s.subject ?? ""} · ${s.grade ?? ""}`
+            : "(simulado removido)",
+          turma: t?.name ?? "(turma removida)",
+          escola: t?.schools?.name ?? "—",
+          inep: t?.schools?.inep ?? "",
+          alunos: i._alunos.size,
+          respostas: i.respostas,
+          ultima: i.ultima,
+        };
+      })
+      .sort((a, b) => (a.ultima < b.ultima ? 1 : -1));
   });
+
 
 export const listImportacaoAlunos = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
