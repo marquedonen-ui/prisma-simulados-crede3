@@ -119,8 +119,11 @@ export function ImportarRespostas({
       if (headerIdx === -1) headerIdx = 0;
 
       const headers = matrix[headerIdx].map(norm);
-      // Coluna C (índice 2) = número de chamada / identificação do aluno na turma.
-      const chamadaCol = 2;
+
+      // Auto-detect coluna de nº de chamada. Fallback: coluna C (índice 2).
+      const chamadaPatterns = ["NUMDALISTA", "NUMLISTA", "NLISTA", "LISTA", "CHAMADA", "NUMCHAMADA", "NCHAMADA"];
+      let chamadaCol = headers.findIndex((h) => chamadaPatterns.some((p) => h === p || h.includes(p)));
+      if (chamadaCol === -1) chamadaCol = 2;
 
       const linhas: Array<{ numero_chamada: number; respostas: Record<string, string> }> = [];
       for (let r = headerIdx + 1; r < matrix.length; r++) {
@@ -144,7 +147,7 @@ export function ImportarRespostas({
 
       if (linhas.length === 0)
         throw new Error(
-          "Nenhuma linha válida. Verifique se a coluna C contém o nº de chamada e existem colunas Q N Options.",
+          "Nenhuma linha válida. Verifique se há coluna 'Núm. da lista' (ou nº de chamada na coluna C) e colunas 'Q N Options'.",
         );
 
       return importFn({ data: { simuladoId, schoolId, turmaId, linhas } });
@@ -314,24 +317,47 @@ export function ImportarRespostas({
             }}
             className="block w-full rounded-md border bg-background px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1 file:text-primary-foreground"
           />
+          {file && (
+            <p className="text-xs text-muted-foreground">
+              Arquivo selecionado: <span className="font-medium text-foreground">{file.name}</span>{" "}
+              ({(file.size / 1024).toFixed(1)} KB)
+            </p>
+          )}
         </div>
 
-        <Button
-          onClick={() => importar.mutate()}
-          disabled={importar.isPending || semQuestoes}
-          className="w-full"
-          size="lg"
-        >
-          {importar.isPending ? (
+        {(() => {
+          const faltam: string[] = [];
+          if (!simuladoId) faltam.push("simulado");
+          if (!schoolId) faltam.push("escola");
+          if (!turmaId) faltam.push("turma");
+          if (!file) faltam.push("planilha");
+          const podeImportar = faltam.length === 0 && !semQuestoes && !importar.isPending;
+          return (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Importando...
+              {faltam.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Para importar, selecione: <span className="font-medium">{faltam.join(", ")}</span>.
+                </p>
+              )}
+              <Button
+                onClick={() => importar.mutate()}
+                disabled={!podeImportar}
+                className="w-full"
+                size="lg"
+              >
+                {importar.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Importando...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" /> Importar respostas
+                  </>
+                )}
+              </Button>
             </>
-          ) : (
-            <>
-              <Upload className="mr-2 h-4 w-4" /> Importar respostas
-            </>
-          )}
-        </Button>
+          );
+        })()}
 
         {resultado && (
           <div className="space-y-4">
