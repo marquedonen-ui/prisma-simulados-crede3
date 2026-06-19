@@ -209,6 +209,7 @@ const importSchema = z.object({
     .array(
       z.object({
         numero_chamada: z.number().int().min(1).max(9999),
+        nome: z.string().trim().max(200).optional(),
         respostas: z.record(z.string(), z.string()),
       }),
     )
