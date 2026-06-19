@@ -301,9 +301,11 @@ export const importarRespostas = createServerFn({ method: "POST" })
           prev.respondidas += respondidas;
           prev.em_branco += emBranco;
           prev.acertos += acertos;
+          if (!prev.nome && linha.nome) prev.nome = linha.nome;
         } else {
           statsPorAluno.set(linha.numero_chamada, {
             numero_chamada: linha.numero_chamada,
+            nome: linha.nome,
             respondidas,
             em_branco: emBranco,
             acertos,
