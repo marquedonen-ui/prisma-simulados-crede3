@@ -363,4 +363,163 @@ export const importarRespostas = createServerFn({ method: "POST" })
     }
   });
 
+// ============== GERENCIAR IMPORTAÇÕES ==============
+
+export const listImportacoes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await ensureProfessorOrAdmin(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("respostas_alunos")
+      .select(
+        "simulado_id, turma_id, numero_chamada, data_resposta, diagnostic_assessments!inner(offer, subject, grade), turmas!inner(name, schools(name, inep))",
+      )
+      .not("turma_id", "is", null)
+      .order("data_resposta", { ascending: false })
+      .limit(20000);
+    if (error) throw error;
+
+    const map = new Map<string, any>();
+    for (const r of (data ?? []) as any[]) {
+      const key = `${r.simulado_id}::${r.turma_id}`;
+      const s = r.diagnostic_assessments;
+      const t = r.turmas;
+      let item = map.get(key);
+      if (!item) {
+        item = {
+          simulado_id: r.simulado_id,
+          turma_id: r.turma_id,
+          simulado: `${s?.offer ?? ""} · ${s?.subject ?? ""} · ${s?.grade ?? ""}`,
+          turma: t?.name ?? "",
+          escola: t?.schools?.name ?? "",
+          inep: t?.schools?.inep ?? "",
+          _alunos: new Set<number>(),
+          respostas: 0,
+          ultima: r.data_resposta,
+        };
+        map.set(key, item);
+      }
+      if (r.numero_chamada != null) item._alunos.add(r.numero_chamada);
+      item.respostas++;
+      if (r.data_resposta > item.ultima) item.ultima = r.data_resposta;
+    }
+    return Array.from(map.values()).map((i: any) => ({
+      simulado_id: i.simulado_id,
+      turma_id: i.turma_id,
+      simulado: i.simulado,
+      turma: i.turma,
+      escola: i.escola,
+      inep: i.inep,
+      alunos: i._alunos.size,
+      respostas: i.respostas,
+      ultima: i.ultima,
+    }));
+  });
+
+export const listImportacaoAlunos = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { simuladoId: string; turmaId: string }) =>
+    z.object({ simuladoId: z.string().uuid(), turmaId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await ensureProfessorOrAdmin(context.supabase, context.userId);
+    const { data: rows, error } = await context.supabase
+      .from("respostas_alunos")
+      .select("numero_chamada, nome")
+      .eq("simulado_id", data.simuladoId)
+      .eq("turma_id", data.turmaId)
+      .not("numero_chamada", "is", null);
+    if (error) throw error;
+    const map = new Map<number, { numero_chamada: number; nome: string | null; respostas: number }>();
+    for (const r of (rows ?? []) as any[]) {
+      const k = r.numero_chamada as number;
+      const cur = map.get(k);
+      if (cur) {
+        cur.respostas++;
+        if (!cur.nome && r.nome) cur.nome = r.nome;
+      } else {
+        map.set(k, { numero_chamada: k, nome: r.nome ?? null, respostas: 1 });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.numero_chamada - b.numero_chamada);
+  });
+
+export const deleteImportacao = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { simuladoId: string; turmaId: string }) =>
+    z.object({ simuladoId: z.string().uuid(), turmaId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await ensureProfessorOrAdmin(context.supabase, context.userId);
+    const { error, count } = await context.supabase
+      .from("respostas_alunos")
+      .delete({ count: "exact" })
+      .eq("simulado_id", data.simuladoId)
+      .eq("turma_id", data.turmaId);
+    if (error) throw error;
+    return { ok: true, removidas: count ?? 0 };
+  });
+
+export const deleteImportacaoAluno = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { simuladoId: string; turmaId: string; numeroChamada: number }) =>
+    z
+      .object({
+        simuladoId: z.string().uuid(),
+        turmaId: z.string().uuid(),
+        numeroChamada: z.number().int().min(1).max(9999),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await ensureProfessorOrAdmin(context.supabase, context.userId);
+    const { error, count } = await context.supabase
+      .from("respostas_alunos")
+      .delete({ count: "exact" })
+      .eq("simulado_id", data.simuladoId)
+      .eq("turma_id", data.turmaId)
+      .eq("numero_chamada", data.numeroChamada);
+    if (error) throw error;
+    return { ok: true, removidas: count ?? 0 };
+  });
+
+export const updateImportacaoAluno = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      simuladoId: string;
+      turmaId: string;
+      numeroChamada: number;
+      novoNumero?: number;
+      nome?: string | null;
+    }) =>
+      z
+        .object({
+          simuladoId: z.string().uuid(),
+          turmaId: z.string().uuid(),
+          numeroChamada: z.number().int().min(1).max(9999),
+          novoNumero: z.number().int().min(1).max(9999).optional(),
+          nome: z.string().trim().max(200).nullable().optional(),
+        })
+        .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await ensureProfessorOrAdmin(context.supabase, context.userId);
+    const patch: { nome?: string | null; numero_chamada?: number } = {};
+    if (data.nome !== undefined) patch.nome = data.nome && data.nome.length ? data.nome : null;
+    if (data.novoNumero !== undefined && data.novoNumero !== data.numeroChamada) {
+      patch.numero_chamada = data.novoNumero;
+    }
+    if (Object.keys(patch).length === 0) return { ok: true, atualizadas: 0 };
+    const { error, count } = await context.supabase
+      .from("respostas_alunos")
+      .update(patch, { count: "exact" })
+      .eq("simulado_id", data.simuladoId)
+      .eq("turma_id", data.turmaId)
+      .eq("numero_chamada", data.numeroChamada);
+    if (error) throw error;
+    return { ok: true, atualizadas: count ?? 0 };
+  });
+
+
 
