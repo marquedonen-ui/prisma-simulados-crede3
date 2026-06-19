@@ -11,6 +11,14 @@ async function ensureProfessorOrAdmin(supabase: any, userId: string) {
   }
 }
 
+async function ensureAdmin(supabase: any, userId: string) {
+  const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  const roles = (data ?? []).map((r: { role: string }) => r.role);
+  if (!roles.includes("admin")) {
+    throw new Error("Acesso restrito a administradores.");
+  }
+}
+
 // ============== QUESTÕES ==============
 
 export const listQuestoes = createServerFn({ method: "GET" })
@@ -489,6 +497,18 @@ export const deleteImportacao = createServerFn({ method: "POST" })
       .delete({ count: "exact" })
       .eq("simulado_id", data.simuladoId)
       .eq("turma_id", data.turmaId);
+    if (error) throw error;
+    return { ok: true, removidas: count ?? 0 };
+  });
+
+export const deleteTodasImportacoes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await ensureAdmin(context.supabase, context.userId);
+    const { error, count } = await context.supabase
+      .from("respostas_alunos")
+      .delete({ count: "exact" })
+      .not("turma_id", "is", null);
     if (error) throw error;
     return { ok: true, removidas: count ?? 0 };
   });
