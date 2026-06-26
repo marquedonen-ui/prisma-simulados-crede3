@@ -237,11 +237,13 @@ const importSchema = z.object({
         numero_chamada: z.number().int().min(1).max(9999),
         nome: z.string().trim().max(200).optional(),
         respostas: z.record(z.string(), z.string()),
+        ausente: z.boolean().optional(),
       }),
     )
     .min(1)
     .max(5000),
 });
+
 
 export const importarRespostas = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
