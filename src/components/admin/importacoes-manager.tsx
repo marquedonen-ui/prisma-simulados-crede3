@@ -169,9 +169,10 @@ export function ImportacoesManager() {
                         {l.escola} · INEP {l.inep} · Turma {l.turma}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {l.alunos} aluno(s) · {l.respostas} resposta(s) ·{" "}
+                        {l.alunos} aluno(s){l.ausentes ? ` · ${l.ausentes} ausente(s)` : ""} · {l.respostas} resposta(s) ·{" "}
                         última: {new Date(l.ultima).toLocaleString("pt-BR")}
                       </p>
+
                     </div>
                   </button>
                   <AlertDialog>
