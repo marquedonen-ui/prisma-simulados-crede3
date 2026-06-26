@@ -54,8 +54,10 @@ function Page() {
   const getPadFn = useServerFn(getPadraoDesempenho);
   const getConFn = useServerFn(getConclusao);
   const getAcFn = useServerFn(getAcertoMedio);
+  const listDiscFn = useServerFn(listDisciplinasSimulado);
 
   const [simuladoId, setSimuladoId] = useState("");
+  const [acDisciplina, setAcDisciplina] = useState<string>("__all__");
 
   const simQ = useQuery({ queryKey: ["rel-sims"], queryFn: () => listSimFn() });
   const padQ = useQuery({
@@ -68,11 +70,23 @@ function Page() {
     queryFn: () => getConFn({ data: { simuladoId } }),
     enabled: !!simuladoId,
   });
-  const acQ = useQuery({
-    queryKey: ["acerto", simuladoId],
-    queryFn: () => getAcFn({ data: { simuladoId } }),
+  const discQ = useQuery({
+    queryKey: ["disciplinas-sim", simuladoId],
+    queryFn: () => listDiscFn({ data: { simuladoId } }),
     enabled: !!simuladoId,
   });
+  const acQ = useQuery({
+    queryKey: ["acerto", simuladoId, acDisciplina],
+    queryFn: () =>
+      getAcFn({
+        data: {
+          simuladoId,
+          disciplina: acDisciplina === "__all__" ? null : acDisciplina,
+        },
+      }),
+    enabled: !!simuladoId,
+  });
+
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-6 py-10">
