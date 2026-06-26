@@ -98,7 +98,7 @@ function faixaDeAcertos(n: number): keyof Faixas {
 async function carregarDataset(
   supabase: any,
   simuladoId: string,
-  opts?: { disciplina?: string | null },
+  opts?: { disciplina?: string | null; scopeSchoolId?: string | null },
 ) {
   // Use service role to read the answer key (resposta_correta) without exposing
   // it via RLS to professor_responsavel/gestor. Callers must enforce role checks first.
