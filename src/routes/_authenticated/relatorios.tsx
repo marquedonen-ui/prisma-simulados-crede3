@@ -147,8 +147,6 @@ function Page() {
 
       {simuladoId && (
         <div className="space-y-6">
-      {simuladoId && (
-        <div className="space-y-6">
           <PadraoDesempenhoPainel
             isLoading={padQ.isLoading}
             data={padQ.data ?? []}
