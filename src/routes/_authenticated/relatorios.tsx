@@ -136,6 +136,19 @@ function Page() {
 
 /* =================== Painel 1: Padrão de Desempenho =================== */
 
+type SchoolPad = {
+  school_id: string;
+  name: string;
+  total: number;
+  faixas: { muito_critico: number; critico: number; intermediario: number; adequado: number };
+  turmas: Array<{
+    turma_id: string;
+    name: string;
+    total: number;
+    faixas: { muito_critico: number; critico: number; intermediario: number; adequado: number };
+  }>;
+};
+
 function PadraoDesempenhoPainel({
   isLoading,
   data,
@@ -145,33 +158,54 @@ function PadraoDesempenhoPainel({
     city: string;
     total: number;
     faixas: { muito_critico: number; critico: number; intermediario: number; adequado: number };
-    escolas: Array<{
-      school_id: string;
-      name: string;
-      total: number;
-      faixas: { muito_critico: number; critico: number; intermediario: number; adequado: number };
-    }>;
+    escolas: SchoolPad[];
   }>;
 }) {
   const [cidade, setCidade] = useState<string | null>(null);
+  const [escolaId, setEscolaId] = useState<string | null>(null);
   const cidadeData = cidade ? data.find((c) => c.city === cidade) : null;
+  const escolaData =
+    cidadeData && escolaId ? cidadeData.escolas.find((e) => e.school_id === escolaId) : null;
 
   const chartData = useMemo(() => {
+    if (escolaData) {
+      return escolaData.turmas.map((t) => toPct(t.name, t.faixas, t.total));
+    }
     if (cidadeData) {
-      return cidadeData.escolas.map((e) => toPct(e.name, e.faixas, e.total));
+      return cidadeData.escolas.map((e) => toPct(e.name, e.faixas, e.total, e.school_id));
     }
     return data.map((c) => toPct(c.city, c.faixas, c.total));
-  }, [data, cidadeData]);
+  }, [data, cidadeData, escolaData]);
+
+  const onBarClick = (d: any) => {
+    if (escolaData) return;
+    if (cidadeData) {
+      const e = cidadeData.escolas.find((x) => x.name === d.label);
+      if (e) setEscolaId(e.school_id);
+    } else {
+      setCidade(d.label);
+    }
+  };
+  const onBack = escolaData
+    ? () => setEscolaId(null)
+    : cidade
+      ? () => setCidade(null)
+      : undefined;
+  const backLabel = escolaData ? "Voltar para escolas" : "Voltar para municípios";
+  const description = escolaData
+    ? `Turmas da escola ${escolaData.name}. Faixas: 0–11 Muito Crítico · 12–22 Crítico · 23–34 Intermediário · 35–45 Adequado.`
+    : cidade
+      ? `Escolas do município de ${cidade}. Clique em uma barra para ver as turmas.`
+      : "Por município. Clique em uma barra para ver as escolas. Faixas: 0–11 Muito Crítico · 12–22 Crítico · 23–34 Intermediário · 35–45 Adequado.";
+
+  const drillable = !escolaData;
 
   return (
     <PainelCard
       title="% de Alunos por Padrão de Desempenho"
-      description={
-        cidade
-          ? `Escolas do município de ${cidade}. Faixas: 0–11 Muito Crítico · 12–22 Crítico · 23–34 Intermediário · 35–45 Adequado.`
-          : "Por município. Clique em uma barra para ver as escolas. Faixas: 0–11 Muito Crítico · 12–22 Crítico · 23–34 Intermediário · 35–45 Adequado."
-      }
-      onBack={cidade ? () => setCidade(null) : undefined}
+      description={description}
+      onBack={onBack}
+      backLabel={backLabel}
       isLoading={isLoading}
       empty={chartData.length === 0}
     >
@@ -186,34 +220,24 @@ function PadraoDesempenhoPainel({
           <YAxis type="category" dataKey="label" width={180} tick={{ fontSize: 12 }} />
           <Tooltip formatter={pctTooltip} />
           <Legend />
-          <Bar
-            dataKey="Muito Crítico"
-            stackId="a"
-            fill={COR_MUITO_CRITICO}
-            onClick={(d: any) => !cidade && setCidade(d.label)}
-            cursor={cidade ? "default" : "pointer"}
-          />
-          <Bar
-            dataKey="Crítico"
-            stackId="a"
-            fill={COR_CRITICO}
-            onClick={(d: any) => !cidade && setCidade(d.label)}
-            cursor={cidade ? "default" : "pointer"}
-          />
-          <Bar
-            dataKey="Intermediário"
-            stackId="a"
-            fill={COR_INTERMEDIARIO}
-            onClick={(d: any) => !cidade && setCidade(d.label)}
-            cursor={cidade ? "default" : "pointer"}
-          />
-          <Bar
-            dataKey="Adequado"
-            stackId="a"
-            fill={COR_ADEQUADO}
-            onClick={(d: any) => !cidade && setCidade(d.label)}
-            cursor={cidade ? "default" : "pointer"}
-          />
+          {(["Muito Crítico", "Crítico", "Intermediário", "Adequado"] as const).map((k) => (
+            <Bar
+              key={k}
+              dataKey={k}
+              stackId="a"
+              fill={
+                k === "Muito Crítico"
+                  ? COR_MUITO_CRITICO
+                  : k === "Crítico"
+                    ? COR_CRITICO
+                    : k === "Intermediário"
+                      ? COR_INTERMEDIARIO
+                      : COR_ADEQUADO
+              }
+              onClick={onBarClick}
+              cursor={drillable ? "pointer" : "default"}
+            />
+          ))}
         </BarChart>
       </ResponsiveContainer>
     </PainelCard>
@@ -224,6 +248,7 @@ function toPct(
   label: string,
   faixas: { muito_critico: number; critico: number; intermediario: number; adequado: number },
   total: number,
+  _id?: string,
 ) {
   const t = total || 1;
   return {
@@ -269,38 +294,75 @@ function ConclusaoPainel({
       finalizaram: number;
       nao_finalizaram: number;
       matriculados: number;
+      turmas: Array<{
+        turma_id: string;
+        name: string;
+        finalizaram: number;
+        nao_finalizaram: number;
+        matriculados: number;
+      }>;
     }>;
   }>;
 }) {
   const [cidade, setCidade] = useState<string | null>(null);
+  const [escolaId, setEscolaId] = useState<string | null>(null);
   const cidadeData = cidade ? data.find((c) => c.city === cidade) : null;
+  const escolaData =
+    cidadeData && escolaId ? cidadeData.escolas.find((e) => e.school_id === escolaId) : null;
 
   const chartData = useMemo(() => {
-    const rows = cidadeData
-      ? cidadeData.escolas.map((e) => ({
-          label: e.name,
-          Finalizaram: e.finalizaram,
-          "Não finalizaram": e.nao_finalizaram,
-          _total: e.matriculados || e.finalizaram + e.nao_finalizaram,
-        }))
-      : data.map((c) => ({
-          label: c.city,
-          Finalizaram: c.finalizaram,
-          "Não finalizaram": c.nao_finalizaram,
-          _total: c.matriculados || c.finalizaram + c.nao_finalizaram,
-        }));
-    return rows;
-  }, [data, cidadeData]);
+    if (escolaData) {
+      return escolaData.turmas.map((t) => ({
+        label: t.name,
+        Finalizaram: t.finalizaram,
+        "Não finalizaram": t.nao_finalizaram,
+        _total: t.matriculados || t.finalizaram + t.nao_finalizaram,
+      }));
+    }
+    if (cidadeData) {
+      return cidadeData.escolas.map((e) => ({
+        label: e.name,
+        Finalizaram: e.finalizaram,
+        "Não finalizaram": e.nao_finalizaram,
+        _total: e.matriculados || e.finalizaram + e.nao_finalizaram,
+      }));
+    }
+    return data.map((c) => ({
+      label: c.city,
+      Finalizaram: c.finalizaram,
+      "Não finalizaram": c.nao_finalizaram,
+      _total: c.matriculados || c.finalizaram + c.nao_finalizaram,
+    }));
+  }, [data, cidadeData, escolaData]);
+
+  const onBarClick = (d: any) => {
+    if (escolaData) return;
+    if (cidadeData) {
+      const e = cidadeData.escolas.find((x) => x.name === d.label);
+      if (e) setEscolaId(e.school_id);
+    } else {
+      setCidade(d.label);
+    }
+  };
+  const onBack = escolaData
+    ? () => setEscolaId(null)
+    : cidade
+      ? () => setCidade(null)
+      : undefined;
+  const backLabel = escolaData ? "Voltar para escolas" : "Voltar para municípios";
+  const description = escolaData
+    ? `Turmas da escola ${escolaData.name}. Base: matrícula atual cadastrada em cada turma.`
+    : cidade
+      ? `Escolas do município de ${cidade}. Clique em uma barra para ver as turmas.`
+      : "Por município. Clique em uma barra para abrir as escolas. Base: matrícula atual cadastrada em cada turma.";
+  const drillable = !escolaData;
 
   return (
     <PainelCard
       title="% de Alunos que Finalizaram a Prova"
-      description={
-        cidade
-          ? `Escolas do município de ${cidade}. Base: matrícula atual cadastrada em cada turma.`
-          : "Por município. Clique em uma barra para abrir as escolas. Base: matrícula atual cadastrada em cada turma."
-      }
-      onBack={cidade ? () => setCidade(null) : undefined}
+      description={description}
+      onBack={onBack}
+      backLabel={backLabel}
       isLoading={isLoading}
       empty={chartData.length === 0}
     >
@@ -325,15 +387,15 @@ function ConclusaoPainel({
             dataKey="Finalizaram"
             stackId="b"
             fill={COR_FINALIZOU}
-            onClick={(d: any) => !cidade && setCidade(d.label)}
-            cursor={cidade ? "default" : "pointer"}
+            onClick={onBarClick}
+            cursor={drillable ? "pointer" : "default"}
           />
           <Bar
             dataKey="Não finalizaram"
             stackId="b"
             fill={COR_NAO_FINALIZOU}
-            onClick={(d: any) => !cidade && setCidade(d.label)}
-            cursor={cidade ? "default" : "pointer"}
+            onClick={onBarClick}
+            cursor={drillable ? "pointer" : "default"}
           />
         </BarChart>
       </ResponsiveContainer>
@@ -361,40 +423,79 @@ function AcertoMedioPainel({
       pct_erro: number;
       acertos: number;
       erros: number;
+      turmas: Array<{
+        turma_id: string;
+        name: string;
+        pct_acerto: number;
+        pct_erro: number;
+        acertos: number;
+        erros: number;
+      }>;
     }>;
   }>;
 }) {
   const [cidade, setCidade] = useState<string | null>(null);
+  const [escolaId, setEscolaId] = useState<string | null>(null);
   const cidadeData = cidade ? data.find((c) => c.city === cidade) : null;
+  const escolaData =
+    cidadeData && escolaId ? cidadeData.escolas.find((e) => e.school_id === escolaId) : null;
 
   const chartData = useMemo(() => {
-    const rows = cidadeData
-      ? cidadeData.escolas.map((e) => ({
-          label: e.name,
-          "% Acerto": e.pct_acerto,
-          "% Erro": e.pct_erro,
-          _acertos: e.acertos,
-          _erros: e.erros,
-        }))
-      : data.map((c) => ({
-          label: c.city,
-          "% Acerto": c.pct_acerto,
-          "% Erro": c.pct_erro,
-          _acertos: c.acertos,
-          _erros: c.erros,
-        }));
-    return rows;
-  }, [data, cidadeData]);
+    if (escolaData) {
+      return escolaData.turmas.map((t) => ({
+        label: t.name,
+        "% Acerto": t.pct_acerto,
+        "% Erro": t.pct_erro,
+        _acertos: t.acertos,
+        _erros: t.erros,
+      }));
+    }
+    if (cidadeData) {
+      return cidadeData.escolas.map((e) => ({
+        label: e.name,
+        "% Acerto": e.pct_acerto,
+        "% Erro": e.pct_erro,
+        _acertos: e.acertos,
+        _erros: e.erros,
+      }));
+    }
+    return data.map((c) => ({
+      label: c.city,
+      "% Acerto": c.pct_acerto,
+      "% Erro": c.pct_erro,
+      _acertos: c.acertos,
+      _erros: c.erros,
+    }));
+  }, [data, cidadeData, escolaData]);
+
+  const onBarClick = (d: any) => {
+    if (escolaData) return;
+    if (cidadeData) {
+      const e = cidadeData.escolas.find((x) => x.name === d.label);
+      if (e) setEscolaId(e.school_id);
+    } else {
+      setCidade(d.label);
+    }
+  };
+  const onBack = escolaData
+    ? () => setEscolaId(null)
+    : cidade
+      ? () => setCidade(null)
+      : undefined;
+  const backLabel = escolaData ? "Voltar para escolas" : "Voltar para municípios";
+  const description = escolaData
+    ? `Turmas da escola ${escolaData.name}.`
+    : cidade
+      ? `Escolas do município de ${cidade}. Clique em uma barra para ver as turmas.`
+      : "Por município. Clique em uma barra para abrir as escolas.";
+  const drillable = !escolaData;
 
   return (
     <PainelCard
       title="Percentual de Acerto Médio na Oferta"
-      description={
-        cidade
-          ? `Escolas do município de ${cidade}.`
-          : "Por município. Clique em uma barra para abrir as escolas."
-      }
-      onBack={cidade ? () => setCidade(null) : undefined}
+      description={description}
+      onBack={onBack}
+      backLabel={backLabel}
       isLoading={isLoading}
       empty={chartData.length === 0}
     >
@@ -418,8 +519,8 @@ function AcertoMedioPainel({
             dataKey="% Acerto"
             stackId="c"
             fill={COR_ACERTO}
-            onClick={(d: any) => !cidade && setCidade(d.label)}
-            cursor={cidade ? "default" : "pointer"}
+            onClick={onBarClick}
+            cursor={drillable ? "pointer" : "default"}
           >
             {chartData.map((_, i) => (
               <Cell key={i} fill={COR_ACERTO} />
@@ -429,8 +530,8 @@ function AcertoMedioPainel({
             dataKey="% Erro"
             stackId="c"
             fill={COR_ERRO}
-            onClick={(d: any) => !cidade && setCidade(d.label)}
-            cursor={cidade ? "default" : "pointer"}
+            onClick={onBarClick}
+            cursor={drillable ? "pointer" : "default"}
           />
         </BarChart>
       </ResponsiveContainer>
@@ -444,6 +545,7 @@ function PainelCard({
   title,
   description,
   onBack,
+  backLabel,
   isLoading,
   empty,
   children,
@@ -451,6 +553,7 @@ function PainelCard({
   title: string;
   description: string;
   onBack?: () => void;
+  backLabel?: string;
   isLoading: boolean;
   empty: boolean;
   children: React.ReactNode;
@@ -464,7 +567,7 @@ function PainelCard({
         </div>
         {onBack && (
           <Button variant="outline" size="sm" onClick={onBack}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para municípios
+            <ArrowLeft className="mr-2 h-4 w-4" /> {backLabel ?? "Voltar"}
           </Button>
         )}
       </CardHeader>
