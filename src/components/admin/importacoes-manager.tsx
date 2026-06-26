@@ -105,6 +105,26 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
+  const fechar = useMutation({
+    mutationFn: (l: Lote) =>
+      fecharFn({ data: { simuladoId: l.simulado_id, turmaId: l.turma_id } }),
+    onSuccess: () => {
+      toast.success("Avaliação encerrada. Os dados desta turma foram bloqueados para edição.");
+      qc.invalidateQueries({ queryKey: ["importacoes"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
+
+  const reabrir = useMutation({
+    mutationFn: (l: Lote) =>
+      reabrirFn({ data: { simuladoId: l.simulado_id, turmaId: l.turma_id } }),
+    onSuccess: () => {
+      toast.success("Avaliação reaberta.");
+      qc.invalidateQueries({ queryKey: ["importacoes"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
+
   return (
     <Card>
       <CardHeader>
