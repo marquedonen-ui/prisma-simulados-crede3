@@ -6,6 +6,8 @@ import {
   getMyRole,
   listSchools,
   createSchool,
+  updateSchool,
+  deleteSchool,
 } from "@/lib/prisma.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
