@@ -402,7 +402,9 @@ function LoteAlunos({ lote, bloqueadoPorPrazo = false }: { lote: Lote; bloqueado
       {locked && (
         <div className="mb-3 flex items-center gap-2 rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-xs text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
           <Lock className="h-4 w-4" />
-          Avaliação encerrada — os dados desta turma estão bloqueados para edição. Somente o administrador geral pode reabrir.
+          {lote.fechado
+            ? "Avaliação encerrada — os dados desta turma estão bloqueados para edição. Somente o administrador geral pode reabrir."
+            : "Prazo de inserção dos resultados no PRISMA encerrado — edição e exclusão bloqueadas para professores. Somente o administrador geral pode alterar."}
         </div>
       )}
       {alunosQ.isLoading && (
