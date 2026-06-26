@@ -472,7 +472,7 @@ function LoteAlunos({ lote }: { lote: Lote }) {
         ))}
       </div>
 
-      {(() => {
+      {!lote.fechado && (() => {
         const nParsed = parseInt(novoNum || "0", 10);
         const existentes = new Set((alunosQ.data ?? []).map((a) => a.numero_chamada));
         const duplicado = nParsed > 0 && existentes.has(nParsed);
