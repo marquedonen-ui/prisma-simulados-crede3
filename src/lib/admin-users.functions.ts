@@ -72,7 +72,13 @@ export const createManagedUser = createServerFn({ method: "POST" })
         school_id: data.school_id ?? null,
       },
     });
-    if (error) throw error;
+    if (error) {
+      if ((error as any).code === "weak_password" || /weak/i.test(error.message)) {
+        throw new Error("Senha muito fraca. Use ao menos 8 caracteres com letras, números e símbolos.");
+      }
+      throw error;
+    }
+
     const userId = created.user!.id;
 
     // Garantir perfil (trigger já insere, mas garantimos os campos)
