@@ -777,6 +777,7 @@ export const updateRespostasAluno = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await ensureProfessorOrAdmin(context.supabase, context.userId);
 
+    // Tenta obter nome existente em respostas ou na lista de ausentes.
     const { data: existente } = await context.supabase
       .from("respostas_alunos")
       .select("nome")
@@ -784,7 +785,17 @@ export const updateRespostasAluno = createServerFn({ method: "POST" })
       .eq("turma_id", data.turmaId)
       .eq("numero_chamada", data.numeroChamada)
       .limit(1);
-    const nome = (existente?.[0] as any)?.nome ?? null;
+    let nome = (existente?.[0] as any)?.nome ?? null;
+    if (!nome) {
+      const { data: aus } = await context.supabase
+        .from("alunos_ausentes")
+        .select("nome")
+        .eq("simulado_id", data.simuladoId)
+        .eq("turma_id", data.turmaId)
+        .eq("numero_chamada", data.numeroChamada)
+        .limit(1);
+      nome = (aus?.[0] as any)?.nome ?? null;
+    }
 
     const { error: delErr } = await context.supabase
       .from("respostas_alunos")
@@ -814,8 +825,16 @@ export const updateRespostasAluno = createServerFn({ method: "POST" })
         .from("respostas_alunos")
         .insert(inserir);
       if (insErr) throw insErr;
+      // Saiu da lista de ausentes ao ter pelo menos uma resposta marcada.
+      await context.supabase
+        .from("alunos_ausentes")
+        .delete()
+        .eq("simulado_id", data.simuladoId)
+        .eq("turma_id", data.turmaId)
+        .eq("numero_chamada", data.numeroChamada);
     }
 
     return { ok: true, total: inserir.length };
   });
+
 
