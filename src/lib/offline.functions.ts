@@ -889,6 +889,8 @@ export const updateRespostasAluno = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => updateRespostasSchema.parse(d))
   .handler(async ({ data, context }) => {
     await ensureProfessorOrAdmin(context.supabase, context.userId);
+    await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
+    await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
 
     // Tenta obter nome existente em respostas ou na lista de ausentes.
     const { data: existente } = await context.supabase
