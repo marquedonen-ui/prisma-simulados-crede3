@@ -389,12 +389,12 @@ export function UsersManager({ schools }: { schools: School[] }) {
                     </SelectContent>
                   </Select>
                 </div>
-                {(editing.role === "professor_responsavel" || editing.role === "gestor") && (
+                {SCHOOL_BOUND_ROLES.has(editing.role) && (
                   <div className="space-y-1.5">
                     <Label>Escola</Label>
                     <Select
                       value={editing.school_id}
-                      onValueChange={(v) => setEditing({ ...editing, school_id: v })}
+                      onValueChange={(v) => setEditing({ ...editing, school_id: v, turma_ids: [] })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione..." />
@@ -408,6 +408,66 @@ export function UsersManager({ schools }: { schools: School[] }) {
                       </SelectContent>
                     </Select>
                   </div>
+                )}
+                {editing.role === "gestor" && (
+                  <div className="space-y-1.5">
+                    <Label>Cargo</Label>
+                    <Select
+                      value={editing.cargo ?? ""}
+                      onValueChange={(v) => setEditing({ ...editing, cargo: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o cargo..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CARGOS.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {editing.role === "professor_escola" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label>Série</Label>
+                        <Input
+                          value={editing.serie ?? ""}
+                          onChange={(e) => setEditing({ ...editing, serie: e.target.value })}
+                          placeholder="Ex.: 3º ano"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Turno</Label>
+                        <Select
+                          value={editing.turno ?? ""}
+                          onValueChange={(v) => setEditing({ ...editing, turno: v })}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Turno" /></SelectTrigger>
+                          <SelectContent>
+                            {TURNOS.map((t) => (
+                              <SelectItem key={t} value={t}>{t}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Disciplina(s) de lotação</Label>
+                      <Input
+                        value={editing.disciplinas ?? ""}
+                        onChange={(e) => setEditing({ ...editing, disciplinas: e.target.value })}
+                        placeholder="Ex.: Matemática, Física"
+                      />
+                      <p className="text-xs text-muted-foreground">Separe múltiplas disciplinas por vírgula.</p>
+                    </div>
+                    <TurmasMultiSelect
+                      schoolId={editing.school_id}
+                      value={editing.turma_ids ?? []}
+                      onChange={(ids) => setEditing({ ...editing, turma_ids: ids })}
+                    />
+                  </>
                 )}
                 <Button
                   type="submit"
