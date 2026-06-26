@@ -194,43 +194,87 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
                       <ChevronRight className="mt-0.5 h-4 w-4 shrink-0" />
                     )}
                     <div className="min-w-0">
-                      <p className="truncate font-medium">{l.simulado}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate font-medium">{l.simulado}</p>
+                        {l.fechado && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                            <Lock className="h-3 w-3" /> Avaliação encerrada
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {l.escola} · INEP {l.inep} · Turma {l.turma}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {l.alunos} aluno(s){l.ausentes ? ` · ${l.ausentes} ausente(s)` : ""} · {l.respostas} resposta(s) ·{" "}
                         última: {new Date(l.ultima).toLocaleString("pt-BR")}
+                        {l.fechado && l.fechado_em ? ` · fechada em ${new Date(l.fechado_em).toLocaleString("pt-BR")}` : ""}
                       </p>
-
                     </div>
                   </button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm">
-                        <Trash2 className="mr-1 h-4 w-4" /> Excluir lote
+                  <div className="flex flex-wrap gap-2">
+                    {!l.fechado && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="default" size="sm" disabled={fechar.isPending}>
+                            <Lock className="mr-1 h-4 w-4" /> Fechar avaliação
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Encerrar avaliação desta turma?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Após fechar, ninguém poderá alterar, excluir ou reimportar respostas desta turma. Somente o administrador geral pode reabrir.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => fechar.mutate(l)}>
+                              Fechar avaliação
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                    {l.fechado && isAdmin && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={reabrir.isPending}
+                        onClick={() => reabrir.mutate(l)}
+                      >
+                        <LockOpen className="mr-1 h-4 w-4" /> Reabrir
                       </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Excluir lote inteiro?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Todas as {l.respostas} respostas dos {l.alunos} alunos
-                          deste simulado nesta turma serão removidas. Essa ação
-                          não pode ser desfeita.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => delLote.mutate(l)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Excluir
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                    )}
+                    {(!l.fechado || isAdmin) && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="sm" disabled={l.fechado && !isAdmin}>
+                            <Trash2 className="mr-1 h-4 w-4" /> Excluir lote
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Excluir lote inteiro?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Todas as {l.respostas} respostas dos {l.alunos} alunos
+                              deste simulado nesta turma serão removidas. Essa ação
+                              não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => delLote.mutate(l)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
                 </div>
                 {open && <LoteAlunos lote={l} />}
               </div>
