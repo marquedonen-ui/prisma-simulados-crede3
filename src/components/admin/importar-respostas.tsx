@@ -476,7 +476,7 @@ export function ImportarRespostas({
                         const total = resultado.total_questoes || 1;
                         const pct = ((a.acertos / total) * 100).toFixed(1);
                         return (
-                          <tr key={`${a.numero_chamada}-${i}`} className="border-t">
+                          <tr key={`${a.numero_chamada}-${i}`} className={"border-t " + (a.ausente ? "bg-amber-500/5" : "")}>
                             <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
                             <td className="px-3 py-2 font-mono text-xs">{a.numero_chamada}</td>
                             <td className="px-3 py-2">
@@ -485,17 +485,23 @@ export function ImportarRespostas({
                               ) : (
                                 <span className="text-muted-foreground italic">—</span>
                               )}
+                              {a.ausente ? (
+                                <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
+                                  Ausente
+                                </span>
+                              ) : null}
                             </td>
                             <td className="px-3 py-2 text-center font-semibold text-green-600">
-                              {a.acertos}
+                              {a.ausente ? "—" : a.acertos}
                             </td>
-                            <td className="px-3 py-2 text-center text-destructive">{a.erros}</td>
+                            <td className="px-3 py-2 text-center text-destructive">{a.ausente ? "—" : a.erros}</td>
                             <td className="px-3 py-2 text-center text-muted-foreground">
-                              {a.em_branco}
+                              {a.ausente ? "—" : a.em_branco}
                             </td>
-                            <td className="px-3 py-2 text-center">{pct}%</td>
+                            <td className="px-3 py-2 text-center">{a.ausente ? "—" : `${pct}%`}</td>
                           </tr>
                         );
+
                       })}
                     </tbody>
                   </table>
