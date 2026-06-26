@@ -459,17 +459,15 @@ function Page() {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-xs text-muted-foreground">
-                                Nº de chamada: {a.numero_chamada}
-                              </div>
                             </TableCell>
                             <TableCell>
                               <div className="text-sm">{a.school_name}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {a.turma_nome}
-                                {a.city ? ` · ${a.city}` : ""}
-                              </div>
+                              {a.city && (
+                                <div className="text-xs text-muted-foreground">{a.city}</div>
+                              )}
                             </TableCell>
+                            <TableCell className="text-sm">{a.turma_nome}</TableCell>
+                            <TableCell className="text-right">{a.numero_chamada}</TableCell>
                             <TableCell className="text-right">
                               {a.acertos}/{a.total_questoes}
                             </TableCell>
@@ -491,7 +489,6 @@ function Page() {
             </CardContent>
           </Card>
         </section>
-      </div>
 
       <Dialog open={!!selecionado} onOpenChange={(o) => !o && setSelecionado(null)}>
         <DialogContent className="max-w-3xl">
