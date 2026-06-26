@@ -33,6 +33,49 @@ async function fetchAllRows<T>(buildQuery: () => any): Promise<T[]> {
   return rows;
 }
 
+async function isLoteFechado(supabase: any, simuladoId: string, turmaId: string) {
+  const { data } = await supabase
+    .from("lotes_fechados")
+    .select("simulado_id")
+    .eq("simulado_id", simuladoId)
+    .eq("turma_id", turmaId)
+    .maybeSingle();
+  return !!data;
+}
+
+async function assertLoteAberto(supabase: any, simuladoId: string, turmaId: string) {
+  if (await isLoteFechado(supabase, simuladoId, turmaId)) {
+    throw new Error(
+      "Avaliação encerrada para esta turma. Solicite ao administrador geral para reabrir.",
+    );
+  }
+}
+
+async function getProfSchoolId(supabase: any, userId: string) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("school_id")
+    .eq("id", userId)
+    .maybeSingle();
+  return (data?.school_id ?? null) as string | null;
+}
+
+async function ensureTurmaAccess(supabase: any, userId: string, turmaId: string) {
+  const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  const roles = (data ?? []).map((r: any) => r.role);
+  if (roles.includes("admin")) return;
+  if (roles.includes("professor_responsavel")) {
+    const my = await getProfSchoolId(supabase, userId);
+    const { data: t } = await supabase
+      .from("turmas")
+      .select("school_id")
+      .eq("id", turmaId)
+      .maybeSingle();
+    if (my && t?.school_id === my) return;
+  }
+  throw new Error("Você só pode operar dados da sua escola.");
+}
+
 // ============== QUESTÕES ==============
 
 export const listQuestoes = createServerFn({ method: "GET" })
