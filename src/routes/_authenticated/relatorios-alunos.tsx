@@ -547,10 +547,26 @@ function Page() {
                   </thead>
                   <tbody>
                     {gabQ.data.itens.map((it) => (
-                      <tr key={it.numero} className="border-t">
+                      <tr key={it.numero} className={cn("border-t", it.anulada && "bg-amber-50")}>
                         <td className="px-3 py-2 font-medium">{it.numero}</td>
                         {ALTERNATIVAS.map((alt) => {
                           const isChosen = it.escolhida === alt;
+                          if (it.anulada) {
+                            return (
+                              <td key={alt} className="px-1 py-1 text-center">
+                                <span
+                                  className={cn(
+                                    "inline-flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold",
+                                    isChosen
+                                      ? "border-amber-600 bg-amber-500 text-white"
+                                      : "border-muted text-muted-foreground/60",
+                                  )}
+                                >
+                                  {alt}
+                                </span>
+                              </td>
+                            );
+                          }
                           const isCorrect = it.correta === alt;
                           const chosenWrong = isChosen && !isCorrect;
                           return (
@@ -570,7 +586,11 @@ function Page() {
                           );
                         })}
                         <td className="px-3 py-2 text-center">
-                          {it.status === "certo" ? (
+                          {it.status === "anulada" ? (
+                            <Badge variant="outline" className="border-amber-300 bg-amber-100 text-amber-800">
+                              Anulada
+                            </Badge>
+                          ) : it.status === "certo" ? (
                             <CheckCircle2 className="mx-auto h-5 w-5 text-green-600" />
                           ) : it.status === "errado" ? (
                             <XCircle className="mx-auto h-5 w-5 text-red-600" />
@@ -580,6 +600,7 @@ function Page() {
                         </td>
                       </tr>
                     ))}
+
                   </tbody>
                 </table>
               </div>
