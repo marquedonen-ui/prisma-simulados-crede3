@@ -74,8 +74,13 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
         total,
         answers: Array.from({ length: total }, (_, i) => {
           const n = i + 1;
-          return { numero: n, resposta_correta: (answers[n] ?? "A") as Letter };
+          return {
+            numero: n,
+            resposta_correta: (answers[n] ?? "A") as Letter,
+            anulada: !!anuladas[n],
+          };
         }),
+
       };
       return saveFn({ data: payload });
     },
