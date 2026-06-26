@@ -533,7 +533,6 @@ function AcertoMedioPainel({
 
   const [cidade, setCidade] = useState<string | null>(null);
   const [escolaId, setEscolaId] = useState<string | null>(null);
-  const scoped = (arguments[0] as any)?.scoped === true;
   const cidadeData = scoped ? data[0] ?? null : cidade ? data.find((c) => c.city === cidade) : null;
   const escolaData = scoped
     ? (data[0]?.escolas?.[0] ?? null)
