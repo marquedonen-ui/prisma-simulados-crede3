@@ -52,9 +52,11 @@ type Lote = {
   escola: string;
   inep: string;
   alunos: number;
+  ausentes?: number;
   respostas: number;
   ultima: string;
 };
+
 
 type AlunoLote = {
   numero_chamada: number;
