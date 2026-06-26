@@ -569,10 +569,11 @@ export const getResultadosAlunos = createServerFn({ method: "GET" })
   .inputValidator(idInput)
   .handler(async ({ data, context }) => {
     const scopeSchoolId = await getScopeSchoolId(context.supabase, context.userId);
+    const scopeTurmaIds = await getScopeTurmaIds(context.supabase, context.userId);
     const { alunos, totalQuestoes } = await carregarDataset(
       context.supabase,
       data.simuladoId,
-      { scopeSchoolId },
+      { scopeSchoolId, scopeTurmaIds },
     );
 
     return {
