@@ -31,12 +31,14 @@ type School = { id: string; name: string; inep: string };
 export function ImportarRespostas({
   simulados,
   schools,
+  fixedSchoolId,
 }: {
   simulados: Simulado[];
   schools: School[];
+  fixedSchoolId?: string;
 }) {
   const [simuladoId, setSimuladoId] = useState("");
-  const [schoolId, setSchoolId] = useState("");
+  const [schoolId, setSchoolId] = useState(fixedSchoolId ?? "");
   const [turmaId, setTurmaId] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [resultado, setResultado] = useState<any>(null);
