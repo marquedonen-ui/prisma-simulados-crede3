@@ -264,7 +264,7 @@ export const importarRespostas = createServerFn({ method: "POST" })
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: questoes, error: qErr } = await supabaseAdmin
         .from("questoes")
-        .select("id, numero, resposta_correta")
+        .select("id, numero, resposta_correta, anulada")
         .eq("simulado_id", data.simuladoId);
       if (qErr) {
         console.error(`${tag} erro ao carregar questões`, qErr);
@@ -278,6 +278,10 @@ export const importarRespostas = createServerFn({ method: "POST" })
       const correctById = new Map<string, string>(
         questoes.map((q: any) => [q.id, q.resposta_correta]),
       );
+      const anuladaById = new Map<string, boolean>(
+        questoes.map((q: any) => [q.id, !!q.anulada]),
+      );
+
 
       const { error: delErr, count: delCount } = await context.supabase
         .from("respostas_alunos")
