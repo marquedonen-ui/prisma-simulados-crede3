@@ -43,6 +43,9 @@ function Page() {
   const listSimFn = useServerFn(listSimuladosComRespostas);
   const getQFn = useServerFn(getRelatorioQuestoes);
   const getResFn = useServerFn(getResultadosAlunos);
+  const getScopeFn = useServerFn(getMyReportScope);
+  const scopeQ = useQuery({ queryKey: ["report-scope"], queryFn: () => getScopeFn() });
+  const scoped = !!scopeQ.data?.scoped;
 
   const [simuladoId, setSimuladoId] = useState("");
   const [escolaId, setEscolaId] = useState<string>("__all");
