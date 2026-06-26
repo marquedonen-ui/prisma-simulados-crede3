@@ -356,12 +356,15 @@ export const importarRespostas = createServerFn({ method: "POST" })
             continue;
           }
           const alt = String(v ?? "").trim().toUpperCase();
-          if (!["A", "B", "C", "D", "E"].includes(alt)) {
-            emBranco++;
+          const isAlt = ["A", "B", "C", "D", "E"].includes(alt);
+          const anulada = anuladaById.get(qid) === true;
+          if (!isAlt) {
+            if (anulada) acertos++;
+            else emBranco++;
             continue;
           }
           respondidas++;
-          if (correctById.get(qid) === alt) acertos++;
+          if (anulada || correctById.get(qid) === alt) acertos++;
           inserir.push({
             simulado_id: data.simuladoId,
             turma_id: data.turmaId,
@@ -371,6 +374,7 @@ export const importarRespostas = createServerFn({ method: "POST" })
             resposta_escolhida: alt,
           });
         }
+
 
         const prev = statsPorAluno.get(linha.numero_chamada);
         if (prev) {
