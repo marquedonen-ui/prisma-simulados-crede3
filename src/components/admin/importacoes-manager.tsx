@@ -274,6 +274,30 @@ function LoteAlunos({ lote }: { lote: Lote }) {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
+  const addFn = useServerFn(addAlunoAusente);
+  const [novoNum, setNovoNum] = useState<string>("");
+  const [novoNome, setNovoNome] = useState<string>("");
+  const add = useMutation({
+    mutationFn: () =>
+      addFn({
+        data: {
+          simuladoId: lote.simulado_id,
+          turmaId: lote.turma_id,
+          numeroChamada: parseInt(novoNum || "0", 10),
+          nome: novoNome.trim() || null,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Aluno adicionado para 2ª chamada. Clique no ícone de respostas para registrá-las.");
+      setNovoNum("");
+      setNovoNome("");
+      qc.invalidateQueries({ queryKey: ["importacao-alunos", lote.simulado_id, lote.turma_id] });
+      qc.invalidateQueries({ queryKey: ["importacoes"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
+
+
   return (
     <div className="border-t bg-muted/30 p-3">
       {alunosQ.isLoading && (
