@@ -131,13 +131,23 @@ export function ImportarRespostas({
       if (nomeCol === -1) nomeCol = 3;
 
       const linhas: Array<{ numero_chamada: number; nome?: string; respostas: Record<string, string> }> = [];
+      const ignoradas: Array<{ linha: number; motivo: string; nome?: string; chamadaRaw?: string }> = [];
       for (let r = headerIdx + 1; r < matrix.length; r++) {
         const row = matrix[r];
-        if (!row || row.length === 0) continue;
-        const rawChamada = String(row[chamadaCol] ?? "").trim();
+        const linhaPlanilha = r + 1; // 1-indexed para o usuário
+        const rawChamada = String(row?.[chamadaCol] ?? "").trim();
+        const nome = String(row?.[nomeCol] ?? "").trim().slice(0, 200) || undefined;
+        if (!row || row.length === 0 || (!rawChamada && !nome)) continue; // linha totalmente vazia: silêncio
         const numero_chamada = parseInt(rawChamada.replace(/\D/g, ""), 10);
-        if (!numero_chamada || numero_chamada < 1) continue;
-        const nome = String(row[nomeCol] ?? "").trim().slice(0, 200) || undefined;
+        if (!numero_chamada || numero_chamada < 1) {
+          ignoradas.push({
+            linha: linhaPlanilha,
+            motivo: rawChamada ? `nº de chamada inválido ("${rawChamada}")` : "nº de chamada em branco",
+            nome,
+            chamadaRaw: rawChamada,
+          });
+          continue;
+        }
         const respostas: Record<string, string> = {};
         for (let c = 0; c < headers.length; c++) {
           const h = headers[c];
@@ -156,14 +166,17 @@ export function ImportarRespostas({
           "Nenhuma linha válida. Verifique se há coluna 'Núm. da lista' (ou nº de chamada na coluna C) e colunas 'Q N Options'.",
         );
 
-      return importFn({ data: { simuladoId, schoolId, turmaId, linhas } });
+      const resp = await importFn({ data: { simuladoId, schoolId, turmaId, linhas } });
+      return { ...resp, linhas_ignoradas: ignoradas } as any;
     },
     onSuccess: (r) => {
       setResultado(r);
+      const ign = r.linhas_ignoradas?.length ?? 0;
       toast.success(
-        `${r.respostas_importadas} respostas de ${r.alunos_processados} aluno(s) importadas!`,
+        `${r.respostas_importadas} respostas de ${r.alunos_processados} aluno(s) importadas${ign ? ` · ${ign} linha(s) ignorada(s)` : ""}.`,
       );
     },
+
     onError: (e) => toast.error(e instanceof Error ? e.message : "Falha na importação"),
   });
 
@@ -381,6 +394,42 @@ export function ImportarRespostas({
                 </div>
               </div>
             </div>
+
+            {resultado.linhas_ignoradas?.length > 0 && (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10">
+                <div className="flex items-start gap-3 px-4 py-3">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                      {resultado.linhas_ignoradas.length} linha(s) da planilha foram ignoradas
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Podem ser alunos transferidos ou que não fizeram a prova. A importação continuou normalmente com os demais.
+                    </p>
+                  </div>
+                </div>
+                <div className="max-h-56 overflow-auto border-t border-amber-500/30">
+                  <table className="w-full text-xs">
+                    <thead className="bg-amber-500/10 text-left uppercase text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-1.5">Linha</th>
+                        <th className="px-3 py-1.5">Nome (se houver)</th>
+                        <th className="px-3 py-1.5">Motivo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {resultado.linhas_ignoradas.map((l: any, i: number) => (
+                        <tr key={i} className="border-t border-amber-500/20">
+                          <td className="px-3 py-1.5 font-mono">{l.linha}</td>
+                          <td className="px-3 py-1.5">{l.nome || <span className="text-muted-foreground italic">—</span>}</td>
+                          <td className="px-3 py-1.5 text-muted-foreground">{l.motivo}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {resultado.detalhes_alunos?.length > 0 && (
               <div className="rounded-md border">
