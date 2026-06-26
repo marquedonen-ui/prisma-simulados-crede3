@@ -522,13 +522,28 @@ function AcertoMedioPainel({
         _erros: e.erros,
       }));
     }
-    return data.map((c) => ({
+    const rows = data.map((c) => ({
       label: c.city,
       "% Acerto": c.pct_acerto,
       "% Erro": c.pct_erro,
       _acertos: c.acertos,
       _erros: c.erros,
     }));
+    const totA = data.reduce((s, c) => s + c.acertos, 0);
+    const totE = data.reduce((s, c) => s + c.erros, 0);
+    const tot = totA + totE;
+    if (tot > 0) {
+      const pa = Math.round((totA / tot) * 1000) / 10;
+      rows.push({
+        label: "CREDE 3",
+        "% Acerto": pa,
+        "% Erro": Math.round((100 - pa) * 10) / 10,
+        _acertos: totA,
+        _erros: totE,
+      });
+    }
+    return rows;
+
   }, [data, cidadeData, escolaData]);
 
   const onBarClick = (d: any) => {
