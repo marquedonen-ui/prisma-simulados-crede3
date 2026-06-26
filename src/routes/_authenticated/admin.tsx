@@ -36,6 +36,8 @@ function AdminPage() {
   const getRole = useServerFn(getMyRole);
   const listFn = useServerFn(listSchools);
   const createFn = useServerFn(createSchool);
+  const updateFn = useServerFn(updateSchool);
+  const deleteFn = useServerFn(deleteSchool);
 
   const roleQ = useQuery({ queryKey: ["my-role"], queryFn: () => getRole({}) });
   const schoolsQ = useQuery({ queryKey: ["schools"], queryFn: () => listFn({}) });
@@ -49,6 +51,11 @@ function AdminPage() {
   const [inep, setInep] = useState("");
   const [city, setCity] = useState("");
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editInep, setEditInep] = useState("");
+  const [editCity, setEditCity] = useState("");
+
   const create = useMutation({
     mutationFn: () => createFn({ data: { name, inep, city } }),
     onSuccess: () => {
@@ -57,6 +64,26 @@ function AdminPage() {
       qc.invalidateQueries({ queryKey: ["schools"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
+
+  const update = useMutation({
+    mutationFn: (vars: { id: string; name: string; inep: string; city: string }) =>
+      updateFn({ data: vars }),
+    onSuccess: () => {
+      toast.success("Escola atualizada.");
+      setEditingId(null);
+      qc.invalidateQueries({ queryKey: ["schools"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: string) => deleteFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Escola excluída.");
+      qc.invalidateQueries({ queryKey: ["schools"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Não foi possível excluir. Verifique se há turmas/usuários vinculados."),
   });
 
   if (roleQ.isLoading) return <div className="p-10 text-center">Carregando...</div>;
