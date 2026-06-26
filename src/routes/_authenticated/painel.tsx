@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
@@ -11,7 +11,7 @@ import {
   Target,
   Users,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+
 import { getMyRole, bootstrapFirstAdmin } from "@/lib/prisma.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -70,8 +70,6 @@ const goals = [
 ];
 
 function Painel() {
-  const navigate = useNavigate();
-  const { user } = Route.useRouteContext();
   const getRole = useServerFn(getMyRole);
   const bootstrap = useServerFn(bootstrapFirstAdmin);
 
@@ -85,10 +83,6 @@ function Painel() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Falha"),
   });
 
-  async function signOut() {
-    await supabase.auth.signOut();
-    navigate({ to: "/" });
-  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -100,12 +94,6 @@ function Painel() {
               <p className="text-sm font-semibold">PRISMA</p>
               <p className="text-xs text-muted-foreground">CREDE 3</p>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-muted-foreground sm:inline">{user.email}</span>
-            <Button variant="outline" size="sm" onClick={signOut}>
-              Sair
-            </Button>
           </div>
         </div>
       </header>
