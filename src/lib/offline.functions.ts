@@ -344,6 +344,7 @@ export const importarRespostas = createServerFn({ method: "POST" })
       await ensureProfessorOrAdmin(context.supabase, context.userId);
       await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
       await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
+    await assertDentroDoPrazoSeNaoAdmin(context.supabase, context.userId);
 
       // Use service role to read answer key; role check above already authorized the caller.
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -729,6 +730,7 @@ export const deleteImportacao = createServerFn({ method: "POST" })
     await ensureProfessorOrAdmin(context.supabase, context.userId);
     await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
     await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
+    await assertDentroDoPrazoSeNaoAdmin(context.supabase, context.userId);
     const { error, count } = await context.supabase
       .from("respostas_alunos")
       .delete({ count: "exact" })
@@ -775,6 +777,7 @@ export const deleteImportacaoAluno = createServerFn({ method: "POST" })
     await ensureProfessorOrAdmin(context.supabase, context.userId);
     await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
     await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
+    await assertDentroDoPrazoSeNaoAdmin(context.supabase, context.userId);
     const { error, count } = await context.supabase
       .from("respostas_alunos")
       .delete({ count: "exact" })
@@ -816,6 +819,7 @@ export const updateImportacaoAluno = createServerFn({ method: "POST" })
     await ensureProfessorOrAdmin(context.supabase, context.userId);
     await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
     await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
+    await assertDentroDoPrazoSeNaoAdmin(context.supabase, context.userId);
     const patch: { nome?: string | null; numero_chamada?: number } = {};
     if (data.nome !== undefined) patch.nome = data.nome && data.nome.length ? data.nome : null;
     if (data.novoNumero !== undefined && data.novoNumero !== data.numeroChamada) {
@@ -857,6 +861,7 @@ export const addAlunoAusente = createServerFn({ method: "POST" })
     await ensureProfessorOrAdmin(context.supabase, context.userId);
     await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
     await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
+    await assertDentroDoPrazoSeNaoAdmin(context.supabase, context.userId);
 
     const { data: jaResp } = await context.supabase
       .from("respostas_alunos")
@@ -954,6 +959,7 @@ export const updateRespostasAluno = createServerFn({ method: "POST" })
     await ensureProfessorOrAdmin(context.supabase, context.userId);
     await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
     await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
+    await assertDentroDoPrazoSeNaoAdmin(context.supabase, context.userId);
 
     // Tenta obter nome existente em respostas ou na lista de ausentes.
     const { data: existente } = await context.supabase
