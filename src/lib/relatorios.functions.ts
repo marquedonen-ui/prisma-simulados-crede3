@@ -340,7 +340,8 @@ export const getConclusao = createServerFn({ method: "GET" })
   .inputValidator(idInput)
   .handler(async ({ data, context }) => {
     const scopeSchoolId = await getScopeSchoolId(context.supabase, context.userId);
-    const { alunos, turmas } = await carregarDataset(context.supabase, data.simuladoId, { scopeSchoolId });
+    const scopeTurmaIds = await getScopeTurmaIds(context.supabase, context.userId);
+    const { alunos, turmas } = await carregarDataset(context.supabase, data.simuladoId, { scopeSchoolId, scopeTurmaIds });
 
     const finPorTurma = new Map<string, number>();
     for (const a of alunos) {
