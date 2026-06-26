@@ -419,9 +419,10 @@ export const getAcertoMedio = createServerFn({ method: "GET" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    await ensureProfessorOrAdmin(context.supabase, context.userId);
+    const scopeSchoolId = await getScopeSchoolId(context.supabase, context.userId);
     const { alunos } = await carregarDataset(context.supabase, data.simuladoId, {
       disciplina: data.disciplina ?? null,
+      scopeSchoolId,
     });
 
 
