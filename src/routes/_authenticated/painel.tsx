@@ -206,28 +206,6 @@ function Painel() {
           </Button>
         </section>
 
-        {/* Bootstrap admin — only visible when there's no admin yet */}
-        {!roleQ.isLoading && !roleQ.data?.isAdmin && (
-          <section>
-            <Card className="border-dashed">
-              <CardHeader>
-                <CardTitle className="text-base">É o primeiro gestor da CREDE 3?</CardTitle>
-                <CardDescription>
-                  Ative seu acesso administrativo (disponível apenas até o primeiro admin ser criado).
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  variant="secondary"
-                  disabled={promote.isPending}
-                  onClick={() => promote.mutate()}
-                >
-                  {promote.isPending ? "Aguarde..." : "Tornar-me administrador"}
-                </Button>
-              </CardContent>
-            </Card>
-          </section>
-        )}
       </main>
     </div>
   );
