@@ -122,6 +122,7 @@ const gabaritoSchema = z.object({
       z.object({
         numero: z.number().int().min(1).max(500),
         resposta_correta: z.enum(["A", "B", "C", "D", "E"]),
+        anulada: z.boolean().optional().default(false),
       }),
     )
     .min(1),
@@ -162,6 +163,7 @@ export const saveGabarito = createServerFn({ method: "POST" })
         alternativa_e: prev?.alternativa_e ?? null,
         pontos: prev?.pontos ?? 1,
         resposta_correta: a.resposta_correta,
+        anulada: !!a.anulada,
       };
       if (prev?.id) base.id = prev.id;
       return base;
@@ -173,6 +175,7 @@ export const saveGabarito = createServerFn({ method: "POST" })
     if (error) throw error;
     return { ok: true, total: data.total };
   });
+
 
 // ============== ALUNOS ==============
 
