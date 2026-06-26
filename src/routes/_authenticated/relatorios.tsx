@@ -56,6 +56,10 @@ function Page() {
   const getConFn = useServerFn(getConclusao);
   const getAcFn = useServerFn(getAcertoMedio);
   const listDiscFn = useServerFn(listDisciplinasSimulado);
+  const getScopeFn = useServerFn(getMyReportScope);
+
+  const scopeQ = useQuery({ queryKey: ["report-scope"], queryFn: () => getScopeFn() });
+  const scoped = !!scopeQ.data?.scoped;
 
   const [simuladoId, setSimuladoId] = useState("");
   const [acDisciplina, setAcDisciplina] = useState<string>("__all__");
