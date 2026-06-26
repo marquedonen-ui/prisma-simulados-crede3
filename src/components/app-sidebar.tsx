@@ -35,6 +35,11 @@ const baseItems = [
 
 export function AppSidebar() {
   const { state } = useSidebar();
+  const navigate = useNavigate();
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    navigate({ to: "/" });
+  }
   const collapsed = state === "collapsed";
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
   const getRole = useServerFn(getMyRole);
