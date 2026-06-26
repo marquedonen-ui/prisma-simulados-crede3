@@ -506,7 +506,7 @@ export const getGabaritoAluno = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: questoes, error: qErr } = await supabaseAdmin
       .from("questoes")
-      .select("id, numero, resposta_correta")
+      .select("id, numero, resposta_correta, anulada")
       .eq("simulado_id", data.simuladoId)
       .order("numero", { ascending: true });
     if (qErr) throw qErr;
@@ -530,19 +530,24 @@ export const getGabaritoAluno = createServerFn({ method: "GET" })
     const itens = (questoes ?? []).map((q: any, idx: number) => {
       const escolhida = escolhaPorQ.get(q.id) ?? null;
       const correta = String(q.resposta_correta ?? "").toUpperCase();
-      const isCorrect = escolhida && escolhida === correta;
+      const isAnulada = !!q.anulada;
+      const isCorrect = isAnulada || (escolhida && escolhida === correta);
       if (isCorrect) acertos += 1;
       return {
         numero: q.numero ?? idx + 1,
         escolhida,
         correta,
-        status: !escolhida
-          ? ("branco" as const)
-          : isCorrect
-            ? ("certo" as const)
-            : ("errado" as const),
+        anulada: isAnulada,
+        status: isAnulada
+          ? ("anulada" as const)
+          : !escolhida
+            ? ("branco" as const)
+            : escolhida === correta
+              ? ("certo" as const)
+              : ("errado" as const),
       };
     });
 
     return { nome, acertos, total: itens.length, itens };
   });
+
