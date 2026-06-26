@@ -11,7 +11,7 @@ import {
   Target,
   Users,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+
 import { getMyRole, bootstrapFirstAdmin } from "@/lib/prisma.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
