@@ -1,7 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Home, BookOpen, ClipboardList, BarChart3, FileCheck, Shield, Users, ListChecks, CalendarDays, LogOut } from "lucide-react";
+import { Home, BookOpen, ClipboardList, BarChart3, FileCheck, Shield, Users, ListChecks, CalendarDays, LogOut, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 
@@ -49,9 +49,16 @@ export function AppSidebar() {
   const roles: string[] = roleQ.data?.roles ?? [];
   const isAdmin = roles.includes("admin");
   const profileRoles: string[] = (profileQ.data?.roles as string[] | undefined) ?? [];
-  const isProfResp = profileRoles.includes("professor_responsavel") || roles.includes("professor_responsavel");
+  const allRoles = Array.from(new Set([...roles, ...profileRoles]));
+  const isProfResp = allRoles.includes("professor_responsavel");
+  const isSuperintendente = allRoles.includes("superintendente");
+  const isGestor = allRoles.includes("gestor");
+  const showDevolutivas = isAdmin || isSuperintendente || isGestor || isProfResp;
   const items = [
     ...baseItems,
+    ...(showDevolutivas
+      ? [{ title: "Devolutivas", url: "/devolutivas", icon: MessageSquare }]
+      : []),
     ...(isProfResp && !isAdmin
       ? [{ title: "Administração / Escola", url: "/admin-escola", icon: Shield }]
       : []),
@@ -61,22 +68,34 @@ export function AppSidebar() {
 
   const roleLabels: Record<string, string> = {
     admin: "Administrador",
+    superintendente: "Superintendente Escolar",
     professor_responsavel: "Professor responsável",
     gestor: "Gestor escolar",
+    professor_escola: "Professor da escola",
     professor: "Professor",
     aluno: "Aluno",
   };
-  const profile = profileQ.data;
-  const rolePriority = ["admin", "professor_responsavel", "gestor", "professor", "aluno"] as const;
+  const profile = profileQ.data as any;
+  const rolePriority = [
+    "admin",
+    "superintendente",
+    "professor_responsavel",
+    "gestor",
+    "professor_escola",
+    "professor",
+    "aluno",
+  ] as const;
   const primaryRole = profile?.roles
     ? rolePriority.find((r) => (profile.roles as string[]).includes(r)) ?? profile.roles[0]
     : null;
-  const roleLabel = primaryRole ? (roleLabels[primaryRole] ?? primaryRole) : null;
-  const initials = (profile?.fullName ?? profile?.email ?? "?")
+  const baseLabel = primaryRole ? (roleLabels[primaryRole] ?? primaryRole) : null;
+  const roleLabel =
+    primaryRole === "gestor" && profile?.cargo ? `${baseLabel} — ${profile.cargo}` : baseLabel;
+  const initials = String(profile?.fullName ?? profile?.email ?? "?")
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
-    .map((s) => s[0]?.toUpperCase() ?? "")
+    .map((s: string) => s[0]?.toUpperCase() ?? "")
     .join("");
 
   return (

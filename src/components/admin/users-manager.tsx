@@ -10,6 +10,7 @@ import {
   updateManagedUser,
   deleteManagedUser,
 } from "@/lib/admin-users.functions";
+import { listTurmas } from "@/lib/turmas.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -40,13 +41,30 @@ type School = { id: string; name: string; inep: string };
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Administrador",
+  superintendente: "Superintendente Escolar",
   professor_responsavel: "Professor responsável",
   gestor: "Gestor escolar",
+  professor_escola: "Professor da escola",
   professor: "Professor",
   aluno: "Aluno",
 };
 
-const ROLE_OPTIONS = ["professor_responsavel", "gestor", "admin"] as const;
+const ROLE_OPTIONS = [
+  "professor_responsavel",
+  "gestor",
+  "professor_escola",
+  "superintendente",
+  "admin",
+] as const;
+
+const CARGOS = ["Diretor(a)", "Coordenador(a)"] as const;
+const TURNOS = ["Manhã", "Tarde", "Noite", "Integral"] as const;
+const SCHOOL_BOUND_ROLES = new Set([
+  "professor_responsavel",
+  "gestor",
+  "professor_escola",
+  "professor",
+]);
 
 function genTempPassword() {
   const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -131,6 +149,11 @@ export function UsersManager({ schools }: { schools: School[] }) {
       password: genTempPassword(),
       role: "professor_responsavel",
       school_id: "",
+      cargo: "",
+      disciplinas: "",
+      serie: "",
+      turno: "",
+      turma_ids: [] as string[],
     });
     setOpen(true);
   }
@@ -144,18 +167,36 @@ export function UsersManager({ schools }: { schools: School[] }) {
       school_id: u.school_id ?? "",
       email: u.email,
       password: "",
+      cargo: u.cargo ?? "",
+      disciplinas: (u.disciplinas ?? []).join(", "),
+      serie: u.serie ?? "",
+      turno: u.turno ?? "",
+      turma_ids: u.turma_ids ?? [],
     });
     setOpen(true);
   }
 
   function save(e: React.FormEvent) {
     e.preventDefault();
-    const needsSchool = editing.role === "professor_responsavel" || editing.role === "gestor";
+    const needsSchool = SCHOOL_BOUND_ROLES.has(editing.role);
     const school_id = needsSchool ? editing.school_id || null : null;
     if (needsSchool && !school_id) {
       toast.error("Selecione a escola.");
       return;
     }
+    const disciplinas = editing.disciplinas
+      ? String(editing.disciplinas)
+          .split(",")
+          .map((s: string) => s.trim())
+          .filter(Boolean)
+      : null;
+    const extras = {
+      cargo: editing.cargo || null,
+      disciplinas,
+      serie: editing.serie || null,
+      turno: editing.turno || null,
+      turma_ids: editing.role === "professor_escola" ? editing.turma_ids ?? [] : null,
+    };
     if (editing._new) {
       if (!isStrongEnoughPassword(editing.password)) {
         toastPasswordPolicy();
@@ -167,6 +208,7 @@ export function UsersManager({ schools }: { schools: School[] }) {
         full_name: editing.full_name.trim(),
         role: editing.role,
         school_id,
+        ...extras,
       });
     } else {
       if (editing.password && !isStrongEnoughPassword(editing.password)) {
@@ -179,6 +221,7 @@ export function UsersManager({ schools }: { schools: School[] }) {
         role: editing.role,
         school_id,
         new_password: editing.password ? editing.password : null,
+        ...extras,
       });
     }
   }
@@ -347,12 +390,12 @@ export function UsersManager({ schools }: { schools: School[] }) {
                     </SelectContent>
                   </Select>
                 </div>
-                {(editing.role === "professor_responsavel" || editing.role === "gestor") && (
+                {SCHOOL_BOUND_ROLES.has(editing.role) && (
                   <div className="space-y-1.5">
                     <Label>Escola</Label>
                     <Select
                       value={editing.school_id}
-                      onValueChange={(v) => setEditing({ ...editing, school_id: v })}
+                      onValueChange={(v) => setEditing({ ...editing, school_id: v, turma_ids: [] })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione..." />
@@ -366,6 +409,66 @@ export function UsersManager({ schools }: { schools: School[] }) {
                       </SelectContent>
                     </Select>
                   </div>
+                )}
+                {editing.role === "gestor" && (
+                  <div className="space-y-1.5">
+                    <Label>Cargo</Label>
+                    <Select
+                      value={editing.cargo ?? ""}
+                      onValueChange={(v) => setEditing({ ...editing, cargo: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o cargo..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CARGOS.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {editing.role === "professor_escola" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label>Série</Label>
+                        <Input
+                          value={editing.serie ?? ""}
+                          onChange={(e) => setEditing({ ...editing, serie: e.target.value })}
+                          placeholder="Ex.: 3º ano"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Turno</Label>
+                        <Select
+                          value={editing.turno ?? ""}
+                          onValueChange={(v) => setEditing({ ...editing, turno: v })}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Turno" /></SelectTrigger>
+                          <SelectContent>
+                            {TURNOS.map((t) => (
+                              <SelectItem key={t} value={t}>{t}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Disciplina(s) de lotação</Label>
+                      <Input
+                        value={editing.disciplinas ?? ""}
+                        onChange={(e) => setEditing({ ...editing, disciplinas: e.target.value })}
+                        placeholder="Ex.: Matemática, Física"
+                      />
+                      <p className="text-xs text-muted-foreground">Separe múltiplas disciplinas por vírgula.</p>
+                    </div>
+                    <TurmasMultiSelect
+                      schoolId={editing.school_id}
+                      value={editing.turma_ids ?? []}
+                      onChange={(ids) => setEditing({ ...editing, turma_ids: ids })}
+                    />
+                  </>
                 )}
                 <Button
                   type="submit"
@@ -400,5 +503,53 @@ export function UsersManager({ schools }: { schools: School[] }) {
         </Dialog>
       </CardContent>
     </Card>
+  );
+}
+
+function TurmasMultiSelect({
+  schoolId,
+  value,
+  onChange,
+}: {
+  schoolId?: string;
+  value: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const getTurmas = useServerFn(listTurmas);
+  const turmasQ = useQuery({
+    queryKey: ["turmas-by-school", schoolId],
+    queryFn: () => getTurmas({ data: { schoolId: schoolId! } }),
+    enabled: !!schoolId,
+  });
+  if (!schoolId) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        Selecione a escola para listar as turmas de lotação.
+      </p>
+    );
+  }
+  const turmas = (turmasQ.data ?? []) as any[];
+  function toggle(id: string) {
+    onChange(value.includes(id) ? value.filter((x) => x !== id) : [...value, id]);
+  }
+  return (
+    <div className="space-y-1.5">
+      <Label>Turma(s) de lotação</Label>
+      <div className="max-h-40 overflow-auto rounded-md border p-2">
+        {turmas.length === 0 && (
+          <p className="text-xs text-muted-foreground">Nenhuma turma cadastrada para esta escola.</p>
+        )}
+        {turmas.map((t) => (
+          <label key={t.id} className="flex items-center gap-2 py-1 text-sm">
+            <input
+              type="checkbox"
+              checked={value.includes(t.id)}
+              onChange={() => toggle(t.id)}
+            />
+            <span>{t.nome} · {t.ano} · {t.turno}</span>
+          </label>
+        ))}
+      </div>
+    </div>
   );
 }

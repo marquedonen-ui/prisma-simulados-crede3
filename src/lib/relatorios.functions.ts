@@ -6,17 +6,24 @@ async function ensureProfessorOrAdmin(supabase: any, userId: string) {
   const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
   if (error) throw error;
   const roles = (data ?? []).map((r: { role: string }) => r.role);
-  const allowed = ["admin", "professor", "professor_responsavel", "gestor"];
+  const allowed = [
+    "admin",
+    "professor",
+    "professor_responsavel",
+    "gestor",
+    "superintendente",
+    "professor_escola",
+  ];
   if (!roles.some((r: string) => allowed.includes(r))) {
     throw new Error("Acesso restrito.");
   }
   return roles as string[];
 }
 
-/** Retorna o school_id ao qual o usuário está restrito (null para admin global). */
+/** Retorna o school_id ao qual o usuário está restrito (null para admin/superintendente). */
 async function getScopeSchoolId(supabase: any, userId: string): Promise<string | null> {
   const roles = await ensureProfessorOrAdmin(supabase, userId);
-  if (roles.includes("admin")) return null;
+  if (roles.includes("admin") || roles.includes("superintendente")) return null;
   const { data: prof } = await supabase
     .from("profiles")
     .select("school_id")
@@ -25,17 +32,41 @@ async function getScopeSchoolId(supabase: any, userId: string): Promise<string |
   return (prof?.school_id as string | null) ?? null;
 }
 
+/** Retorna turmas em que o usuário está lotado (apenas para professor_escola). */
+async function getScopeTurmaIds(supabase: any, userId: string): Promise<string[] | null> {
+  const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  const rs = (roles ?? []).map((r: any) => r.role);
+  if (!rs.includes("professor_escola")) return null;
+  const { data } = await supabase
+    .from("professor_turmas")
+    .select("turma_id")
+    .eq("user_id", userId);
+  return (data ?? []).map((r: any) => r.turma_id as string);
+}
+
 export const getMyReportScope = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const schoolId = await getScopeSchoolId(context.supabase, context.userId);
-    if (!schoolId) return { scoped: false, schoolId: null as string | null, schoolName: null as string | null };
+    const turmaIds = await getScopeTurmaIds(context.supabase, context.userId);
+    if (!schoolId)
+      return {
+        scoped: false,
+        schoolId: null as string | null,
+        schoolName: null as string | null,
+        turmaIds: turmaIds ?? null,
+      };
     const { data: sch } = await context.supabase
       .from("schools")
       .select("id, name")
       .eq("id", schoolId)
       .maybeSingle();
-    return { scoped: true, schoolId, schoolName: (sch?.name as string | null) ?? null };
+    return {
+      scoped: true,
+      schoolId,
+      schoolName: (sch?.name as string | null) ?? null,
+      turmaIds: turmaIds ?? null,
+    };
   });
 
 const idInput = (d: { simuladoId: string }) =>
@@ -98,7 +129,11 @@ function faixaDeAcertos(n: number): keyof Faixas {
 async function carregarDataset(
   supabase: any,
   simuladoId: string,
-  opts?: { disciplina?: string | null; scopeSchoolId?: string | null },
+  opts?: {
+    disciplina?: string | null;
+    scopeSchoolId?: string | null;
+    scopeTurmaIds?: string[] | null;
+  },
 ) {
   // Use service role to read the answer key (resposta_correta) without exposing
   // it via RLS to professor_responsavel/gestor. Callers must enforce role checks first.
@@ -124,7 +159,6 @@ async function carregarDataset(
 
   const totalQuestoes = questoesFiltradas.length;
 
-
   const respostas = await fetchAllRows<any>(() =>
     supabase
       .from("respostas_alunos")
@@ -134,7 +168,6 @@ async function carregarDataset(
       .not("numero_chamada", "is", null),
   );
 
-
   const turmaIds = Array.from(new Set((respostas ?? []).map((r: any) => r.turma_id)));
   const { data: turmasRaw } = turmaIds.length
     ? await supabase
@@ -143,9 +176,16 @@ async function carregarDataset(
         .in("id", turmaIds)
     : { data: [] as any[] };
   const scopeSchoolId = opts?.scopeSchoolId ?? null;
-  const turmas = scopeSchoolId
+  const scopeTurmaSet =
+    opts?.scopeTurmaIds && opts.scopeTurmaIds.length >= 0
+      ? new Set(opts.scopeTurmaIds)
+      : null;
+  let turmas = scopeSchoolId
     ? (turmasRaw ?? []).filter((t: any) => t.school_id === scopeSchoolId)
     : (turmasRaw ?? []);
+  if (scopeTurmaSet) {
+    turmas = turmas.filter((t: any) => scopeTurmaSet.has(t.id));
+  }
   const turmaById = new Map((turmas ?? []).map((t: any) => [t.id, t]));
 
   // Por aluno (turma+chamada)
@@ -162,7 +202,7 @@ async function carregarDataset(
     }
   >();
   for (const r of respostas ?? []) {
-    if (scopeSchoolId && !turmaById.has(r.turma_id)) continue;
+    if ((scopeSchoolId || scopeTurmaSet) && !turmaById.has(r.turma_id)) continue;
     const key = `${r.turma_id}|${r.numero_chamada}`;
     let a = alunos.get(key);
     if (!a) {
@@ -217,7 +257,8 @@ export const getPadraoDesempenho = createServerFn({ method: "GET" })
   .inputValidator(idInput)
   .handler(async ({ data, context }) => {
     const scopeSchoolId = await getScopeSchoolId(context.supabase, context.userId);
-    const { alunos } = await carregarDataset(context.supabase, data.simuladoId, { scopeSchoolId });
+    const scopeTurmaIds = await getScopeTurmaIds(context.supabase, context.userId);
+    const { alunos } = await carregarDataset(context.supabase, data.simuladoId, { scopeSchoolId, scopeTurmaIds });
 
     const porCidade = new Map<
       string,
@@ -299,7 +340,8 @@ export const getConclusao = createServerFn({ method: "GET" })
   .inputValidator(idInput)
   .handler(async ({ data, context }) => {
     const scopeSchoolId = await getScopeSchoolId(context.supabase, context.userId);
-    const { alunos, turmas } = await carregarDataset(context.supabase, data.simuladoId, { scopeSchoolId });
+    const scopeTurmaIds = await getScopeTurmaIds(context.supabase, context.userId);
+    const { alunos, turmas } = await carregarDataset(context.supabase, data.simuladoId, { scopeSchoolId, scopeTurmaIds });
 
     const finPorTurma = new Map<string, number>();
     for (const a of alunos) {
@@ -420,9 +462,11 @@ export const getAcertoMedio = createServerFn({ method: "GET" })
   )
   .handler(async ({ data, context }) => {
     const scopeSchoolId = await getScopeSchoolId(context.supabase, context.userId);
+    const scopeTurmaIds = await getScopeTurmaIds(context.supabase, context.userId);
     const { alunos } = await carregarDataset(context.supabase, data.simuladoId, {
       disciplina: data.disciplina ?? null,
       scopeSchoolId,
+      scopeTurmaIds,
     });
 
 
@@ -525,10 +569,11 @@ export const getResultadosAlunos = createServerFn({ method: "GET" })
   .inputValidator(idInput)
   .handler(async ({ data, context }) => {
     const scopeSchoolId = await getScopeSchoolId(context.supabase, context.userId);
+    const scopeTurmaIds = await getScopeTurmaIds(context.supabase, context.userId);
     const { alunos, totalQuestoes } = await carregarDataset(
       context.supabase,
       data.simuladoId,
-      { scopeSchoolId },
+      { scopeSchoolId, scopeTurmaIds },
     );
 
     return {
