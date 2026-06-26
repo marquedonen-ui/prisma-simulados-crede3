@@ -433,9 +433,10 @@ function EditAnswersDialog({
             {nome ? ` · ${nome}` : ""}
           </DialogTitle>
           <DialogDescription>
-            Clique nas alternativas para alterar a resposta do(a) aluno(a). Selecione novamente
-            a mesma alternativa para deixar em branco.
+            Apenas as respostas marcadas pelo(a) aluno(a) são exibidas. Clique numa alternativa
+            para alterar; clique na mesma alternativa para deixar em branco.
           </DialogDescription>
+
         </DialogHeader>
 
         {q.isLoading && (
