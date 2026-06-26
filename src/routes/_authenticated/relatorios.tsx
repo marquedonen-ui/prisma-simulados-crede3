@@ -143,7 +143,14 @@ function Page() {
             data={padQ.data ?? []}
           />
           <ConclusaoPainel isLoading={conQ.isLoading} data={conQ.data ?? []} />
-          <AcertoMedioPainel isLoading={acQ.isLoading} data={acQ.data ?? []} />
+          <AcertoMedioPainel
+            isLoading={acQ.isLoading}
+            data={acQ.data ?? []}
+            disciplinas={discQ.data ?? []}
+            disciplina={acDisciplina}
+            onDisciplinaChange={setAcDisciplina}
+          />
+
         </div>
       )}
     </div>
