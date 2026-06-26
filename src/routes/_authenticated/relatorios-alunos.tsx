@@ -312,52 +312,50 @@ function Page() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-        <aside className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Filter className="h-4 w-4" /> Filtros
-                  {filtrosAtivos > 0 && (
-                    <Badge variant="secondary" className="ml-1">
-                      {filtrosAtivos}
-                    </Badge>
-                  )}
-                </CardTitle>
-                {filtrosAtivos > 0 && (
-                  <Button variant="ghost" size="sm" onClick={limpar}>
-                    <X className="mr-1 h-3 w-3" /> Limpar
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="space-y-1.5">
-                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Buscar aluno
-                </Label>
-                <Input
-                  placeholder="Nome ou nº de chamada"
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                />
-              </div>
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Filter className="h-4 w-4" /> Filtros
+              {filtrosAtivos > 0 && (
+                <Badge variant="secondary" className="ml-1">{filtrosAtivos}</Badge>
+              )}
+            </CardTitle>
+            {filtrosAtivos > 0 && (
+              <Button variant="ghost" size="sm" onClick={limpar}>
+                <X className="mr-1 h-3 w-3" /> Limpar
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                Buscar aluno
+              </Label>
+              <Input
+                placeholder="Nome ou nº de chamada"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
+            </div>
 
-              <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Padrão de Desempenho
-                </Label>
-                {!simuladoId ? (
-                  <p className="text-xs text-muted-foreground">—</p>
-                ) : (
-                  (Object.keys(PADRAO_INFO) as Padrao[]).map((p) => {
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                Padrão de Desempenho
+              </Label>
+              {!simuladoId ? (
+                <p className="text-xs text-muted-foreground">—</p>
+              ) : (
+                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                  {(Object.keys(PADRAO_INFO) as Padrao[]).map((p) => {
                     const info = PADRAO_INFO[p];
                     const count = alunos.filter((a) => a.padrao === p).length;
                     return (
                       <label
                         key={p}
-                        className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-muted/50"
+                        className="flex cursor-pointer items-center gap-1.5 rounded px-1 py-1 text-sm hover:bg-muted/50"
                       >
                         <Checkbox
                           checked={padroes.has(p)}
@@ -367,34 +365,35 @@ function Page() {
                           className="inline-block h-2.5 w-2.5 rounded-full"
                           style={{ background: info.color }}
                         />
-                        <span className="flex-1">{info.label}</span>
-                        <span className="text-xs text-muted-foreground">{count}</span>
+                        <span>{info.label}</span>
+                        <span className="text-xs text-muted-foreground">({count})</span>
                       </label>
                     );
-                  })
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                  % de Acerto ({pctRange[0]}% – {pctRange[1]}%)
-                </Label>
-                <div className="px-1 pt-3">
-                  <Slider
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={pctRange}
-                    onValueChange={(v) => setPctRange([v[0], v[1]] as [number, number])}
-                    disabled={!simuladoId}
-                  />
+                  })}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </aside>
+              )}
+            </div>
 
-        <section>
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                % de Acerto ({pctRange[0]}% – {pctRange[1]}%)
+              </Label>
+              <div className="px-1 pt-3">
+                <Slider
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={pctRange}
+                  onValueChange={(v) => setPctRange([v[0], v[1]] as [number, number])}
+                  disabled={!simuladoId}
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <section>
           <Card>
             <CardHeader>
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -426,11 +425,13 @@ function Page() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Aluno</TableHead>
-                        <TableHead>Escola / Turma</TableHead>
-                        <TableHead className="text-right">Acertos</TableHead>
-                        <TableHead className="text-right">% Acerto</TableHead>
-                        <TableHead>Padrão</TableHead>
+                        <TableHead><SortBtn label="Aluno" k="nome" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></TableHead>
+                        <TableHead><SortBtn label="Escola" k="escola" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></TableHead>
+                        <TableHead><SortBtn label="Turma" k="turma" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></TableHead>
+                        <TableHead className="text-right"><SortBtn label="Nº" k="chamada" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" /></TableHead>
+                        <TableHead className="text-right"><SortBtn label="Acertos" k="acertos" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" /></TableHead>
+                        <TableHead className="text-right"><SortBtn label="% Acerto" k="pct" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" /></TableHead>
+                        <TableHead><SortBtn label="Padrão" k="padrao" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
