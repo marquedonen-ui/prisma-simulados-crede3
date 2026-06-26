@@ -245,6 +245,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "respostas_alunos_questao_id_fkey"
+            columns: ["questao_id"]
+            isOneToOne: false
+            referencedRelation: "questoes_sem_gabarito"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "respostas_alunos_simulado_id_fkey"
             columns: ["simulado_id"]
             isOneToOne: false
@@ -479,7 +486,62 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      questoes_sem_gabarito: {
+        Row: {
+          alternativa_a: string | null
+          alternativa_b: string | null
+          alternativa_c: string | null
+          alternativa_d: string | null
+          alternativa_e: string | null
+          created_at: string | null
+          enunciado: string | null
+          id: string | null
+          numero: number | null
+          ordem: number | null
+          pontos: number | null
+          simulado_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          alternativa_a?: string | null
+          alternativa_b?: string | null
+          alternativa_c?: string | null
+          alternativa_d?: string | null
+          alternativa_e?: string | null
+          created_at?: string | null
+          enunciado?: string | null
+          id?: string | null
+          numero?: number | null
+          ordem?: number | null
+          pontos?: number | null
+          simulado_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          alternativa_a?: string | null
+          alternativa_b?: string | null
+          alternativa_c?: string | null
+          alternativa_d?: string | null
+          alternativa_e?: string | null
+          created_at?: string | null
+          enunciado?: string | null
+          id?: string | null
+          numero?: number | null
+          ordem?: number | null
+          pontos?: number | null
+          simulado_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questoes_simulado_id_fkey"
+            columns: ["simulado_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostic_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       generate_student_codes: {
