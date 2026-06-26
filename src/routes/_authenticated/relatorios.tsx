@@ -100,10 +100,14 @@ function Page() {
           <BarChart3 className="h-3.5 w-3.5" /> Relatórios
         </div>
         <h1 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
-          Relatórios por município, escola e padrão de desempenho
+          {scoped
+            ? `Relatórios da escola${scopeQ.data?.schoolName ? ` — ${scopeQ.data.schoolName}` : ""}`
+            : "Relatórios por município, escola e padrão de desempenho"}
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Selecione um simulado e clique em uma barra de município para abrir o detalhamento por escola.
+          {scoped
+            ? "Os gráficos abaixo mostram apenas as turmas da sua escola."
+            : "Selecione um simulado e clique em uma barra de município para abrir o detalhamento por escola."}
         </p>
       </header>
 
