@@ -20,10 +20,10 @@ import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authentic
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedGabaritoRouteImport } from './routes/_authenticated/gabarito'
 import { Route as AuthenticatedCorrecaoRouteImport } from './routes/_authenticated/correcao'
+import { Route as AuthenticatedAdminEscolaRouteImport } from './routes/_authenticated/admin-escola'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAvaliacaoDiagnosticaIndexRouteImport } from './routes/_authenticated/avaliacao-diagnostica.index'
 import { Route as AuthenticatedAvaliacaoDiagnosticaIdRouteImport } from './routes/_authenticated/avaliacao-diagnostica.$id'
-import { Route as AuthenticatedAdminEscolaRouteImport } from './routes/_authenticated/admin.escola'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -81,6 +81,12 @@ const AuthenticatedCorrecaoRoute = AuthenticatedCorrecaoRouteImport.update({
   path: '/correcao',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminEscolaRoute =
+  AuthenticatedAdminEscolaRouteImport.update({
+    id: '/admin-escola',
+    path: '/admin-escola',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -98,18 +104,13 @@ const AuthenticatedAvaliacaoDiagnosticaIdRoute =
     path: '/avaliacao-diagnostica/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAdminEscolaRoute =
-  AuthenticatedAdminEscolaRouteImport.update({
-    id: '/escola',
-    path: '/escola',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/aluno': typeof AlunoRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/admin': typeof AuthenticatedAdminRoute
+  '/admin-escola': typeof AuthenticatedAdminEscolaRoute
   '/correcao': typeof AuthenticatedCorrecaoRoute
   '/gabarito': typeof AuthenticatedGabaritoRoute
   '/painel': typeof AuthenticatedPainelRoute
@@ -117,7 +118,6 @@ export interface FileRoutesByFullPath {
   '/relatorios-alunos': typeof AuthenticatedRelatoriosAlunosRoute
   '/relatorios-questoes': typeof AuthenticatedRelatoriosQuestoesRoute
   '/tutoriais': typeof AuthenticatedTutoriaisRoute
-  '/admin/escola': typeof AuthenticatedAdminEscolaRoute
   '/avaliacao-diagnostica/$id': typeof AuthenticatedAvaliacaoDiagnosticaIdRoute
   '/avaliacao-diagnostica/': typeof AuthenticatedAvaliacaoDiagnosticaIndexRoute
 }
@@ -125,7 +125,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aluno': typeof AlunoRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/admin': typeof AuthenticatedAdminRoute
+  '/admin-escola': typeof AuthenticatedAdminEscolaRoute
   '/correcao': typeof AuthenticatedCorrecaoRoute
   '/gabarito': typeof AuthenticatedGabaritoRoute
   '/painel': typeof AuthenticatedPainelRoute
@@ -133,7 +134,6 @@ export interface FileRoutesByTo {
   '/relatorios-alunos': typeof AuthenticatedRelatoriosAlunosRoute
   '/relatorios-questoes': typeof AuthenticatedRelatoriosQuestoesRoute
   '/tutoriais': typeof AuthenticatedTutoriaisRoute
-  '/admin/escola': typeof AuthenticatedAdminEscolaRoute
   '/avaliacao-diagnostica/$id': typeof AuthenticatedAvaliacaoDiagnosticaIdRoute
   '/avaliacao-diagnostica': typeof AuthenticatedAvaliacaoDiagnosticaIndexRoute
 }
@@ -143,7 +143,8 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/aluno': typeof AlunoRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/admin-escola': typeof AuthenticatedAdminEscolaRoute
   '/_authenticated/correcao': typeof AuthenticatedCorrecaoRoute
   '/_authenticated/gabarito': typeof AuthenticatedGabaritoRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
@@ -151,7 +152,6 @@ export interface FileRoutesById {
   '/_authenticated/relatorios-alunos': typeof AuthenticatedRelatoriosAlunosRoute
   '/_authenticated/relatorios-questoes': typeof AuthenticatedRelatoriosQuestoesRoute
   '/_authenticated/tutoriais': typeof AuthenticatedTutoriaisRoute
-  '/_authenticated/admin/escola': typeof AuthenticatedAdminEscolaRoute
   '/_authenticated/avaliacao-diagnostica/$id': typeof AuthenticatedAvaliacaoDiagnosticaIdRoute
   '/_authenticated/avaliacao-diagnostica/': typeof AuthenticatedAvaliacaoDiagnosticaIndexRoute
 }
@@ -162,6 +162,7 @@ export interface FileRouteTypes {
     | '/aluno'
     | '/reset-password'
     | '/admin'
+    | '/admin-escola'
     | '/correcao'
     | '/gabarito'
     | '/painel'
@@ -169,7 +170,6 @@ export interface FileRouteTypes {
     | '/relatorios-alunos'
     | '/relatorios-questoes'
     | '/tutoriais'
-    | '/admin/escola'
     | '/avaliacao-diagnostica/$id'
     | '/avaliacao-diagnostica/'
   fileRoutesByTo: FileRoutesByTo
@@ -178,6 +178,7 @@ export interface FileRouteTypes {
     | '/aluno'
     | '/reset-password'
     | '/admin'
+    | '/admin-escola'
     | '/correcao'
     | '/gabarito'
     | '/painel'
@@ -185,7 +186,6 @@ export interface FileRouteTypes {
     | '/relatorios-alunos'
     | '/relatorios-questoes'
     | '/tutoriais'
-    | '/admin/escola'
     | '/avaliacao-diagnostica/$id'
     | '/avaliacao-diagnostica'
   id:
@@ -195,6 +195,7 @@ export interface FileRouteTypes {
     | '/aluno'
     | '/reset-password'
     | '/_authenticated/admin'
+    | '/_authenticated/admin-escola'
     | '/_authenticated/correcao'
     | '/_authenticated/gabarito'
     | '/_authenticated/painel'
@@ -202,7 +203,6 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios-alunos'
     | '/_authenticated/relatorios-questoes'
     | '/_authenticated/tutoriais'
-    | '/_authenticated/admin/escola'
     | '/_authenticated/avaliacao-diagnostica/$id'
     | '/_authenticated/avaliacao-diagnostica/'
   fileRoutesById: FileRoutesById
@@ -293,6 +293,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCorrecaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin-escola': {
+      id: '/_authenticated/admin-escola'
+      path: '/admin-escola'
+      fullPath: '/admin-escola'
+      preLoaderRoute: typeof AuthenticatedAdminEscolaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
       path: '/admin'
@@ -314,29 +321,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAvaliacaoDiagnosticaIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin/escola': {
-      id: '/_authenticated/admin/escola'
-      path: '/escola'
-      fullPath: '/admin/escola'
-      preLoaderRoute: typeof AuthenticatedAdminEscolaRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
   }
 }
 
-interface AuthenticatedAdminRouteChildren {
-  AuthenticatedAdminEscolaRoute: typeof AuthenticatedAdminEscolaRoute
-}
-
-const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
-  AuthenticatedAdminEscolaRoute: AuthenticatedAdminEscolaRoute,
-}
-
-const AuthenticatedAdminRouteWithChildren =
-  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
-
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAdminEscolaRoute: typeof AuthenticatedAdminEscolaRoute
   AuthenticatedCorrecaoRoute: typeof AuthenticatedCorrecaoRoute
   AuthenticatedGabaritoRoute: typeof AuthenticatedGabaritoRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
@@ -349,7 +339,8 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAdminEscolaRoute: AuthenticatedAdminEscolaRoute,
   AuthenticatedCorrecaoRoute: AuthenticatedCorrecaoRoute,
   AuthenticatedGabaritoRoute: AuthenticatedGabaritoRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
