@@ -90,6 +90,10 @@ function Page() {
   const [padroes, setPadroes] = useState<Set<Padrao>>(new Set());
   const [pctRange, setPctRange] = useState<[number, number]>([0, 100]);
 
+  type SortKey = "nome" | "escola" | "turma" | "acertos" | "pct" | "padrao" | "chamada";
+  const [sortKey, setSortKey] = useState<SortKey>("nome");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
   const [selecionado, setSelecionado] = useState<{
     turma_id: string;
     numero_chamada: number;
