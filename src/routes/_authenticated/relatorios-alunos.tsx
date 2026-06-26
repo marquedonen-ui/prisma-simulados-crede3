@@ -7,6 +7,7 @@ import {
   listSimuladosComRespostas,
   getResultadosAlunos,
   getGabaritoAluno,
+  getMyReportScope,
 } from "@/lib/relatorios.functions";
 import {
   Card,
@@ -81,6 +82,10 @@ function Page() {
   const listSimFn = useServerFn(listSimuladosComRespostas);
   const getResFn = useServerFn(getResultadosAlunos);
   const getGabFn = useServerFn(getGabaritoAluno);
+  const getScopeFn = useServerFn(getMyReportScope);
+
+  const scopeQ = useQuery({ queryKey: ["report-scope"], queryFn: () => getScopeFn() });
+  const scoped = !!scopeQ.data?.scoped;
 
   const [simuladoId, setSimuladoId] = useState("");
   const [escolaId, setEscolaId] = useState<string>("__all");
@@ -260,26 +265,34 @@ function Page() {
 
             <div className="space-y-1.5">
               <Label>Escola</Label>
-              <Select
-                value={escolaId}
-                onValueChange={(v) => {
-                  setEscolaId(v);
-                  setTurmaId("__all");
-                }}
-                disabled={!simuladoId || escolasDisponiveis.length === 0}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Todas as escolas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all">Todas as escolas</SelectItem>
-                  {escolasDisponiveis.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>
-                      {e.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {scoped ? (
+                <Input
+                  value={scopeQ.data?.schoolName ?? escolasDisponiveis[0]?.name ?? ""}
+                  disabled
+                  readOnly
+                />
+              ) : (
+                <Select
+                  value={escolaId}
+                  onValueChange={(v) => {
+                    setEscolaId(v);
+                    setTurmaId("__all");
+                  }}
+                  disabled={!simuladoId || escolasDisponiveis.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todas as escolas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all">Todas as escolas</SelectItem>
+                    {escolasDisponiveis.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="space-y-1.5">
