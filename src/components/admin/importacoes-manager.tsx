@@ -428,39 +428,44 @@ function LoteAlunos({ lote }: { lote: Lote }) {
                   variant={a.ausente ? "default" : "outline"}
                   onClick={() => setEditAnswersFor(a.numero_chamada)}
                   title={a.ausente ? "Inserir respostas da 2ª chamada" : "Editar respostas"}
+                  disabled={lote.fechado}
                 >
                   <ListChecks className="h-3.5 w-3.5" />
                 </Button>
 
-                <Button size="sm" variant="outline" onClick={() => startEdit(a)} title="Editar nome / nº">
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
+                {!lote.fechado && (
+                  <Button size="sm" variant="outline" onClick={() => startEdit(a)} title="Editar nome / nº">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                )}
 
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button size="sm" variant="destructive">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Excluir respostas deste aluno?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        As {a.respostas} respostas do aluno nº {a.numero_chamada}
-                        {a.nome ? ` (${a.nome})` : ""} neste simulado/turma serão removidas.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => del.mutate(a.numero_chamada)}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        Excluir
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                {!lote.fechado && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" variant="destructive">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir respostas deste aluno?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          As {a.respostas} respostas do aluno nº {a.numero_chamada}
+                          {a.nome ? ` (${a.nome})` : ""} neste simulado/turma serão removidas.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => del.mutate(a.numero_chamada)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </>
             )}
           </div>
