@@ -134,33 +134,54 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-0">
         {profile && (
-          <div className="border-t border-sidebar-border px-3 py-3">
+          <div className="space-y-2 border-t border-sidebar-border px-3 py-3">
             {collapsed ? (
-              <div
-                className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-xs font-semibold text-sidebar-foreground"
-                title={`${profile.fullName ?? profile.email ?? ""}${roleLabel ? ` · ${roleLabel}` : ""}`}
-              >
-                {initials || "?"}
-              </div>
-            ) : (
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-xs font-semibold text-sidebar-foreground">
+              <>
+                <div
+                  className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-xs font-semibold text-sidebar-foreground"
+                  title={`${profile.fullName ?? profile.email ?? ""}${roleLabel ? ` · ${roleLabel}` : ""}`}
+                >
                   {initials || "?"}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-sidebar-foreground">
-                    {profile.fullName ?? "—"}
-                  </p>
-                  <p className="truncate text-xs text-sidebar-foreground/80">
-                    {profile.email ?? "—"}
-                  </p>
-                  {roleLabel && (
-                    <p className="truncate text-[11px] uppercase tracking-wide text-sidebar-foreground/70">
-                      {roleLabel}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleSignOut}
+                  title="Sair"
+                  className="mx-auto flex h-8 w-8 text-sidebar-foreground hover:bg-white/15 hover:text-sidebar-foreground"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-xs font-semibold text-sidebar-foreground">
+                    {initials || "?"}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-sidebar-foreground">
+                      {profile.fullName ?? "—"}
                     </p>
-                  )}
+                    <p className="truncate text-xs text-sidebar-foreground/80">
+                      {profile.email ?? "—"}
+                    </p>
+                    {roleLabel && (
+                      <p className="truncate text-[11px] uppercase tracking-wide text-sidebar-foreground/70">
+                        {roleLabel}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSignOut}
+                  className="w-full border-white/20 bg-transparent text-sidebar-foreground hover:bg-white/15 hover:text-sidebar-foreground"
+                >
+                  <LogOut className="mr-2 h-4 w-4" /> Sair
+                </Button>
+              </>
             )}
           </div>
         )}
