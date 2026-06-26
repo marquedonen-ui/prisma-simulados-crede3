@@ -148,6 +148,11 @@ export function UsersManager({ schools }: { schools: School[] }) {
       password: genTempPassword(),
       role: "professor_responsavel",
       school_id: "",
+      cargo: "",
+      disciplinas: "",
+      serie: "",
+      turno: "",
+      turma_ids: [] as string[],
     });
     setOpen(true);
   }
@@ -161,18 +166,36 @@ export function UsersManager({ schools }: { schools: School[] }) {
       school_id: u.school_id ?? "",
       email: u.email,
       password: "",
+      cargo: u.cargo ?? "",
+      disciplinas: (u.disciplinas ?? []).join(", "),
+      serie: u.serie ?? "",
+      turno: u.turno ?? "",
+      turma_ids: u.turma_ids ?? [],
     });
     setOpen(true);
   }
 
   function save(e: React.FormEvent) {
     e.preventDefault();
-    const needsSchool = editing.role === "professor_responsavel" || editing.role === "gestor";
+    const needsSchool = SCHOOL_BOUND_ROLES.has(editing.role);
     const school_id = needsSchool ? editing.school_id || null : null;
     if (needsSchool && !school_id) {
       toast.error("Selecione a escola.");
       return;
     }
+    const disciplinas = editing.disciplinas
+      ? String(editing.disciplinas)
+          .split(",")
+          .map((s: string) => s.trim())
+          .filter(Boolean)
+      : null;
+    const extras = {
+      cargo: editing.cargo || null,
+      disciplinas,
+      serie: editing.serie || null,
+      turno: editing.turno || null,
+      turma_ids: editing.role === "professor_escola" ? editing.turma_ids ?? [] : null,
+    };
     if (editing._new) {
       if (!isStrongEnoughPassword(editing.password)) {
         toastPasswordPolicy();
@@ -184,6 +207,7 @@ export function UsersManager({ schools }: { schools: School[] }) {
         full_name: editing.full_name.trim(),
         role: editing.role,
         school_id,
+        ...extras,
       });
     } else {
       if (editing.password && !isStrongEnoughPassword(editing.password)) {
@@ -196,6 +220,7 @@ export function UsersManager({ schools }: { schools: School[] }) {
         role: editing.role,
         school_id,
         new_password: editing.password ? editing.password : null,
+        ...extras,
       });
     }
   }
