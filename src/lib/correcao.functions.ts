@@ -15,6 +15,20 @@ async function ensureProfessorOrAdmin(supabase: any, userId: string) {
   return roles;
 }
 
+const PAGE_SIZE = 1000;
+
+async function fetchAllRows<T>(buildQuery: () => any): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await buildQuery().range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    const batch = (data ?? []) as T[];
+    rows.push(...batch);
+    if (batch.length < PAGE_SIZE) break;
+  }
+  return rows;
+}
+
 /** Lista simulados (avaliações diagnósticas) com contagem de alunos que responderam. */
 export const listSimuladosCorrecao = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -30,12 +44,13 @@ export const listSimuladosCorrecao = createServerFn({ method: "GET" })
     const ids = (simulados ?? []).map((s) => s.id);
     if (ids.length === 0) return [];
 
-    const [{ data: respostas }, { data: questoes }, { data: resultados }] = await Promise.all([
-      context.supabase
-        .from("respostas_alunos")
-        .select("simulado_id, usuario_id")
-        .in("simulado_id", ids)
-        .range(0, 49999),
+    const [respostas, { data: questoes }, { data: resultados }] = await Promise.all([
+      fetchAllRows<any>(() =>
+        context.supabase
+          .from("respostas_alunos")
+          .select("simulado_id, usuario_id")
+          .in("simulado_id", ids),
+      ),
       context.supabase.from("questoes").select("simulado_id").in("simulado_id", ids),
       context.supabase
         .from("resultados_simulados")
@@ -85,12 +100,12 @@ export const corrigirSimulado = createServerFn({ method: "POST" })
     );
     const totalQuestoes = questoes.length;
 
-    const { data: respostas, error: rErr } = await context.supabase
-      .from("respostas_alunos")
-      .select("usuario_id, aluno_id, questao_id, resposta_escolhida")
-      .eq("simulado_id", simuladoId)
-      .range(0, 49999);
-    if (rErr) throw rErr;
+    const respostas = await fetchAllRows<any>(() =>
+      context.supabase
+        .from("respostas_alunos")
+        .select("usuario_id, aluno_id, questao_id, resposta_escolhida")
+        .eq("simulado_id", simuladoId),
+    );
     if (!respostas || respostas.length === 0) {
       throw new Error("Nenhum aluno respondeu este simulado ainda.");
     }
