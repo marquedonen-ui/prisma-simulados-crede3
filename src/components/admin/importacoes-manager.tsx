@@ -58,6 +58,8 @@ type Lote = {
   ausentes?: number;
   respostas: number;
   ultima: string;
+  fechado?: boolean;
+  fechado_em?: string | null;
 };
 
 
