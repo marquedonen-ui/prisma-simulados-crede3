@@ -20,6 +20,7 @@ import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authentic
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedGabaritoRouteImport } from './routes/_authenticated/gabarito'
 import { Route as AuthenticatedCorrecaoRouteImport } from './routes/_authenticated/correcao'
+import { Route as AuthenticatedAdminEscolaRouteImport } from './routes/_authenticated/admin-escola'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAvaliacaoDiagnosticaIndexRouteImport } from './routes/_authenticated/avaliacao-diagnostica.index'
 import { Route as AuthenticatedAvaliacaoDiagnosticaIdRouteImport } from './routes/_authenticated/avaliacao-diagnostica.$id'
@@ -80,6 +81,12 @@ const AuthenticatedCorrecaoRoute = AuthenticatedCorrecaoRouteImport.update({
   path: '/correcao',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminEscolaRoute =
+  AuthenticatedAdminEscolaRouteImport.update({
+    id: '/admin-escola',
+    path: '/admin-escola',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -103,6 +110,7 @@ export interface FileRoutesByFullPath {
   '/aluno': typeof AlunoRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/admin-escola': typeof AuthenticatedAdminEscolaRoute
   '/correcao': typeof AuthenticatedCorrecaoRoute
   '/gabarito': typeof AuthenticatedGabaritoRoute
   '/painel': typeof AuthenticatedPainelRoute
@@ -118,6 +126,7 @@ export interface FileRoutesByTo {
   '/aluno': typeof AlunoRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/admin-escola': typeof AuthenticatedAdminEscolaRoute
   '/correcao': typeof AuthenticatedCorrecaoRoute
   '/gabarito': typeof AuthenticatedGabaritoRoute
   '/painel': typeof AuthenticatedPainelRoute
@@ -135,6 +144,7 @@ export interface FileRoutesById {
   '/aluno': typeof AlunoRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/admin-escola': typeof AuthenticatedAdminEscolaRoute
   '/_authenticated/correcao': typeof AuthenticatedCorrecaoRoute
   '/_authenticated/gabarito': typeof AuthenticatedGabaritoRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
     | '/aluno'
     | '/reset-password'
     | '/admin'
+    | '/admin-escola'
     | '/correcao'
     | '/gabarito'
     | '/painel'
@@ -167,6 +178,7 @@ export interface FileRouteTypes {
     | '/aluno'
     | '/reset-password'
     | '/admin'
+    | '/admin-escola'
     | '/correcao'
     | '/gabarito'
     | '/painel'
@@ -183,6 +195,7 @@ export interface FileRouteTypes {
     | '/aluno'
     | '/reset-password'
     | '/_authenticated/admin'
+    | '/_authenticated/admin-escola'
     | '/_authenticated/correcao'
     | '/_authenticated/gabarito'
     | '/_authenticated/painel'
@@ -280,6 +293,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCorrecaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin-escola': {
+      id: '/_authenticated/admin-escola'
+      path: '/admin-escola'
+      fullPath: '/admin-escola'
+      preLoaderRoute: typeof AuthenticatedAdminEscolaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
       path: '/admin'
@@ -306,6 +326,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAdminEscolaRoute: typeof AuthenticatedAdminEscolaRoute
   AuthenticatedCorrecaoRoute: typeof AuthenticatedCorrecaoRoute
   AuthenticatedGabaritoRoute: typeof AuthenticatedGabaritoRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
@@ -319,6 +340,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAdminEscolaRoute: AuthenticatedAdminEscolaRoute,
   AuthenticatedCorrecaoRoute: AuthenticatedCorrecaoRoute,
   AuthenticatedGabaritoRoute: AuthenticatedGabaritoRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,

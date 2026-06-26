@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Pencil, Trash2, ChevronDown, ChevronRight, Database, ListChecks, UserPlus } from "lucide-react";
+import { Loader2, Pencil, Trash2, ChevronDown, ChevronRight, Database, ListChecks, UserPlus, Lock, LockOpen } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -14,6 +14,8 @@ import {
   getRespostasAluno,
   updateRespostasAluno,
   addAlunoAusente,
+  fecharLote,
+  reabrirLote,
 } from "@/lib/offline.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +58,8 @@ type Lote = {
   ausentes?: number;
   respostas: number;
   ultima: string;
+  fechado?: boolean;
+  fechado_em?: string | null;
 };
 
 
@@ -67,11 +71,13 @@ type AlunoLote = {
 };
 
 
-export function ImportacoesManager() {
+export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {}) {
   const qc = useQueryClient();
   const listFn = useServerFn(listImportacoes);
   const delLoteFn = useServerFn(deleteImportacao);
   const delTudoFn = useServerFn(deleteTodasImportacoes);
+  const fecharFn = useServerFn(fecharLote);
+  const reabrirFn = useServerFn(reabrirLote);
 
   const lotesQ = useQuery({
     queryKey: ["importacoes"],
@@ -99,6 +105,26 @@ export function ImportacoesManager() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
+  const fechar = useMutation({
+    mutationFn: (l: Lote) =>
+      fecharFn({ data: { simuladoId: l.simulado_id, turmaId: l.turma_id } }),
+    onSuccess: () => {
+      toast.success("Avaliação encerrada. Os dados desta turma foram bloqueados para edição.");
+      qc.invalidateQueries({ queryKey: ["importacoes"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
+
+  const reabrir = useMutation({
+    mutationFn: (l: Lote) =>
+      reabrirFn({ data: { simuladoId: l.simulado_id, turmaId: l.turma_id } }),
+    onSuccess: () => {
+      toast.success("Avaliação reaberta.");
+      qc.invalidateQueries({ queryKey: ["importacoes"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
+
   return (
     <Card>
       <CardHeader>
@@ -116,7 +142,7 @@ export function ImportacoesManager() {
             <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
           </div>
         )}
-        {lotesQ.data?.length === 0 && (
+        {lotesQ.data?.length === 0 && isAdmin && (
           <div className="space-y-3 rounded-md border border-destructive/30 bg-destructive/5 p-4">
             <p className="text-sm text-muted-foreground">
               Nenhum lote apareceu na listagem. Se você quer limpar os dados de teste já importados, use a opção abaixo.
@@ -147,6 +173,9 @@ export function ImportacoesManager() {
             </AlertDialog>
           </div>
         )}
+        {lotesQ.data?.length === 0 && !isAdmin && (
+          <p className="text-sm text-muted-foreground">Nenhuma importação ainda para a sua escola.</p>
+        )}
         <div className="space-y-2">
           {(lotesQ.data ?? []).map((l) => {
             const key = `${l.simulado_id}::${l.turma_id}`;
@@ -165,43 +194,87 @@ export function ImportacoesManager() {
                       <ChevronRight className="mt-0.5 h-4 w-4 shrink-0" />
                     )}
                     <div className="min-w-0">
-                      <p className="truncate font-medium">{l.simulado}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate font-medium">{l.simulado}</p>
+                        {l.fechado && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                            <Lock className="h-3 w-3" /> Avaliação encerrada
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {l.escola} · INEP {l.inep} · Turma {l.turma}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {l.alunos} aluno(s){l.ausentes ? ` · ${l.ausentes} ausente(s)` : ""} · {l.respostas} resposta(s) ·{" "}
                         última: {new Date(l.ultima).toLocaleString("pt-BR")}
+                        {l.fechado && l.fechado_em ? ` · fechada em ${new Date(l.fechado_em).toLocaleString("pt-BR")}` : ""}
                       </p>
-
                     </div>
                   </button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm">
-                        <Trash2 className="mr-1 h-4 w-4" /> Excluir lote
+                  <div className="flex flex-wrap gap-2">
+                    {!l.fechado && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="default" size="sm" disabled={fechar.isPending}>
+                            <Lock className="mr-1 h-4 w-4" /> Fechar avaliação
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Encerrar avaliação desta turma?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Após fechar, ninguém poderá alterar, excluir ou reimportar respostas desta turma. Somente o administrador geral pode reabrir.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => fechar.mutate(l)}>
+                              Fechar avaliação
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                    {l.fechado && isAdmin && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={reabrir.isPending}
+                        onClick={() => reabrir.mutate(l)}
+                      >
+                        <LockOpen className="mr-1 h-4 w-4" /> Reabrir
                       </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Excluir lote inteiro?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Todas as {l.respostas} respostas dos {l.alunos} alunos
-                          deste simulado nesta turma serão removidas. Essa ação
-                          não pode ser desfeita.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => delLote.mutate(l)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Excluir
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                    )}
+                    {(!l.fechado || isAdmin) && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="sm" disabled={l.fechado && !isAdmin}>
+                            <Trash2 className="mr-1 h-4 w-4" /> Excluir lote
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Excluir lote inteiro?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Todas as {l.respostas} respostas dos {l.alunos} alunos
+                              deste simulado nesta turma serão removidas. Essa ação
+                              não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => delLote.mutate(l)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
                 </div>
                 {open && <LoteAlunos lote={l} />}
               </div>
@@ -300,6 +373,12 @@ function LoteAlunos({ lote }: { lote: Lote }) {
 
   return (
     <div className="border-t bg-muted/30 p-3">
+      {lote.fechado && (
+        <div className="mb-3 flex items-center gap-2 rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-xs text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
+          <Lock className="h-4 w-4" />
+          Avaliação encerrada — os dados desta turma estão bloqueados para edição. Somente o administrador geral pode reabrir.
+        </div>
+      )}
       {alunosQ.isLoading && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> Carregando alunos...
@@ -349,46 +428,51 @@ function LoteAlunos({ lote }: { lote: Lote }) {
                   variant={a.ausente ? "default" : "outline"}
                   onClick={() => setEditAnswersFor(a.numero_chamada)}
                   title={a.ausente ? "Inserir respostas da 2ª chamada" : "Editar respostas"}
+                  disabled={lote.fechado}
                 >
                   <ListChecks className="h-3.5 w-3.5" />
                 </Button>
 
-                <Button size="sm" variant="outline" onClick={() => startEdit(a)} title="Editar nome / nº">
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
+                {!lote.fechado && (
+                  <Button size="sm" variant="outline" onClick={() => startEdit(a)} title="Editar nome / nº">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                )}
 
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button size="sm" variant="destructive">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Excluir respostas deste aluno?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        As {a.respostas} respostas do aluno nº {a.numero_chamada}
-                        {a.nome ? ` (${a.nome})` : ""} neste simulado/turma serão removidas.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => del.mutate(a.numero_chamada)}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        Excluir
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                {!lote.fechado && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" variant="destructive">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir respostas deste aluno?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          As {a.respostas} respostas do aluno nº {a.numero_chamada}
+                          {a.nome ? ` (${a.nome})` : ""} neste simulado/turma serão removidas.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => del.mutate(a.numero_chamada)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </>
             )}
           </div>
         ))}
       </div>
 
-      {(() => {
+      {!lote.fechado && (() => {
         const nParsed = parseInt(novoNum || "0", 10);
         const existentes = new Set((alunosQ.data ?? []).map((a) => a.numero_chamada));
         const duplicado = nParsed > 0 && existentes.has(nParsed);
@@ -438,6 +522,7 @@ function LoteAlunos({ lote }: { lote: Lote }) {
           </form>
         );
       })()}
+
 
 
       <EditAnswersDialog

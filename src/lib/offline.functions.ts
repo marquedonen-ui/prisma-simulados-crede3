@@ -33,6 +33,49 @@ async function fetchAllRows<T>(buildQuery: () => any): Promise<T[]> {
   return rows;
 }
 
+async function isLoteFechado(supabase: any, simuladoId: string, turmaId: string) {
+  const { data } = await supabase
+    .from("lotes_fechados")
+    .select("simulado_id")
+    .eq("simulado_id", simuladoId)
+    .eq("turma_id", turmaId)
+    .maybeSingle();
+  return !!data;
+}
+
+async function assertLoteAberto(supabase: any, simuladoId: string, turmaId: string) {
+  if (await isLoteFechado(supabase, simuladoId, turmaId)) {
+    throw new Error(
+      "Avaliação encerrada para esta turma. Solicite ao administrador geral para reabrir.",
+    );
+  }
+}
+
+async function getProfSchoolId(supabase: any, userId: string) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("school_id")
+    .eq("id", userId)
+    .maybeSingle();
+  return (data?.school_id ?? null) as string | null;
+}
+
+async function ensureTurmaAccess(supabase: any, userId: string, turmaId: string) {
+  const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  const roles = (data ?? []).map((r: any) => r.role);
+  if (roles.includes("admin")) return;
+  if (roles.includes("professor_responsavel")) {
+    const my = await getProfSchoolId(supabase, userId);
+    const { data: t } = await supabase
+      .from("turmas")
+      .select("school_id")
+      .eq("id", turmaId)
+      .maybeSingle();
+    if (my && t?.school_id === my) return;
+  }
+  throw new Error("Você só pode operar dados da sua escola.");
+}
+
 // ============== QUESTÕES ==============
 
 export const listQuestoes = createServerFn({ method: "GET" })
@@ -262,6 +305,8 @@ export const importarRespostas = createServerFn({ method: "POST" })
     );
     try {
       await ensureProfessorOrAdmin(context.supabase, context.userId);
+      await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
+      await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
 
       // Use service role to read answer key; role check above already authorized the caller.
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -531,7 +576,7 @@ export const listImportacoes = createServerFn({ method: "GET" })
       turmaIds.length
         ? context.supabase
             .from("turmas")
-            .select("id, nome, schools(name, inep)")
+            .select("id, nome, school_id, schools(id, name, inep)")
             .in("id", turmaIds)
         : Promise.resolve({ data: [], error: null } as any),
     ]);
@@ -541,11 +586,35 @@ export const listImportacoes = createServerFn({ method: "GET" })
     const simMap = new Map<string, any>((simRes.data ?? []).map((s: any) => [s.id, s]));
     const turmaMap = new Map<string, any>((turmaRes.data ?? []).map((t: any) => [t.id, t]));
 
+    // Restringe por escola para professor_responsavel (admin vê tudo).
+    const { data: rolesData } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    const roles = (rolesData ?? []).map((r: any) => r.role);
+    const isAdmin = roles.includes("admin");
+    const isProfResp = roles.includes("professor_responsavel");
+    let mySchool: string | null = null;
+    if (!isAdmin && isProfResp) mySchool = await getProfSchoolId(context.supabase, context.userId);
+
+    const fechados = await fetchAllRows<any>(() =>
+      context.supabase.from("lotes_fechados").select("simulado_id, turma_id, fechado_em"),
+    );
+    const fechadosMap = new Map<string, string>(
+      fechados.map((f: any) => [`${f.simulado_id}::${f.turma_id}`, f.fechado_em]),
+    );
+
     return Array.from(map.values())
+      .filter((i) => {
+        if (isAdmin || !mySchool) return true;
+        const t = turmaMap.get(i.turma_id);
+        return t?.schools?.id ? t.schools.id === mySchool : false;
+      })
       .map((i) => {
         const s = simMap.get(i.simulado_id);
         const t = turmaMap.get(i.turma_id);
         const totalAlunos = new Set<number>([...i._alunos, ...i._ausentes]).size;
+        const key = `${i.simulado_id}::${i.turma_id}`;
         return {
           simulado_id: i.simulado_id,
           turma_id: i.turma_id,
@@ -559,6 +628,8 @@ export const listImportacoes = createServerFn({ method: "GET" })
           ausentes: i._ausentes.size,
           respostas: i.respostas,
           ultima: i.ultima,
+          fechado: fechadosMap.has(key),
+          fechado_em: fechadosMap.get(key) ?? null,
         };
       })
       .sort((a, b) => (a.ultima < b.ultima ? 1 : -1));
@@ -619,6 +690,8 @@ export const deleteImportacao = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await ensureProfessorOrAdmin(context.supabase, context.userId);
+    await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
+    await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
     const { error, count } = await context.supabase
       .from("respostas_alunos")
       .delete({ count: "exact" })
@@ -663,6 +736,8 @@ export const deleteImportacaoAluno = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await ensureProfessorOrAdmin(context.supabase, context.userId);
+    await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
+    await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
     const { error, count } = await context.supabase
       .from("respostas_alunos")
       .delete({ count: "exact" })
@@ -702,6 +777,8 @@ export const updateImportacaoAluno = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await ensureProfessorOrAdmin(context.supabase, context.userId);
+    await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
+    await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
     const patch: { nome?: string | null; numero_chamada?: number } = {};
     if (data.nome !== undefined) patch.nome = data.nome && data.nome.length ? data.nome : null;
     if (data.novoNumero !== undefined && data.novoNumero !== data.numeroChamada) {
@@ -741,6 +818,8 @@ export const addAlunoAusente = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await ensureProfessorOrAdmin(context.supabase, context.userId);
+    await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
+    await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
 
     const { data: jaResp } = await context.supabase
       .from("respostas_alunos")
@@ -836,6 +915,8 @@ export const updateRespostasAluno = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => updateRespostasSchema.parse(d))
   .handler(async ({ data, context }) => {
     await ensureProfessorOrAdmin(context.supabase, context.userId);
+    await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
+    await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
 
     // Tenta obter nome existente em respostas ou na lista de ausentes.
     const { data: existente } = await context.supabase
@@ -897,4 +978,39 @@ export const updateRespostasAluno = createServerFn({ method: "POST" })
     return { ok: true, total: inserir.length };
   });
 
+
+export const fecharLote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { simuladoId: string; turmaId: string }) =>
+    z.object({ simuladoId: z.string().uuid(), turmaId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await ensureProfessorOrAdmin(context.supabase, context.userId);
+    await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
+    const { error } = await context.supabase
+      .from("lotes_fechados")
+      .insert({
+        simulado_id: data.simuladoId,
+        turma_id: data.turmaId,
+        fechado_por: context.userId,
+      });
+    if (error && !String(error.message).includes("duplicate")) throw error;
+    return { ok: true };
+  });
+
+export const reabrirLote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { simuladoId: string; turmaId: string }) =>
+    z.object({ simuladoId: z.string().uuid(), turmaId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context.supabase, context.userId);
+    const { error } = await context.supabase
+      .from("lotes_fechados")
+      .delete()
+      .eq("simulado_id", data.simuladoId)
+      .eq("turma_id", data.turmaId);
+    if (error) throw error;
+    return { ok: true };
+  });
 
