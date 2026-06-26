@@ -186,6 +186,7 @@ type SchoolPad = {
 function PadraoDesempenhoPainel({
   isLoading,
   data,
+  scoped = false,
 }: {
   isLoading: boolean;
   data: Array<{
@@ -194,12 +195,18 @@ function PadraoDesempenhoPainel({
     faixas: { muito_critico: number; critico: number; intermediario: number; adequado: number };
     escolas: SchoolPad[];
   }>;
+  scoped?: boolean;
 }) {
   const [cidade, setCidade] = useState<string | null>(null);
   const [escolaId, setEscolaId] = useState<string | null>(null);
-  const cidadeData = cidade ? data.find((c) => c.city === cidade) : null;
-  const escolaData =
-    cidadeData && escolaId ? cidadeData.escolas.find((e) => e.school_id === escolaId) : null;
+  const scopedCidade = scoped ? (data[0]?.city ?? null) : null;
+  const scopedEscola = scoped ? (data[0]?.escolas?.[0] ?? null) : null;
+  const cidadeData = scoped ? data[0] ?? null : cidade ? data.find((c) => c.city === cidade) : null;
+  const escolaData = scoped
+    ? scopedEscola
+    : cidadeData && escolaId
+      ? cidadeData.escolas.find((e) => e.school_id === escolaId)
+      : null;
 
   const chartData = useMemo(() => {
     if (escolaData) {
@@ -226,7 +233,7 @@ function PadraoDesempenhoPainel({
 
 
   const onBarClick = (d: any) => {
-    if (escolaData) return;
+    if (scoped || escolaData) return;
     if (cidadeData) {
       const e = cidadeData.escolas.find((x) => x.name === d.label);
       if (e) setEscolaId(e.school_id);
@@ -234,19 +241,24 @@ function PadraoDesempenhoPainel({
       setCidade(d.label);
     }
   };
-  const onBack = escolaData
-    ? () => setEscolaId(null)
-    : cidade
-      ? () => setCidade(null)
-      : undefined;
+  const onBack = scoped
+    ? undefined
+    : escolaData
+      ? () => setEscolaId(null)
+      : cidade
+        ? () => setCidade(null)
+        : undefined;
   const backLabel = escolaData ? "Voltar para escolas" : "Voltar para municípios";
-  const description = escolaData
-    ? `Turmas da escola ${escolaData.name}. Faixas: 0–11 Muito Crítico · 12–22 Crítico · 23–34 Intermediário · 35–45 Adequado.`
-    : cidade
-      ? `Escolas do município de ${cidade}. Clique em uma barra para ver as turmas.`
-      : "Por município. Clique em uma barra para ver as escolas. Faixas: 0–11 Muito Crítico · 12–22 Crítico · 23–34 Intermediário · 35–45 Adequado.";
+  const description = scoped
+    ? `Turmas da escola${escolaData ? ` ${escolaData.name}` : ""}. Faixas: 0–11 Muito Crítico · 12–22 Crítico · 23–34 Intermediário · 35–45 Adequado.`
+    : escolaData
+      ? `Turmas da escola ${escolaData.name}. Faixas: 0–11 Muito Crítico · 12–22 Crítico · 23–34 Intermediário · 35–45 Adequado.`
+      : cidade
+        ? `Escolas do município de ${cidade}. Clique em uma barra para ver as turmas.`
+        : "Por município. Clique em uma barra para ver as escolas. Faixas: 0–11 Muito Crítico · 12–22 Crítico · 23–34 Intermediário · 35–45 Adequado.";
 
-  const drillable = !escolaData;
+  const drillable = !scoped && !escolaData;
+  void scopedCidade;
 
   return (
     <PainelCard
