@@ -586,11 +586,35 @@ export const listImportacoes = createServerFn({ method: "GET" })
     const simMap = new Map<string, any>((simRes.data ?? []).map((s: any) => [s.id, s]));
     const turmaMap = new Map<string, any>((turmaRes.data ?? []).map((t: any) => [t.id, t]));
 
+    // Restringe por escola para professor_responsavel (admin vê tudo).
+    const { data: rolesData } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    const roles = (rolesData ?? []).map((r: any) => r.role);
+    const isAdmin = roles.includes("admin");
+    const isProfResp = roles.includes("professor_responsavel");
+    let mySchool: string | null = null;
+    if (!isAdmin && isProfResp) mySchool = await getProfSchoolId(context.supabase, context.userId);
+
+    const fechados = await fetchAllRows<any>(() =>
+      context.supabase.from("lotes_fechados").select("simulado_id, turma_id, fechado_em"),
+    );
+    const fechadosMap = new Map<string, string>(
+      fechados.map((f: any) => [`${f.simulado_id}::${f.turma_id}`, f.fechado_em]),
+    );
+
     return Array.from(map.values())
+      .filter((i) => {
+        if (isAdmin || !mySchool) return true;
+        const t = turmaMap.get(i.turma_id);
+        return t?.schools?.id ? t.schools.id === mySchool : false;
+      })
       .map((i) => {
         const s = simMap.get(i.simulado_id);
         const t = turmaMap.get(i.turma_id);
         const totalAlunos = new Set<number>([...i._alunos, ...i._ausentes]).size;
+        const key = `${i.simulado_id}::${i.turma_id}`;
         return {
           simulado_id: i.simulado_id,
           turma_id: i.turma_id,
@@ -604,6 +628,8 @@ export const listImportacoes = createServerFn({ method: "GET" })
           ausentes: i._ausentes.size,
           respostas: i.respostas,
           ultima: i.ultima,
+          fechado: fechadosMap.has(key),
+          fechado_em: fechadosMap.get(key) ?? null,
         };
       })
       .sort((a, b) => (a.ultima < b.ultima ? 1 : -1));
