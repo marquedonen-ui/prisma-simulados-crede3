@@ -67,11 +67,14 @@ export const corrigirSimulado = createServerFn({ method: "POST" })
     await ensureProfessorOrAdmin(context.supabase, context.userId);
     const { simuladoId } = data;
 
-    const { data: questoes, error: qErr } = await context.supabase
+    // resposta_correta is column-locked to service_role; use admin client after role check.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: questoes, error: qErr } = await supabaseAdmin
       .from("questoes")
       .select("id, resposta_correta, pontos")
       .eq("simulado_id", simuladoId);
     if (qErr) throw qErr;
+
     if (!questoes || questoes.length === 0) {
       throw new Error("Este simulado ainda não tem questões cadastradas.");
     }
