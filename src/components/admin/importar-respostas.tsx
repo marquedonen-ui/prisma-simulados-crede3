@@ -433,10 +433,14 @@ export function ImportarRespostas({
 
             {resultado.detalhes_alunos?.length > 0 && (
               <div className="rounded-md border">
-                <div className="border-b bg-muted/40 px-3 py-2">
+                <div className="flex items-center justify-between border-b bg-muted/40 px-3 py-2">
                   <p className="text-sm font-semibold">Respostas importadas por aluno</p>
+                  <span className="text-xs text-muted-foreground">
+                    {resultado.detalhes_alunos.length} registro(s)
+                  </span>
                 </div>
-                <div className="max-h-96 overflow-auto">
+                <div className="overflow-auto">
+
                   <table className="w-full text-sm">
                     <thead className="sticky top-0 bg-muted text-left text-xs uppercase text-muted-foreground">
                       <tr>
