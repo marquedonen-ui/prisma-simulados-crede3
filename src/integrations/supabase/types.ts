@@ -182,6 +182,7 @@ export type Database = {
           alternativa_c: string
           alternativa_d: string
           alternativa_e: string | null
+          anulada: boolean
           created_at: string
           enunciado: string
           id: string
@@ -198,6 +199,7 @@ export type Database = {
           alternativa_c: string
           alternativa_d: string
           alternativa_e?: string | null
+          anulada?: boolean
           created_at?: string
           enunciado: string
           id?: string
@@ -214,6 +216,7 @@ export type Database = {
           alternativa_c?: string
           alternativa_d?: string
           alternativa_e?: string | null
+          anulada?: boolean
           created_at?: string
           enunciado?: string
           id?: string
