@@ -305,6 +305,8 @@ export const importarRespostas = createServerFn({ method: "POST" })
     );
     try {
       await ensureProfessorOrAdmin(context.supabase, context.userId);
+      await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
+      await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
 
       // Use service role to read answer key; role check above already authorized the caller.
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
