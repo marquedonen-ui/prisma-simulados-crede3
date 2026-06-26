@@ -49,9 +49,16 @@ export function AppSidebar() {
   const roles: string[] = roleQ.data?.roles ?? [];
   const isAdmin = roles.includes("admin");
   const profileRoles: string[] = (profileQ.data?.roles as string[] | undefined) ?? [];
-  const isProfResp = profileRoles.includes("professor_responsavel") || roles.includes("professor_responsavel");
+  const allRoles = Array.from(new Set([...roles, ...profileRoles]));
+  const isProfResp = allRoles.includes("professor_responsavel");
+  const isSuperintendente = allRoles.includes("superintendente");
+  const isGestor = allRoles.includes("gestor");
+  const showDevolutivas = isAdmin || isSuperintendente || isGestor || isProfResp;
   const items = [
     ...baseItems,
+    ...(showDevolutivas
+      ? [{ title: "Devolutivas", url: "/devolutivas", icon: MessageSquare }]
+      : []),
     ...(isProfResp && !isAdmin
       ? [{ title: "Administração / Escola", url: "/admin-escola", icon: Shield }]
       : []),
@@ -61,17 +68,29 @@ export function AppSidebar() {
 
   const roleLabels: Record<string, string> = {
     admin: "Administrador",
+    superintendente: "Superintendente Escolar",
     professor_responsavel: "Professor responsável",
     gestor: "Gestor escolar",
+    professor_escola: "Professor da escola",
     professor: "Professor",
     aluno: "Aluno",
   };
-  const profile = profileQ.data;
-  const rolePriority = ["admin", "professor_responsavel", "gestor", "professor", "aluno"] as const;
+  const profile = profileQ.data as any;
+  const rolePriority = [
+    "admin",
+    "superintendente",
+    "professor_responsavel",
+    "gestor",
+    "professor_escola",
+    "professor",
+    "aluno",
+  ] as const;
   const primaryRole = profile?.roles
     ? rolePriority.find((r) => (profile.roles as string[]).includes(r)) ?? profile.roles[0]
     : null;
-  const roleLabel = primaryRole ? (roleLabels[primaryRole] ?? primaryRole) : null;
+  const baseLabel = primaryRole ? (roleLabels[primaryRole] ?? primaryRole) : null;
+  const roleLabel =
+    primaryRole === "gestor" && profile?.cargo ? `${baseLabel} — ${profile.cargo}` : baseLabel;
   const initials = (profile?.fullName ?? profile?.email ?? "?")
     .split(/\s+/)
     .filter(Boolean)
