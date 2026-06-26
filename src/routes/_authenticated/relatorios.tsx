@@ -364,13 +364,32 @@ function ConclusaoPainel({
         _total: e.matriculados || e.finalizaram + e.nao_finalizaram,
       }));
     }
-    return data.map((c) => ({
+    const rows = data.map((c) => ({
       label: c.city,
       Finalizaram: c.finalizaram,
       "Não finalizaram": c.nao_finalizaram,
       _total: c.matriculados || c.finalizaram + c.nao_finalizaram,
     }));
+    const geral = data.reduce(
+      (acc, c) => {
+        acc.fin += c.finalizaram;
+        acc.naofin += c.nao_finalizaram;
+        acc.mat += c.matriculados || c.finalizaram + c.nao_finalizaram;
+        return acc;
+      },
+      { fin: 0, naofin: 0, mat: 0 },
+    );
+    if (geral.fin + geral.naofin > 0) {
+      rows.push({
+        label: "CREDE 3",
+        Finalizaram: geral.fin,
+        "Não finalizaram": geral.naofin,
+        _total: geral.mat || geral.fin + geral.naofin,
+      });
+    }
+    return rows;
   }, [data, cidadeData, escolaData]);
+
 
   const onBarClick = (d: any) => {
     if (escolaData) return;
