@@ -69,23 +69,35 @@ function faixaDeAcertos(n: number): keyof Faixas {
  * Retorna por aluno (turma_id + numero_chamada), com acertos, total_respondidas
  * e metadados (escola, município, matrícula da turma).
  */
-async function carregarDataset(supabase: any, simuladoId: string) {
+async function carregarDataset(
+  supabase: any,
+  simuladoId: string,
+  opts?: { disciplina?: string | null },
+) {
   // Use service role to read the answer key (resposta_correta) without exposing
   // it via RLS to professor_responsavel/gestor. Callers must enforce role checks first.
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: questoes, error: qErr } = await supabaseAdmin
     .from("questoes")
-    .select("id, resposta_correta, anulada")
+    .select("id, resposta_correta, anulada, disciplina")
     .eq("simulado_id", simuladoId);
   if (qErr) throw qErr;
+  const disciplinaFilter = (opts?.disciplina ?? "").trim();
+  const questoesFiltradas = disciplinaFilter
+    ? (questoes ?? []).filter(
+        (q: any) => String(q.disciplina ?? "").trim() === disciplinaFilter,
+      )
+    : (questoes ?? []);
+  const allowedIds = new Set<string>(questoesFiltradas.map((q: any) => q.id));
   const correct = new Map<string, string>(
-    (questoes ?? []).map((q: any) => [q.id, q.resposta_correta]),
+    questoesFiltradas.map((q: any) => [q.id, q.resposta_correta]),
   );
   const anulada = new Map<string, boolean>(
-    (questoes ?? []).map((q: any) => [q.id, !!q.anulada]),
+    questoesFiltradas.map((q: any) => [q.id, !!q.anulada]),
   );
 
-  const totalQuestoes = (questoes ?? []).length;
+  const totalQuestoes = questoesFiltradas.length;
+
 
   const respostas = await fetchAllRows<any>(() =>
     supabase
@@ -136,11 +148,13 @@ async function carregarDataset(supabase: any, simuladoId: string) {
       alunos.set(key, a);
     }
     if (!a.nome && r.nome) a.nome = r.nome;
+    if (!allowedIds.has(r.questao_id)) continue;
     const alt = String(r.resposta_escolhida ?? "").toUpperCase();
     if (["A", "B", "C", "D", "E"].includes(alt)) {
       a.respondidas += 1;
       if (anulada.get(r.questao_id) || correct.get(r.questao_id) === alt) a.acertos += 1;
     }
+
   }
 
 
@@ -342,13 +356,43 @@ export const getConclusao = createServerFn({ method: "GET" })
       .sort((a, b) => a.city.localeCompare(b.city));
   });
 
-/** Acerto Médio — % de acerto vs % de erro (sobre respostas marcadas). */
-export const getAcertoMedio = createServerFn({ method: "GET" })
+/** Lista as disciplinas cadastradas nas questões de um simulado. */
+export const listDisciplinasSimulado = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator(idInput)
   .handler(async ({ data, context }) => {
     await ensureProfessorOrAdmin(context.supabase, context.userId);
-    const { alunos } = await carregarDataset(context.supabase, data.simuladoId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("questoes")
+      .select("disciplina")
+      .eq("simulado_id", data.simuladoId);
+    if (error) throw error;
+    const set = new Set<string>();
+    for (const r of rows ?? []) {
+      const v = String((r as any).disciplina ?? "").trim();
+      if (v) set.add(v);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  });
+
+/** Acerto Médio — % de acerto vs % de erro (sobre respostas marcadas). */
+export const getAcertoMedio = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { simuladoId: string; disciplina?: string | null }) =>
+    z
+      .object({
+        simuladoId: z.string().uuid(),
+        disciplina: z.string().nullable().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await ensureProfessorOrAdmin(context.supabase, context.userId);
+    const { alunos } = await carregarDataset(context.supabase, data.simuladoId, {
+      disciplina: data.disciplina ?? null,
+    });
+
 
     const porCidade = new Map<
       string,

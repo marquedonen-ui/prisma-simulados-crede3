@@ -18,7 +18,9 @@ import {
   getPadraoDesempenho,
   getConclusao,
   getAcertoMedio,
+  listDisciplinasSimulado,
 } from "@/lib/relatorios.functions";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Select,
@@ -52,8 +54,10 @@ function Page() {
   const getPadFn = useServerFn(getPadraoDesempenho);
   const getConFn = useServerFn(getConclusao);
   const getAcFn = useServerFn(getAcertoMedio);
+  const listDiscFn = useServerFn(listDisciplinasSimulado);
 
   const [simuladoId, setSimuladoId] = useState("");
+  const [acDisciplina, setAcDisciplina] = useState<string>("__all__");
 
   const simQ = useQuery({ queryKey: ["rel-sims"], queryFn: () => listSimFn() });
   const padQ = useQuery({
@@ -66,11 +70,23 @@ function Page() {
     queryFn: () => getConFn({ data: { simuladoId } }),
     enabled: !!simuladoId,
   });
-  const acQ = useQuery({
-    queryKey: ["acerto", simuladoId],
-    queryFn: () => getAcFn({ data: { simuladoId } }),
+  const discQ = useQuery({
+    queryKey: ["disciplinas-sim", simuladoId],
+    queryFn: () => listDiscFn({ data: { simuladoId } }),
     enabled: !!simuladoId,
   });
+  const acQ = useQuery({
+    queryKey: ["acerto", simuladoId, acDisciplina],
+    queryFn: () =>
+      getAcFn({
+        data: {
+          simuladoId,
+          disciplina: acDisciplina === "__all__" ? null : acDisciplina,
+        },
+      }),
+    enabled: !!simuladoId,
+  });
+
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-6 py-10">
@@ -127,7 +143,14 @@ function Page() {
             data={padQ.data ?? []}
           />
           <ConclusaoPainel isLoading={conQ.isLoading} data={conQ.data ?? []} />
-          <AcertoMedioPainel isLoading={acQ.isLoading} data={acQ.data ?? []} />
+          <AcertoMedioPainel
+            isLoading={acQ.isLoading}
+            data={acQ.data ?? []}
+            disciplinas={discQ.data ?? []}
+            disciplina={acDisciplina}
+            onDisciplinaChange={setAcDisciplina}
+          />
+
         </div>
       )}
     </div>
@@ -408,6 +431,9 @@ function ConclusaoPainel({
 function AcertoMedioPainel({
   isLoading,
   data,
+  disciplinas,
+  disciplina,
+  onDisciplinaChange,
 }: {
   isLoading: boolean;
   data: Array<{
@@ -433,7 +459,11 @@ function AcertoMedioPainel({
       }>;
     }>;
   }>;
+  disciplinas: string[];
+  disciplina: string;
+  onDisciplinaChange: (v: string) => void;
 }) {
+
   const [cidade, setCidade] = useState<string | null>(null);
   const [escolaId, setEscolaId] = useState<string | null>(null);
   const cidadeData = cidade ? data.find((c) => c.city === cidade) : null;
@@ -499,6 +529,23 @@ function AcertoMedioPainel({
       isLoading={isLoading}
       empty={chartData.length === 0}
     >
+      <div className="mb-4 max-w-xs space-y-1.5">
+        <Label>Disciplina</Label>
+        <Select value={disciplina} onValueChange={onDisciplinaChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="Todas as disciplinas" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Todas as disciplinas</SelectItem>
+            {disciplinas.map((d) => (
+              <SelectItem key={d} value={d}>
+                {d}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <ResponsiveContainer width="100%" height={Math.max(220, chartData.length * 44)}>
         <BarChart
           data={chartData}
