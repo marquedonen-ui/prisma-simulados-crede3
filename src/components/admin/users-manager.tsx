@@ -40,13 +40,30 @@ type School = { id: string; name: string; inep: string };
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Administrador",
+  superintendente: "Superintendente Escolar",
   professor_responsavel: "Professor responsável",
   gestor: "Gestor escolar",
+  professor_escola: "Professor da escola",
   professor: "Professor",
   aluno: "Aluno",
 };
 
-const ROLE_OPTIONS = ["professor_responsavel", "gestor", "admin"] as const;
+const ROLE_OPTIONS = [
+  "professor_responsavel",
+  "gestor",
+  "professor_escola",
+  "superintendente",
+  "admin",
+] as const;
+
+const CARGOS = ["Diretor(a)", "Coordenador(a)"] as const;
+const TURNOS = ["Manhã", "Tarde", "Noite", "Integral"] as const;
+const SCHOOL_BOUND_ROLES = new Set([
+  "professor_responsavel",
+  "gestor",
+  "professor_escola",
+  "professor",
+]);
 
 function genTempPassword() {
   const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
