@@ -202,25 +202,37 @@ export type Database = {
       }
       profiles: {
         Row: {
+          cargo: string | null
           created_at: string
+          disciplinas: string[] | null
           email: string
           full_name: string | null
           id: string
           school_id: string | null
+          serie: string | null
+          turno: string | null
         }
         Insert: {
+          cargo?: string | null
           created_at?: string
+          disciplinas?: string[] | null
           email: string
           full_name?: string | null
           id: string
           school_id?: string | null
+          serie?: string | null
+          turno?: string | null
         }
         Update: {
+          cargo?: string | null
           created_at?: string
+          disciplinas?: string[] | null
           email?: string
           full_name?: string | null
           id?: string
           school_id?: string | null
+          serie?: string | null
+          turno?: string | null
         }
         Relationships: [
           {
@@ -692,6 +704,9 @@ export type Database = {
         | "aluno"
         | "professor_responsavel"
         | "gestor"
+        | "superintendente"
+        | "professor_escola"
+      devolutiva_status: "enviada" | "em_processo" | "finalizada"
       turno_turma: "manha" | "tarde" | "noite" | "integral"
     }
     CompositeTypes: {
@@ -826,7 +841,10 @@ export const Constants = {
         "aluno",
         "professor_responsavel",
         "gestor",
+        "superintendente",
+        "professor_escola",
       ],
+      devolutiva_status: ["enviada", "em_processo", "finalizada"],
       turno_turma: ["manha", "tarde", "noite", "integral"],
     },
   },
