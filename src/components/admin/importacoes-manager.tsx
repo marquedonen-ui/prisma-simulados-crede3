@@ -142,7 +142,7 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
             <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
           </div>
         )}
-        {lotesQ.data?.length === 0 && (
+        {lotesQ.data?.length === 0 && isAdmin && (
           <div className="space-y-3 rounded-md border border-destructive/30 bg-destructive/5 p-4">
             <p className="text-sm text-muted-foreground">
               Nenhum lote apareceu na listagem. Se você quer limpar os dados de teste já importados, use a opção abaixo.
@@ -172,6 +172,9 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
               </AlertDialogContent>
             </AlertDialog>
           </div>
+        )}
+        {lotesQ.data?.length === 0 && !isAdmin && (
+          <p className="text-sm text-muted-foreground">Nenhuma importação ainda para a sua escola.</p>
         )}
         <div className="space-y-2">
           {(lotesQ.data ?? []).map((l) => {
