@@ -595,5 +595,111 @@ export const updateImportacaoAluno = createServerFn({ method: "POST" })
     return { ok: true, atualizadas: count ?? 0 };
   });
 
+export const getRespostasAluno = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { simuladoId: string; turmaId: string; numeroChamada: number }) =>
+    z
+      .object({
+        simuladoId: z.string().uuid(),
+        turmaId: z.string().uuid(),
+        numeroChamada: z.number().int().min(1).max(9999),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await ensureProfessorOrAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: questoes, error: qErr } = await supabaseAdmin
+      .from("questoes")
+      .select("id, numero, resposta_correta")
+      .eq("simulado_id", data.simuladoId)
+      .order("numero", { ascending: true });
+    if (qErr) throw qErr;
 
+    const respostas = await fetchAllRows<any>(() =>
+      context.supabase
+        .from("respostas_alunos")
+        .select("questao_id, resposta_escolhida, nome")
+        .eq("simulado_id", data.simuladoId)
+        .eq("turma_id", data.turmaId)
+        .eq("numero_chamada", data.numeroChamada),
+    );
+
+    const respMap = new Map<string, string>(
+      respostas.map((r: any) => [r.questao_id, r.resposta_escolhida]),
+    );
+    const nome = respostas.find((r: any) => r.nome)?.nome ?? null;
+
+    return {
+      nome,
+      questoes: (questoes ?? []).map((q: any) => ({
+        questao_id: q.id,
+        numero: q.numero,
+        resposta_correta: q.resposta_correta as string,
+        resposta_escolhida: respMap.get(q.id) ?? null,
+      })),
+    };
+  });
+
+const updateRespostasSchema = z.object({
+  simuladoId: z.string().uuid(),
+  turmaId: z.string().uuid(),
+  numeroChamada: z.number().int().min(1).max(9999),
+  respostas: z
+    .array(
+      z.object({
+        questao_id: z.string().uuid(),
+        resposta_escolhida: z.string().nullable(),
+      }),
+    )
+    .min(1),
+});
+
+export const updateRespostasAluno = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => updateRespostasSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    await ensureProfessorOrAdmin(context.supabase, context.userId);
+
+    const { data: existente } = await context.supabase
+      .from("respostas_alunos")
+      .select("nome")
+      .eq("simulado_id", data.simuladoId)
+      .eq("turma_id", data.turmaId)
+      .eq("numero_chamada", data.numeroChamada)
+      .limit(1);
+    const nome = (existente?.[0] as any)?.nome ?? null;
+
+    const { error: delErr } = await context.supabase
+      .from("respostas_alunos")
+      .delete()
+      .eq("simulado_id", data.simuladoId)
+      .eq("turma_id", data.turmaId)
+      .eq("numero_chamada", data.numeroChamada);
+    if (delErr) throw delErr;
+
+    const inserir = data.respostas
+      .map((r) => ({
+        ...r,
+        alt: String(r.resposta_escolhida ?? "").trim().toUpperCase(),
+      }))
+      .filter((r) => ["A", "B", "C", "D", "E"].includes(r.alt))
+      .map((r) => ({
+        simulado_id: data.simuladoId,
+        turma_id: data.turmaId,
+        numero_chamada: data.numeroChamada,
+        nome,
+        questao_id: r.questao_id,
+        resposta_escolhida: r.alt,
+      }));
+
+    if (inserir.length > 0) {
+      const { error: insErr } = await context.supabase
+        .from("respostas_alunos")
+        .insert(inserir);
+      if (insErr) throw insErr;
+    }
+
+    return { ok: true, total: inserir.length };
+  });
 

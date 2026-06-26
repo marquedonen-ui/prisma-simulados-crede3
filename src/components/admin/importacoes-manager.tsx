@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Pencil, Trash2, ChevronDown, ChevronRight, Database } from "lucide-react";
+import { Loader2, Pencil, Trash2, ChevronDown, ChevronRight, Database, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -11,9 +11,20 @@ import {
   deleteTodasImportacoes,
   deleteImportacaoAluno,
   updateImportacaoAluno,
+  getRespostasAluno,
+  updateRespostasAluno,
 } from "@/lib/offline.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
 import {
   Card,
   CardContent,
@@ -211,6 +222,8 @@ function LoteAlunos({ lote }: { lote: Lote }) {
   const [editing, setEditing] = useState<number | null>(null);
   const [editNome, setEditNome] = useState("");
   const [editNumero, setEditNumero] = useState<number>(0);
+  const [editAnswersFor, setEditAnswersFor] = useState<number | null>(null);
+
 
   const startEdit = (a: AlunoLote) => {
     setEditing(a.numero_chamada);
@@ -296,9 +309,18 @@ function LoteAlunos({ lote }: { lote: Lote }) {
                   {a.nome ?? <span className="italic text-muted-foreground">Nome não informado</span>}
                 </span>
                 <span className="text-xs text-muted-foreground">{a.respostas} resp.</span>
-                <Button size="sm" variant="outline" onClick={() => startEdit(a)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setEditAnswersFor(a.numero_chamada)}
+                  title="Editar respostas"
+                >
+                  <ListChecks className="h-3.5 w-3.5" />
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => startEdit(a)} title="Editar nome / nº">
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
+
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button size="sm" variant="destructive">
@@ -329,6 +351,161 @@ function LoteAlunos({ lote }: { lote: Lote }) {
           </div>
         ))}
       </div>
+      <EditAnswersDialog
+        open={editAnswersFor !== null}
+        onClose={() => setEditAnswersFor(null)}
+        simuladoId={lote.simulado_id}
+        turmaId={lote.turma_id}
+        numeroChamada={editAnswersFor}
+        nome={(alunosQ.data ?? []).find((x) => x.numero_chamada === editAnswersFor)?.nome ?? null}
+      />
     </div>
   );
 }
+
+const ALTS = ["A", "B", "C", "D", "E"] as const;
+
+function EditAnswersDialog({
+  open,
+  onClose,
+  simuladoId,
+  turmaId,
+  numeroChamada,
+  nome,
+}: {
+  open: boolean;
+  onClose: () => void;
+  simuladoId: string;
+  turmaId: string;
+  numeroChamada: number | null;
+  nome: string | null;
+}) {
+  const qc = useQueryClient();
+  const getFn = useServerFn(getRespostasAluno);
+  const updFn = useServerFn(updateRespostasAluno);
+
+  const q = useQuery({
+    queryKey: ["respostas-aluno", simuladoId, turmaId, numeroChamada],
+    queryFn: () =>
+      getFn({ data: { simuladoId, turmaId, numeroChamada: numeroChamada! } }),
+    enabled: open && numeroChamada !== null,
+  });
+
+  const [edits, setEdits] = useState<Record<string, string | null>>({});
+
+  useEffect(() => {
+    if (q.data) {
+      const init: Record<string, string | null> = {};
+      for (const it of q.data.questoes) init[it.questao_id] = it.resposta_escolhida;
+      setEdits(init);
+    }
+  }, [q.data]);
+
+  const save = useMutation({
+    mutationFn: () =>
+      updFn({
+        data: {
+          simuladoId,
+          turmaId,
+          numeroChamada: numeroChamada!,
+          respostas: Object.entries(edits).map(([questao_id, resposta_escolhida]) => ({
+            questao_id,
+            resposta_escolhida,
+          })),
+        },
+      }),
+    onSuccess: (r) => {
+      toast.success(`Respostas atualizadas (${r.total} marcadas).`);
+      qc.invalidateQueries({ queryKey: ["importacao-alunos", simuladoId, turmaId] });
+      qc.invalidateQueries({ queryKey: ["importacoes"] });
+      qc.invalidateQueries({ queryKey: ["respostas-aluno", simuladoId, turmaId, numeroChamada] });
+      onClose();
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>
+            Editar respostas — nº {numeroChamada}
+            {nome ? ` · ${nome}` : ""}
+          </DialogTitle>
+          <DialogDescription>
+            Clique nas alternativas para alterar a resposta do(a) aluno(a). Selecione novamente
+            a mesma alternativa para deixar em branco.
+          </DialogDescription>
+        </DialogHeader>
+
+        {q.isLoading && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Carregando respostas...
+          </div>
+        )}
+
+        {q.data && (
+          <div className="max-h-[60vh] space-y-1 overflow-auto pr-2">
+            {q.data.questoes.map((it) => {
+              const sel = edits[it.questao_id] ?? null;
+              return (
+                <div
+                  key={it.questao_id}
+                  className="flex items-center gap-2 rounded border p-2 text-sm"
+                >
+                  <span className="w-10 font-mono text-xs text-muted-foreground">
+                    Q{it.numero}
+                  </span>
+                  <div className="flex flex-1 flex-wrap gap-1">
+                    {ALTS.map((alt) => {
+                      const isSel = sel === alt;
+                      const isCorrect = it.resposta_correta === alt;
+                      return (
+                        <button
+                          key={alt}
+                          type="button"
+                          onClick={() =>
+                            setEdits((prev) => ({
+                              ...prev,
+                              [it.questao_id]: prev[it.questao_id] === alt ? null : alt,
+                            }))
+                          }
+                          className={
+                            "h-8 w-8 rounded border text-xs font-semibold transition-colors " +
+                            (isSel
+                              ? isCorrect
+                                ? "border-green-600 bg-green-600 text-white"
+                                : "border-red-600 bg-red-600 text-white"
+                              : isCorrect
+                                ? "border-green-600/50 bg-green-50 text-green-700 hover:bg-green-100"
+                                : "bg-card hover:bg-muted")
+                          }
+                          title={isCorrect ? "Resposta correta" : undefined}
+                        >
+                          {alt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <span className="w-20 text-right text-xs text-muted-foreground">
+                    Gab.: <b>{it.resposta_correta}</b>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={save.isPending}>
+            Cancelar
+          </Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending || !q.data}>
+            {save.isPending ? "Salvando..." : "Salvar alterações"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
