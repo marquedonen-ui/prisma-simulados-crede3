@@ -148,6 +148,20 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {bloqueadoPorPrazo && (
+          <div className="mb-4 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+            <Lock className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-semibold">Prazo encerrado</p>
+              <p className="text-xs">
+                A data limite para inserção dos resultados na plataforma PRISMA
+                {deadlineFmt ? ` (${deadlineFmt})` : ""} já foi ultrapassada.
+                Edição, exclusão e novas importações estão bloqueadas para professores.
+                Apenas o administrador geral pode alterar dados após esta data.
+              </p>
+            </div>
+          </div>
+        )}
         {lotesQ.isLoading && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
