@@ -327,6 +327,7 @@ function LoteAlunos({ lote, bloqueadoPorPrazo = false }: { lote: Lote; bloqueado
   const [editNome, setEditNome] = useState("");
   const [editNumero, setEditNumero] = useState<number>(0);
   const [editAnswersFor, setEditAnswersFor] = useState<number | null>(null);
+  const locked = locked || bloqueadoPorPrazo;
 
 
   const startEdit = (a: AlunoLote) => {
@@ -398,7 +399,7 @@ function LoteAlunos({ lote, bloqueadoPorPrazo = false }: { lote: Lote; bloqueado
 
   return (
     <div className="border-t bg-muted/30 p-3">
-      {lote.fechado && (
+      {locked && (
         <div className="mb-3 flex items-center gap-2 rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-xs text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
           <Lock className="h-4 w-4" />
           Avaliação encerrada — os dados desta turma estão bloqueados para edição. Somente o administrador geral pode reabrir.
@@ -453,18 +454,18 @@ function LoteAlunos({ lote, bloqueadoPorPrazo = false }: { lote: Lote; bloqueado
                   variant={a.ausente ? "default" : "outline"}
                   onClick={() => setEditAnswersFor(a.numero_chamada)}
                   title={a.ausente ? "Inserir respostas da 2ª chamada" : "Editar respostas"}
-                  disabled={lote.fechado}
+                  disabled={locked}
                 >
                   <ListChecks className="h-3.5 w-3.5" />
                 </Button>
 
-                {!lote.fechado && (
+                {!locked && (
                   <Button size="sm" variant="outline" onClick={() => startEdit(a)} title="Editar nome / nº">
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
                 )}
 
-                {!lote.fechado && (
+                {!locked && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button size="sm" variant="destructive">
@@ -497,7 +498,7 @@ function LoteAlunos({ lote, bloqueadoPorPrazo = false }: { lote: Lote; bloqueado
         ))}
       </div>
 
-      {!lote.fechado && (() => {
+      {!locked && (() => {
         const nParsed = parseInt(novoNum || "0", 10);
         const existentes = new Set((alunosQ.data ?? []).map((a) => a.numero_chamada));
         const duplicado = nParsed > 0 && existentes.has(nParsed);
