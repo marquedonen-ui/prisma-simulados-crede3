@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AlunoRouteImport } from './routes/aluno'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -22,6 +23,11 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAvaliacaoDiagnosticaIndexRouteImport } from './routes/_authenticated/avaliacao-diagnostica.index'
 import { Route as AuthenticatedAvaliacaoDiagnosticaIdRouteImport } from './routes/_authenticated/avaliacao-diagnostica.$id'
 
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AlunoRoute = AlunoRouteImport.update({
   id: '/aluno',
   path: '/aluno',
@@ -88,6 +94,7 @@ const AuthenticatedAvaliacaoDiagnosticaIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/aluno': typeof AlunoRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/correcao': typeof AuthenticatedCorrecaoRoute
   '/gabarito': typeof AuthenticatedGabaritoRoute
@@ -101,6 +108,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aluno': typeof AlunoRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/correcao': typeof AuthenticatedCorrecaoRoute
   '/gabarito': typeof AuthenticatedGabaritoRoute
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/aluno': typeof AlunoRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/correcao': typeof AuthenticatedCorrecaoRoute
   '/_authenticated/gabarito': typeof AuthenticatedGabaritoRoute
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/aluno'
+    | '/reset-password'
     | '/admin'
     | '/correcao'
     | '/gabarito'
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/aluno'
+    | '/reset-password'
     | '/admin'
     | '/correcao'
     | '/gabarito'
@@ -158,6 +169,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/aluno'
+    | '/reset-password'
     | '/_authenticated/admin'
     | '/_authenticated/correcao'
     | '/_authenticated/gabarito'
@@ -173,10 +185,18 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AlunoRoute: typeof AlunoRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/aluno': {
       id: '/aluno'
       path: '/aluno'
@@ -297,6 +317,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AlunoRoute: AlunoRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

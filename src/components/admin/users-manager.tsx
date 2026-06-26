@@ -12,6 +12,7 @@ import {
 } from "@/lib/admin-users.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -271,7 +272,7 @@ export function UsersManager({ schools }: { schools: School[] }) {
                 {editing._new && (
                   <div className="space-y-1.5">
                     <Label>Senha temporária</Label>
-                    <Input
+                    <PasswordInput
                       value={editing.password}
                       onChange={(e) => setEditing({ ...editing, password: e.target.value })}
                       required
@@ -340,7 +341,7 @@ export function UsersManager({ schools }: { schools: School[] }) {
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label>Nova senha</Label>
-                <Input value={newPw} onChange={(e) => setNewPw(e.target.value)} minLength={8} />
+                <PasswordInput value={newPw} onChange={(e) => setNewPw(e.target.value)} minLength={8} />
               </div>
               <Button onClick={changePw} disabled={update.isPending} className="w-full">
                 {update.isPending ? "Atualizando..." : "Atualizar senha"}
