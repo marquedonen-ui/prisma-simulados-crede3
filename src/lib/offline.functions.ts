@@ -19,6 +19,43 @@ async function ensureAdmin(supabase: any, userId: string) {
   }
 }
 
+async function isAdminUser(supabase: any, userId: string) {
+  const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  return ((data ?? []) as { role: string }[]).some((r) => r.role === "admin");
+}
+
+// Busca a data limite (data_fim) do item do cronograma "Inserção dos resultados...".
+async function getInsercaoDeadlineDate(supabase: any): Promise<string | null> {
+  const { data } = await supabase
+    .from("cronograma")
+    .select("acao, data_fim")
+    .ilike("acao", "Inserção dos resultados%")
+    .order("data_fim", { ascending: false })
+    .limit(1);
+  const row = (data ?? [])[0] as { data_fim: string | null } | undefined;
+  return row?.data_fim ?? null;
+}
+
+// Bloqueia operações de edição/exclusão/inserção para não-administradores
+// após a data limite definida no cronograma para "Inserção dos resultados...".
+async function assertDentroDoPrazoSeNaoAdmin(supabase: any, userId: string) {
+  if (await isAdminUser(supabase, userId)) return;
+  const deadline = await getInsercaoDeadlineDate(supabase);
+  if (!deadline) return; // sem cronograma cadastrado, não bloqueia
+  const todayLocal = (() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  })();
+  if (todayLocal > deadline) {
+    throw new Error(
+      `Prazo encerrado em ${deadline.split("-").reverse().join("/")} para inserção/edição dos resultados na plataforma PRISMA. Apenas o administrador geral pode alterar dados após esta data.`,
+    );
+  }
+}
+
 const PAGE_SIZE = 1000;
 
 async function fetchAllRows<T>(buildQuery: () => any): Promise<T[]> {
