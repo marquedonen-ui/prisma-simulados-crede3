@@ -41,25 +41,62 @@ const padraoMeta: Record<Padrao, { label: string; bg: string; text: string }> = 
 function Page() {
   const listSimFn = useServerFn(listSimuladosComRespostas);
   const getQFn = useServerFn(getRelatorioQuestoes);
+  const getResFn = useServerFn(getResultadosAlunos);
 
   const [simuladoId, setSimuladoId] = useState("");
+  const [escolaId, setEscolaId] = useState<string>("__all");
+  const [turmaId, setTurmaId] = useState<string>("__all");
   const [disciplina, setDisciplina] = useState<string>("__all");
   const [sortBy, setSortBy] = useState<"numero" | "acertos_desc" | "acertos_asc" | "pct_desc" | "pct_asc">(
     "numero",
   );
 
   const simQ = useQuery({ queryKey: ["rel-sims"], queryFn: () => listSimFn() });
-  const dataQ = useQuery({
-    queryKey: ["rel-questoes", simuladoId],
-    queryFn: () => getQFn({ data: { simuladoId } }),
+  const alunosQ = useQuery({
+    queryKey: ["rel-questoes-alunos", simuladoId],
+    queryFn: () => getResFn({ data: { simuladoId } }),
     enabled: !!simuladoId,
   });
+  const dataQ = useQuery({
+    queryKey: ["rel-questoes", simuladoId, escolaId, turmaId],
+    queryFn: () =>
+      getQFn({
+        data: {
+          simuladoId,
+          escolaId: escolaId === "__all" ? null : escolaId,
+          turmaId: turmaId === "__all" ? null : turmaId,
+        },
+      }),
+    enabled: !!simuladoId,
+  });
+
+  const alunos = alunosQ.data?.alunos ?? [];
+
+  const escolasDisponiveis = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const a of alunos) m.set(a.school_id ?? "sem", a.school_name);
+    return Array.from(m.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [alunos]);
+
+  const turmasDisponiveis = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const a of alunos) {
+      if (escolaId !== "__all" && (a.school_id ?? "sem") !== escolaId) continue;
+      m.set(a.turma_id, a.turma_nome);
+    }
+    return Array.from(m.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [alunos, escolaId]);
 
   const disciplinas = useMemo(() => {
     const set = new Set<string>();
     (dataQ.data ?? []).forEach((q) => q.disciplina && set.add(q.disciplina));
     return Array.from(set).sort();
   }, [dataQ.data]);
+
 
   const linhas = useMemo(() => {
     let arr = [...(dataQ.data ?? [])];
