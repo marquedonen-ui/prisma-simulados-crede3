@@ -529,6 +529,23 @@ function AcertoMedioPainel({
       isLoading={isLoading}
       empty={chartData.length === 0}
     >
+      <div className="mb-4 max-w-xs space-y-1.5">
+        <Label>Disciplina</Label>
+        <Select value={disciplina} onValueChange={onDisciplinaChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="Todas as disciplinas" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Todas as disciplinas</SelectItem>
+            {disciplinas.map((d) => (
+              <SelectItem key={d} value={d}>
+                {d}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <ResponsiveContainer width="100%" height={Math.max(220, chartData.length * 44)}>
         <BarChart
           data={chartData}
