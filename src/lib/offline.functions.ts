@@ -236,7 +236,9 @@ export const importarRespostas = createServerFn({ method: "POST" })
     try {
       await ensureProfessorOrAdmin(context.supabase, context.userId);
 
-      const { data: questoes, error: qErr } = await context.supabase
+      // Use service role to read answer key; role check above already authorized the caller.
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: questoes, error: qErr } = await supabaseAdmin
         .from("questoes")
         .select("id, numero, resposta_correta")
         .eq("simulado_id", data.simuladoId);

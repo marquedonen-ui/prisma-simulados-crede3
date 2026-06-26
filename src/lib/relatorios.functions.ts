@@ -54,7 +54,10 @@ function faixaDeAcertos(n: number): keyof Faixas {
  * e metadados (escola, município, matrícula da turma).
  */
 async function carregarDataset(supabase: any, simuladoId: string) {
-  const { data: questoes, error: qErr } = await supabase
+  // Use service role to read the answer key (resposta_correta) without exposing
+  // it via RLS to professor_responsavel/gestor. Callers must enforce role checks first.
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: questoes, error: qErr } = await supabaseAdmin
     .from("questoes")
     .select("id, resposta_correta")
     .eq("simulado_id", simuladoId);
