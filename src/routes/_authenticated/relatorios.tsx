@@ -341,6 +341,7 @@ function pctTooltip(value: any, name: any, item: any) {
 function ConclusaoPainel({
   isLoading,
   data,
+  scoped = false,
 }: {
   isLoading: boolean;
   data: Array<{
@@ -363,12 +364,16 @@ function ConclusaoPainel({
       }>;
     }>;
   }>;
+  scoped?: boolean;
 }) {
   const [cidade, setCidade] = useState<string | null>(null);
   const [escolaId, setEscolaId] = useState<string | null>(null);
-  const cidadeData = cidade ? data.find((c) => c.city === cidade) : null;
-  const escolaData =
-    cidadeData && escolaId ? cidadeData.escolas.find((e) => e.school_id === escolaId) : null;
+  const cidadeData = scoped ? data[0] ?? null : cidade ? data.find((c) => c.city === cidade) : null;
+  const escolaData = scoped
+    ? (data[0]?.escolas?.[0] ?? null)
+    : cidadeData && escolaId
+      ? cidadeData.escolas.find((e) => e.school_id === escolaId)
+      : null;
 
   const chartData = useMemo(() => {
     if (escolaData) {
