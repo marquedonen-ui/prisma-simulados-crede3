@@ -153,6 +153,17 @@ export function ImportarRespostas({
           });
           continue;
         }
+        // Coluna E vazia => aluno ausente: não importa respostas, apenas registra.
+        const rawMarcas = String(row?.[marcasCol] ?? "").trim();
+        if (rawMarcas === "") {
+          ignoradas.push({
+            linha: linhaPlanilha,
+            motivo: "Ausente (coluna 'Total de marcas' vazia)",
+            nome,
+            chamadaRaw: rawChamada,
+          });
+          continue;
+        }
         const respostas: Record<string, string> = {};
         for (let c = 0; c < headers.length; c++) {
           const h = headers[c];
