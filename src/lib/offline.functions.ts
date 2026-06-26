@@ -979,3 +979,38 @@ export const updateRespostasAluno = createServerFn({ method: "POST" })
   });
 
 
+export const fecharLote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { simuladoId: string; turmaId: string }) =>
+    z.object({ simuladoId: z.string().uuid(), turmaId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await ensureProfessorOrAdmin(context.supabase, context.userId);
+    await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
+    const { error } = await context.supabase
+      .from("lotes_fechados")
+      .insert({
+        simulado_id: data.simuladoId,
+        turma_id: data.turmaId,
+        fechado_por: context.userId,
+      });
+    if (error && !String(error.message).includes("duplicate")) throw error;
+    return { ok: true };
+  });
+
+export const reabrirLote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { simuladoId: string; turmaId: string }) =>
+    z.object({ simuladoId: z.string().uuid(), turmaId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context.supabase, context.userId);
+    const { error } = await context.supabase
+      .from("lotes_fechados")
+      .delete()
+      .eq("simulado_id", data.simuladoId)
+      .eq("turma_id", data.turmaId);
+    if (error) throw error;
+    return { ok: true };
+  });
+
