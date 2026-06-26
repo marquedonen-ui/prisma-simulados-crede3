@@ -37,14 +37,38 @@ type Item = {
 
 type Status = "Pendente" | "Em Processo" | "Realizada";
 
+function parseDateOnly(value: string): number | null {
+  if (!value) return null;
+  const text = String(value).trim().slice(0, 10);
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const time = Date.UTC(year, month - 1, day);
+  const parsed = new Date(time);
+
+  if (
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() !== month - 1 ||
+    parsed.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return time;
+}
+
 function computeStatus(inicio: string, fim: string): Status {
-  const d = new Date();
-  const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  // Normaliza para YYYY-MM-DD (ignora qualquer parte de hora que venha do banco)
-  const ini = String(inicio).slice(0, 10);
-  const end = String(fim).slice(0, 10);
-  if (todayStr < ini) return "Pendente";
-  if (todayStr > end) return "Realizada";
+  const now = new Date();
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const ini = parseDateOnly(inicio);
+  const end = parseDateOnly(fim);
+
+  if (!ini || !end) return "Pendente";
+  if (today < ini) return "Pendente";
+  if (today > end) return "Realizada";
   return "Em Processo";
 }
 
