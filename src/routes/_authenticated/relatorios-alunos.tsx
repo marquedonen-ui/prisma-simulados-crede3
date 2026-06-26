@@ -132,7 +132,8 @@ function Page() {
 
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase();
-    return alunos.filter((a) => {
+    const PAD_ORDER: Record<Padrao, number> = { muito_critico: 0, critico: 1, intermediario: 2, adequado: 3 };
+    const arr = alunos.filter((a) => {
       if (escolaId !== "__all" && (a.school_id ?? "sem") !== escolaId) return false;
       if (turmaId !== "__all" && a.turma_id !== turmaId) return false;
       if (padroes.size > 0 && !padroes.has(a.padrao)) return false;
@@ -143,7 +144,25 @@ function Page() {
       }
       return true;
     });
-  }, [alunos, escolaId, turmaId, padroes, pctRange, busca]);
+    const dir = sortDir === "asc" ? 1 : -1;
+    const cmp = (a: typeof arr[number], b: typeof arr[number]) => {
+      switch (sortKey) {
+        case "nome": return (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR") * dir;
+        case "escola": return a.school_name.localeCompare(b.school_name, "pt-BR") * dir;
+        case "turma": return a.turma_nome.localeCompare(b.turma_nome, "pt-BR") * dir;
+        case "acertos": return (a.acertos - b.acertos) * dir;
+        case "pct": return (a.pct_acerto - b.pct_acerto) * dir;
+        case "padrao": return (PAD_ORDER[a.padrao] - PAD_ORDER[b.padrao]) * dir;
+        case "chamada": return (a.numero_chamada - b.numero_chamada) * dir;
+      }
+    };
+    return [...arr].sort(cmp);
+  }, [alunos, escolaId, turmaId, padroes, pctRange, busca, sortKey, sortDir]);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
+  }
 
   function toggle<T>(set: Set<T>, val: T, setter: (s: Set<T>) => void) {
     const n = new Set(set);
