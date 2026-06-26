@@ -10,6 +10,7 @@ import {
   updateManagedUser,
   deleteManagedUser,
 } from "@/lib/admin-users.functions";
+import { listTurmas } from "@/lib/turmas.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
