@@ -505,3 +505,51 @@ export function UsersManager({ schools }: { schools: School[] }) {
     </Card>
   );
 }
+
+function TurmasMultiSelect({
+  schoolId,
+  value,
+  onChange,
+}: {
+  schoolId?: string;
+  value: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const getTurmas = useServerFn(listTurmas);
+  const turmasQ = useQuery({
+    queryKey: ["turmas-by-school", schoolId],
+    queryFn: () => getTurmas({ data: { schoolId: schoolId! } }),
+    enabled: !!schoolId,
+  });
+  if (!schoolId) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        Selecione a escola para listar as turmas de lotação.
+      </p>
+    );
+  }
+  const turmas = (turmasQ.data ?? []) as any[];
+  function toggle(id: string) {
+    onChange(value.includes(id) ? value.filter((x) => x !== id) : [...value, id]);
+  }
+  return (
+    <div className="space-y-1.5">
+      <Label>Turma(s) de lotação</Label>
+      <div className="max-h-40 overflow-auto rounded-md border p-2">
+        {turmas.length === 0 && (
+          <p className="text-xs text-muted-foreground">Nenhuma turma cadastrada para esta escola.</p>
+        )}
+        {turmas.map((t) => (
+          <label key={t.id} className="flex items-center gap-2 py-1 text-sm">
+            <input
+              type="checkbox"
+              checked={value.includes(t.id)}
+              onChange={() => toggle(t.id)}
+            />
+            <span>{t.nome} · {t.ano} · {t.turno}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
