@@ -792,6 +792,8 @@ export const addAlunoAusente = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await ensureProfessorOrAdmin(context.supabase, context.userId);
+    await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
+    await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
 
     const { data: jaResp } = await context.supabase
       .from("respostas_alunos")
