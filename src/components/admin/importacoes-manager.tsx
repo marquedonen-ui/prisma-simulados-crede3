@@ -433,9 +433,10 @@ function EditAnswersDialog({
             {nome ? ` · ${nome}` : ""}
           </DialogTitle>
           <DialogDescription>
-            Clique nas alternativas para alterar a resposta do(a) aluno(a). Selecione novamente
-            a mesma alternativa para deixar em branco.
+            Apenas as respostas marcadas pelo(a) aluno(a) são exibidas. Clique numa alternativa
+            para alterar; clique na mesma alternativa para deixar em branco.
           </DialogDescription>
+
         </DialogHeader>
 
         {q.isLoading && (
@@ -459,7 +460,6 @@ function EditAnswersDialog({
                   <div className="flex flex-1 flex-wrap gap-1">
                     {ALTS.map((alt) => {
                       const isSel = sel === alt;
-                      const isCorrect = it.resposta_correta === alt;
                       return (
                         <button
                           key={alt}
@@ -473,23 +473,19 @@ function EditAnswersDialog({
                           className={
                             "h-8 w-8 rounded border text-xs font-semibold transition-colors " +
                             (isSel
-                              ? isCorrect
-                                ? "border-green-600 bg-green-600 text-white"
-                                : "border-red-600 bg-red-600 text-white"
-                              : isCorrect
-                                ? "border-green-600/50 bg-green-50 text-green-700 hover:bg-green-100"
-                                : "bg-card hover:bg-muted")
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "bg-card hover:bg-muted")
                           }
-                          title={isCorrect ? "Resposta correta" : undefined}
                         >
                           {alt}
                         </button>
                       );
                     })}
                   </div>
-                  <span className="w-20 text-right text-xs text-muted-foreground">
-                    Gab.: <b>{it.resposta_correta}</b>
+                  <span className="w-16 text-right text-xs text-muted-foreground">
+                    {sel ? `Marcada: ${sel}` : "Em branco"}
                   </span>
+
                 </div>
               );
             })}
