@@ -143,6 +143,89 @@ export type Database = {
         }
         Relationships: []
       }
+      devolutivas: {
+        Row: {
+          autor_id: string
+          created_at: string
+          id: string
+          mensagem: string
+          school_id: string
+          status: Database["public"]["Enums"]["devolutiva_status"]
+          titulo: string
+          turma_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          autor_id: string
+          created_at?: string
+          id?: string
+          mensagem: string
+          school_id: string
+          status?: Database["public"]["Enums"]["devolutiva_status"]
+          titulo: string
+          turma_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          autor_id?: string
+          created_at?: string
+          id?: string
+          mensagem?: string
+          school_id?: string
+          status?: Database["public"]["Enums"]["devolutiva_status"]
+          titulo?: string
+          turma_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devolutivas_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devolutivas_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      devolutivas_respostas: {
+        Row: {
+          autor_id: string
+          created_at: string
+          devolutiva_id: string
+          id: string
+          mensagem: string
+        }
+        Insert: {
+          autor_id: string
+          created_at?: string
+          devolutiva_id: string
+          id?: string
+          mensagem: string
+        }
+        Update: {
+          autor_id?: string
+          created_at?: string
+          devolutiva_id?: string
+          id?: string
+          mensagem?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devolutivas_respostas_devolutiva_id_fkey"
+            columns: ["devolutiva_id"]
+            isOneToOne: false
+            referencedRelation: "devolutivas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       diagnostic_assessments: {
         Row: {
           answer_sheet_pdf_path: string | null
@@ -199,6 +282,35 @@ export type Database = {
           turma_id?: string
         }
         Relationships: []
+      }
+      professor_turmas: {
+        Row: {
+          created_at: string
+          id: string
+          turma_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          turma_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          turma_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professor_turmas_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -687,6 +799,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      minhas_turmas_ids: { Args: never; Returns: string[] }
       validate_student_code: {
         Args: { _code: string }
         Returns: {
