@@ -50,17 +50,22 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
     const rows = questoesQ.data ?? [];
     if (!simuladoId) {
       setAnswers({});
+      setAnuladas({});
       return;
     }
     const map: Record<number, Letter> = {};
+    const an: Record<number, boolean> = {};
     let max = 0;
     for (const q of rows as any[]) {
       map[q.numero] = q.resposta_correta as Letter;
+      an[q.numero] = !!q.anulada;
       if (q.numero > max) max = q.numero;
     }
     setAnswers(map);
+    setAnuladas(an);
     if (max > 0) setTotal(max);
   }, [simuladoId, questoesQ.data]);
+
 
   const save = useMutation({
     mutationFn: () => {
