@@ -700,8 +700,16 @@ export const updateImportacaoAluno = createServerFn({ method: "POST" })
       .eq("turma_id", data.turmaId)
       .eq("numero_chamada", data.numeroChamada);
     if (error) throw error;
+    // Aplica o mesmo patch em alunos_ausentes (caso o aluno esteja marcado como ausente).
+    await context.supabase
+      .from("alunos_ausentes")
+      .update(patch)
+      .eq("simulado_id", data.simuladoId)
+      .eq("turma_id", data.turmaId)
+      .eq("numero_chamada", data.numeroChamada);
     return { ok: true, atualizadas: count ?? 0 };
   });
+
 
 export const getRespostasAluno = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
