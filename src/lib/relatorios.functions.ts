@@ -6,17 +6,24 @@ async function ensureProfessorOrAdmin(supabase: any, userId: string) {
   const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
   if (error) throw error;
   const roles = (data ?? []).map((r: { role: string }) => r.role);
-  const allowed = ["admin", "professor", "professor_responsavel", "gestor"];
+  const allowed = [
+    "admin",
+    "professor",
+    "professor_responsavel",
+    "gestor",
+    "superintendente",
+    "professor_escola",
+  ];
   if (!roles.some((r: string) => allowed.includes(r))) {
     throw new Error("Acesso restrito.");
   }
   return roles as string[];
 }
 
-/** Retorna o school_id ao qual o usuário está restrito (null para admin global). */
+/** Retorna o school_id ao qual o usuário está restrito (null para admin/superintendente). */
 async function getScopeSchoolId(supabase: any, userId: string): Promise<string | null> {
   const roles = await ensureProfessorOrAdmin(supabase, userId);
-  if (roles.includes("admin")) return null;
+  if (roles.includes("admin") || roles.includes("superintendente")) return null;
   const { data: prof } = await supabase
     .from("profiles")
     .select("school_id")
@@ -25,17 +32,41 @@ async function getScopeSchoolId(supabase: any, userId: string): Promise<string |
   return (prof?.school_id as string | null) ?? null;
 }
 
+/** Retorna turmas em que o usuário está lotado (apenas para professor_escola). */
+async function getScopeTurmaIds(supabase: any, userId: string): Promise<string[] | null> {
+  const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  const rs = (roles ?? []).map((r: any) => r.role);
+  if (!rs.includes("professor_escola")) return null;
+  const { data } = await supabase
+    .from("professor_turmas")
+    .select("turma_id")
+    .eq("user_id", userId);
+  return (data ?? []).map((r: any) => r.turma_id as string);
+}
+
 export const getMyReportScope = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const schoolId = await getScopeSchoolId(context.supabase, context.userId);
-    if (!schoolId) return { scoped: false, schoolId: null as string | null, schoolName: null as string | null };
+    const turmaIds = await getScopeTurmaIds(context.supabase, context.userId);
+    if (!schoolId)
+      return {
+        scoped: false,
+        schoolId: null as string | null,
+        schoolName: null as string | null,
+        turmaIds: turmaIds ?? null,
+      };
     const { data: sch } = await context.supabase
       .from("schools")
       .select("id, name")
       .eq("id", schoolId)
       .maybeSingle();
-    return { scoped: true, schoolId, schoolName: (sch?.name as string | null) ?? null };
+    return {
+      scoped: true,
+      schoolId,
+      schoolName: (sch?.name as string | null) ?? null,
+      turmaIds: turmaIds ?? null,
+    };
   });
 
 const idInput = (d: { simuladoId: string }) =>
