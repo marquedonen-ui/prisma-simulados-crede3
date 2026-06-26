@@ -136,12 +136,16 @@ async function carregarDataset(
 
 
   const turmaIds = Array.from(new Set((respostas ?? []).map((r: any) => r.turma_id)));
-  const { data: turmas } = turmaIds.length
+  const { data: turmasRaw } = turmaIds.length
     ? await supabase
         .from("turmas")
         .select("id, nome, ano, matricula_atual, school_id, schools(id, name, city, inep)")
         .in("id", turmaIds)
     : { data: [] as any[] };
+  const scopeSchoolId = opts?.scopeSchoolId ?? null;
+  const turmas = scopeSchoolId
+    ? (turmasRaw ?? []).filter((t: any) => t.school_id === scopeSchoolId)
+    : (turmasRaw ?? []);
   const turmaById = new Map((turmas ?? []).map((t: any) => [t.id, t]));
 
   // Por aluno (turma+chamada)
@@ -158,6 +162,7 @@ async function carregarDataset(
     }
   >();
   for (const r of respostas ?? []) {
+    if (scopeSchoolId && !turmaById.has(r.turma_id)) continue;
     const key = `${r.turma_id}|${r.numero_chamada}`;
     let a = alunos.get(key);
     if (!a) {
