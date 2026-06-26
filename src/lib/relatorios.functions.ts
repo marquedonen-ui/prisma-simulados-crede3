@@ -153,7 +153,15 @@ function cidadeDaEscola(escola: any): string {
   return (escola?.city ?? "").trim() || CITY_DESCONHECIDA;
 }
 
-/** Padrão de desempenho — agregado por cidade e por escola dentro da cidade. */
+type SchoolPad = {
+  school_id: string;
+  name: string;
+  faixas: Faixas;
+  total: number;
+  turmas: Map<string, { turma_id: string; name: string; faixas: Faixas; total: number }>;
+};
+
+/** Padrão de desempenho — agregado por cidade, escola e turma. */
 export const getPadraoDesempenho = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator(idInput)
@@ -167,7 +175,7 @@ export const getPadraoDesempenho = createServerFn({ method: "GET" })
         city: string;
         faixas: Faixas;
         total: number;
-        escolas: Map<string, { school_id: string; name: string; faixas: Faixas; total: number }>;
+        escolas: Map<string, SchoolPad>;
       }
     >();
 
@@ -195,11 +203,26 @@ export const getPadraoDesempenho = createServerFn({ method: "GET" })
           name: a.escola?.name ?? "Sem escola",
           faixas: { muito_critico: 0, critico: 0, intermediario: 0, adequado: 0 },
           total: 0,
+          turmas: new Map(),
         };
         bucket.escolas.set(schoolId, sb);
       }
       sb.faixas[fx] += 1;
       sb.total += 1;
+
+      const tid = a.turma_id ?? "sem-turma";
+      let tb = sb.turmas.get(tid);
+      if (!tb) {
+        tb = {
+          turma_id: tid,
+          name: a.turma?.nome ?? "Sem turma",
+          faixas: { muito_critico: 0, critico: 0, intermediario: 0, adequado: 0 },
+          total: 0,
+        };
+        sb.turmas.set(tid, tb);
+      }
+      tb.faixas[fx] += 1;
+      tb.total += 1;
     }
 
     return Array.from(porCidade.values())
@@ -207,7 +230,15 @@ export const getPadraoDesempenho = createServerFn({ method: "GET" })
         city: c.city,
         total: c.total,
         faixas: c.faixas,
-        escolas: Array.from(c.escolas.values()).sort((a, b) => a.name.localeCompare(b.name)),
+        escolas: Array.from(c.escolas.values())
+          .map((e) => ({
+            school_id: e.school_id,
+            name: e.name,
+            faixas: e.faixas,
+            total: e.total,
+            turmas: Array.from(e.turmas.values()).sort((a, b) => a.name.localeCompare(b.name)),
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
       }))
       .sort((a, b) => a.city.localeCompare(b.city));
   });
@@ -220,7 +251,6 @@ export const getConclusao = createServerFn({ method: "GET" })
     await ensureProfessorOrAdmin(context.supabase, context.userId);
     const { alunos, turmas } = await carregarDataset(context.supabase, data.simuladoId);
 
-    // Conta finalizados por turma (alunos com >=1 resposta).
     const finPorTurma = new Map<string, number>();
     for (const a of alunos) {
       if (a.respondidas >= 1) {
@@ -228,7 +258,6 @@ export const getConclusao = createServerFn({ method: "GET" })
       }
     }
 
-    // Cada turma contribui com sua matrícula (mesmo sem respostas, conta como 0 finalizados).
     const porCidade = new Map<
       string,
       {
@@ -237,7 +266,18 @@ export const getConclusao = createServerFn({ method: "GET" })
         matriculados: number;
         escolas: Map<
           string,
-          { school_id: string; name: string; finalizaram: number; matriculados: number }
+          {
+            school_id: string;
+            name: string;
+            finalizaram: number;
+            matriculados: number;
+            turmas: Array<{
+              turma_id: string;
+              name: string;
+              finalizaram: number;
+              matriculados: number;
+            }>;
+          }
         >;
       }
     >();
@@ -261,11 +301,18 @@ export const getConclusao = createServerFn({ method: "GET" })
           name: t.schools?.name ?? "Sem escola",
           finalizaram: 0,
           matriculados: 0,
+          turmas: [],
         };
         bucket.escolas.set(sid, sb);
       }
       sb.finalizaram += fin;
       sb.matriculados += mat;
+      sb.turmas.push({
+        turma_id: t.id,
+        name: t.nome ?? "Sem turma",
+        finalizaram: fin,
+        matriculados: mat,
+      });
     }
 
     return Array.from(porCidade.values())
@@ -278,6 +325,12 @@ export const getConclusao = createServerFn({ method: "GET" })
           .map((e) => ({
             ...e,
             nao_finalizaram: Math.max(0, e.matriculados - e.finalizaram),
+            turmas: e.turmas
+              .map((t) => ({
+                ...t,
+                nao_finalizaram: Math.max(0, t.matriculados - t.finalizaram),
+              }))
+              .sort((a, b) => a.name.localeCompare(b.name)),
           }))
           .sort((a, b) => a.name.localeCompare(b.name)),
       }))
@@ -300,7 +353,16 @@ export const getAcertoMedio = createServerFn({ method: "GET" })
         respondidas: number;
         escolas: Map<
           string,
-          { school_id: string; name: string; acertos: number; respondidas: number }
+          {
+            school_id: string;
+            name: string;
+            acertos: number;
+            respondidas: number;
+            turmas: Map<
+              string,
+              { turma_id: string; name: string; acertos: number; respondidas: number }
+            >;
+          }
         >;
       }
     >();
@@ -322,11 +384,25 @@ export const getAcertoMedio = createServerFn({ method: "GET" })
           name: a.escola?.name ?? "Sem escola",
           acertos: 0,
           respondidas: 0,
+          turmas: new Map(),
         };
         bucket.escolas.set(sid, sb);
       }
       sb.acertos += a.acertos;
       sb.respondidas += a.respondidas;
+      const tid = a.turma_id ?? "sem-turma";
+      let tb = sb.turmas.get(tid);
+      if (!tb) {
+        tb = {
+          turma_id: tid,
+          name: a.turma?.nome ?? "Sem turma",
+          acertos: 0,
+          respondidas: 0,
+        };
+        sb.turmas.set(tid, tb);
+      }
+      tb.acertos += a.acertos;
+      tb.respondidas += a.respondidas;
     }
 
     const pct = (a: number, b: number) => (b > 0 ? Number(((a / b) * 100).toFixed(1)) : 0);
@@ -340,10 +416,22 @@ export const getAcertoMedio = createServerFn({ method: "GET" })
         pct_erro: pct(c.respondidas - c.acertos, c.respondidas),
         escolas: Array.from(c.escolas.values())
           .map((e) => ({
-            ...e,
+            school_id: e.school_id,
+            name: e.name,
+            acertos: e.acertos,
             erros: Math.max(0, e.respondidas - e.acertos),
             pct_acerto: pct(e.acertos, e.respondidas),
             pct_erro: pct(e.respondidas - e.acertos, e.respondidas),
+            turmas: Array.from(e.turmas.values())
+              .map((t) => ({
+                turma_id: t.turma_id,
+                name: t.name,
+                acertos: t.acertos,
+                erros: Math.max(0, t.respondidas - t.acertos),
+                pct_acerto: pct(t.acertos, t.respondidas),
+                pct_erro: pct(t.respondidas - t.acertos, t.respondidas),
+              }))
+              .sort((a, b) => a.name.localeCompare(b.name)),
           }))
           .sort((a, b) => a.name.localeCompare(b.name)),
       }))
