@@ -97,6 +97,38 @@ export const createSchool = createServerFn({ method: "POST" })
     return row;
   });
 
+export const updateSchool = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        name: z.string().min(2),
+        inep: z.string().regex(/^\d{8}$/, "INEP deve ter 8 dígitos"),
+        city: z.string().optional().nullable(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("schools")
+      .update({ name: data.name, inep: data.inep, city: data.city ?? null })
+      .eq("id", data.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return row;
+  });
+
+export const deleteSchool = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("schools").delete().eq("id", data.id);
+    if (error) throw error;
+    return { ok: true };
+  });
+
 export const generateCodes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
