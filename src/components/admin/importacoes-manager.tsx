@@ -16,6 +16,7 @@ import {
   addAlunoAusente,
   fecharLote,
   reabrirLote,
+  getPrazoInsercao,
 } from "@/lib/offline.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,11 +79,21 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
   const delTudoFn = useServerFn(deleteTodasImportacoes);
   const fecharFn = useServerFn(fecharLote);
   const reabrirFn = useServerFn(reabrirLote);
+  const prazoFn = useServerFn(getPrazoInsercao);
 
   const lotesQ = useQuery({
     queryKey: ["importacoes"],
     queryFn: () => listFn({}),
   });
+
+  const prazoQ = useQuery({
+    queryKey: ["prazo-insercao"],
+    queryFn: () => prazoFn({}),
+  });
+  const bloqueadoPorPrazo = !!prazoQ.data?.bloqueado;
+  const deadlineFmt = prazoQ.data?.deadline
+    ? prazoQ.data.deadline.split("-").reverse().join("/")
+    : null;
 
   const [openKey, setOpenKey] = useState<string | null>(null);
 
@@ -137,6 +148,20 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {bloqueadoPorPrazo && (
+          <div className="mb-4 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+            <Lock className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-semibold">Prazo encerrado</p>
+              <p className="text-xs">
+                A data limite para inserção dos resultados na plataforma PRISMA
+                {deadlineFmt ? ` (${deadlineFmt})` : ""} já foi ultrapassada.
+                Edição, exclusão e novas importações estão bloqueadas para professores.
+                Apenas o administrador geral pode alterar dados após esta data.
+              </p>
+            </div>
+          </div>
+        )}
         {lotesQ.isLoading && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
@@ -216,7 +241,7 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
                     {!l.fechado && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="default" size="sm" disabled={fechar.isPending}>
+                          <Button variant="default" size="sm" disabled={fechar.isPending || bloqueadoPorPrazo}>
                             <Lock className="mr-1 h-4 w-4" /> Fechar avaliação
                           </Button>
                         </AlertDialogTrigger>
@@ -249,7 +274,7 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
                     {(!l.fechado || isAdmin) && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="sm" disabled={l.fechado && !isAdmin}>
+                          <Button variant="destructive" size="sm" disabled={(l.fechado && !isAdmin) || bloqueadoPorPrazo}>
                             <Trash2 className="mr-1 h-4 w-4" /> Excluir lote
                           </Button>
                         </AlertDialogTrigger>
@@ -276,7 +301,7 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
                     )}
                   </div>
                 </div>
-                {open && <LoteAlunos lote={l} />}
+                {open && <LoteAlunos lote={l} bloqueadoPorPrazo={bloqueadoPorPrazo} />}
               </div>
             );
           })}
@@ -286,7 +311,7 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
   );
 }
 
-function LoteAlunos({ lote }: { lote: Lote }) {
+function LoteAlunos({ lote, bloqueadoPorPrazo = false }: { lote: Lote; bloqueadoPorPrazo?: boolean }) {
   const qc = useQueryClient();
   const listAlunosFn = useServerFn(listImportacaoAlunos);
   const updFn = useServerFn(updateImportacaoAluno);
@@ -302,6 +327,7 @@ function LoteAlunos({ lote }: { lote: Lote }) {
   const [editNome, setEditNome] = useState("");
   const [editNumero, setEditNumero] = useState<number>(0);
   const [editAnswersFor, setEditAnswersFor] = useState<number | null>(null);
+  const locked = lote.fechado || bloqueadoPorPrazo;
 
 
   const startEdit = (a: AlunoLote) => {
@@ -373,10 +399,12 @@ function LoteAlunos({ lote }: { lote: Lote }) {
 
   return (
     <div className="border-t bg-muted/30 p-3">
-      {lote.fechado && (
+      {locked && (
         <div className="mb-3 flex items-center gap-2 rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-xs text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
           <Lock className="h-4 w-4" />
-          Avaliação encerrada — os dados desta turma estão bloqueados para edição. Somente o administrador geral pode reabrir.
+          {lote.fechado
+            ? "Avaliação encerrada — os dados desta turma estão bloqueados para edição. Somente o administrador geral pode reabrir."
+            : "Prazo de inserção dos resultados no PRISMA encerrado — edição e exclusão bloqueadas para professores. Somente o administrador geral pode alterar."}
         </div>
       )}
       {alunosQ.isLoading && (
@@ -428,18 +456,18 @@ function LoteAlunos({ lote }: { lote: Lote }) {
                   variant={a.ausente ? "default" : "outline"}
                   onClick={() => setEditAnswersFor(a.numero_chamada)}
                   title={a.ausente ? "Inserir respostas da 2ª chamada" : "Editar respostas"}
-                  disabled={lote.fechado}
+                  disabled={locked}
                 >
                   <ListChecks className="h-3.5 w-3.5" />
                 </Button>
 
-                {!lote.fechado && (
+                {!locked && (
                   <Button size="sm" variant="outline" onClick={() => startEdit(a)} title="Editar nome / nº">
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
                 )}
 
-                {!lote.fechado && (
+                {!locked && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button size="sm" variant="destructive">
@@ -472,7 +500,7 @@ function LoteAlunos({ lote }: { lote: Lote }) {
         ))}
       </div>
 
-      {!lote.fechado && (() => {
+      {!locked && (() => {
         const nParsed = parseInt(novoNum || "0", 10);
         const existentes = new Set((alunosQ.data ?? []).map((a) => a.numero_chamada));
         const duplicado = nParsed > 0 && existentes.has(nParsed);

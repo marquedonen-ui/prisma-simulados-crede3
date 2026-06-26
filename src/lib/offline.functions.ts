@@ -19,6 +19,43 @@ async function ensureAdmin(supabase: any, userId: string) {
   }
 }
 
+async function isAdminUser(supabase: any, userId: string) {
+  const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  return ((data ?? []) as { role: string }[]).some((r) => r.role === "admin");
+}
+
+// Busca a data limite (data_fim) do item do cronograma "Inserção dos resultados...".
+async function getInsercaoDeadlineDate(supabase: any): Promise<string | null> {
+  const { data } = await supabase
+    .from("cronograma")
+    .select("acao, data_fim")
+    .ilike("acao", "Inserção dos resultados%")
+    .order("data_fim", { ascending: false })
+    .limit(1);
+  const row = (data ?? [])[0] as { data_fim: string | null } | undefined;
+  return row?.data_fim ?? null;
+}
+
+// Bloqueia operações de edição/exclusão/inserção para não-administradores
+// após a data limite definida no cronograma para "Inserção dos resultados...".
+async function assertDentroDoPrazoSeNaoAdmin(supabase: any, userId: string) {
+  if (await isAdminUser(supabase, userId)) return;
+  const deadline = await getInsercaoDeadlineDate(supabase);
+  if (!deadline) return; // sem cronograma cadastrado, não bloqueia
+  const todayLocal = (() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  })();
+  if (todayLocal > deadline) {
+    throw new Error(
+      `Prazo encerrado em ${deadline.split("-").reverse().join("/")} para inserção/edição dos resultados na plataforma PRISMA. Apenas o administrador geral pode alterar dados após esta data.`,
+    );
+  }
+}
+
 const PAGE_SIZE = 1000;
 
 async function fetchAllRows<T>(buildQuery: () => any): Promise<T[]> {
@@ -307,6 +344,7 @@ export const importarRespostas = createServerFn({ method: "POST" })
       await ensureProfessorOrAdmin(context.supabase, context.userId);
       await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
       await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
+    await assertDentroDoPrazoSeNaoAdmin(context.supabase, context.userId);
 
       // Use service role to read answer key; role check above already authorized the caller.
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -692,6 +730,7 @@ export const deleteImportacao = createServerFn({ method: "POST" })
     await ensureProfessorOrAdmin(context.supabase, context.userId);
     await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
     await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
+    await assertDentroDoPrazoSeNaoAdmin(context.supabase, context.userId);
     const { error, count } = await context.supabase
       .from("respostas_alunos")
       .delete({ count: "exact" })
@@ -738,6 +777,7 @@ export const deleteImportacaoAluno = createServerFn({ method: "POST" })
     await ensureProfessorOrAdmin(context.supabase, context.userId);
     await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
     await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
+    await assertDentroDoPrazoSeNaoAdmin(context.supabase, context.userId);
     const { error, count } = await context.supabase
       .from("respostas_alunos")
       .delete({ count: "exact" })
@@ -779,6 +819,7 @@ export const updateImportacaoAluno = createServerFn({ method: "POST" })
     await ensureProfessorOrAdmin(context.supabase, context.userId);
     await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
     await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
+    await assertDentroDoPrazoSeNaoAdmin(context.supabase, context.userId);
     const patch: { nome?: string | null; numero_chamada?: number } = {};
     if (data.nome !== undefined) patch.nome = data.nome && data.nome.length ? data.nome : null;
     if (data.novoNumero !== undefined && data.novoNumero !== data.numeroChamada) {
@@ -820,6 +861,7 @@ export const addAlunoAusente = createServerFn({ method: "POST" })
     await ensureProfessorOrAdmin(context.supabase, context.userId);
     await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
     await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
+    await assertDentroDoPrazoSeNaoAdmin(context.supabase, context.userId);
 
     const { data: jaResp } = await context.supabase
       .from("respostas_alunos")
@@ -917,6 +959,7 @@ export const updateRespostasAluno = createServerFn({ method: "POST" })
     await ensureProfessorOrAdmin(context.supabase, context.userId);
     await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
     await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
+    await assertDentroDoPrazoSeNaoAdmin(context.supabase, context.userId);
 
     // Tenta obter nome existente em respostas ou na lista de ausentes.
     const { data: existente } = await context.supabase
@@ -1014,3 +1057,21 @@ export const reabrirLote = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+
+// Retorna o prazo limite (data_fim) do cronograma para "Inserção dos resultados..."
+// e se o usuário atual está bloqueado por já ter ultrapassado essa data.
+export const getPrazoInsercao = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const deadline = await getInsercaoDeadlineDate(context.supabase);
+    const isAdm = await isAdminUser(context.supabase, context.userId);
+    const todayLocal = (() => {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    })();
+    const expirado = !!deadline && todayLocal > deadline;
+    return { deadline, expirado, bloqueado: expirado && !isAdm };
+  });
