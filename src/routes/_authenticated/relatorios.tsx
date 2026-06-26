@@ -380,12 +380,23 @@ function ConclusaoPainel({
 
   const chartData = useMemo(() => {
     if (escolaData) {
-      return escolaData.turmas.map((t) => ({
+      const rows = escolaData.turmas.map((t) => ({
         label: t.name,
         Finalizaram: t.finalizaram,
         "Não finalizaram": t.nao_finalizaram,
         _total: t.matriculados || t.finalizaram + t.nao_finalizaram,
       }));
+      if (escolaData.finalizaram + escolaData.nao_finalizaram > 0) {
+        rows.push({
+          label: `Escola — ${escolaData.name}`,
+          Finalizaram: escolaData.finalizaram,
+          "Não finalizaram": escolaData.nao_finalizaram,
+          _total:
+            escolaData.matriculados ||
+            escolaData.finalizaram + escolaData.nao_finalizaram,
+        });
+      }
+      return rows;
     }
     if (cidadeData) {
       return cidadeData.escolas.map((e) => ({
