@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Users, Loader2, Filter, X, Download, CheckCircle2, XCircle, MinusCircle } from "lucide-react";
+import { Users, Loader2, Filter, X, Download, CheckCircle2, XCircle, MinusCircle, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import {
   listSimuladosComRespostas,
   getResultadosAlunos,
@@ -90,6 +90,10 @@ function Page() {
   const [padroes, setPadroes] = useState<Set<Padrao>>(new Set());
   const [pctRange, setPctRange] = useState<[number, number]>([0, 100]);
 
+  type SortKey = "nome" | "escola" | "turma" | "acertos" | "pct" | "padrao" | "chamada";
+  const [sortKey, setSortKey] = useState<SortKey>("nome");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
   const [selecionado, setSelecionado] = useState<{
     turma_id: string;
     numero_chamada: number;
@@ -128,7 +132,8 @@ function Page() {
 
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase();
-    return alunos.filter((a) => {
+    const PAD_ORDER: Record<Padrao, number> = { muito_critico: 0, critico: 1, intermediario: 2, adequado: 3 };
+    const arr = alunos.filter((a) => {
       if (escolaId !== "__all" && (a.school_id ?? "sem") !== escolaId) return false;
       if (turmaId !== "__all" && a.turma_id !== turmaId) return false;
       if (padroes.size > 0 && !padroes.has(a.padrao)) return false;
@@ -139,7 +144,25 @@ function Page() {
       }
       return true;
     });
-  }, [alunos, escolaId, turmaId, padroes, pctRange, busca]);
+    const dir = sortDir === "asc" ? 1 : -1;
+    const cmp = (a: typeof arr[number], b: typeof arr[number]) => {
+      switch (sortKey) {
+        case "nome": return (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR") * dir;
+        case "escola": return a.school_name.localeCompare(b.school_name, "pt-BR") * dir;
+        case "turma": return a.turma_nome.localeCompare(b.turma_nome, "pt-BR") * dir;
+        case "acertos": return (a.acertos - b.acertos) * dir;
+        case "pct": return (a.pct_acerto - b.pct_acerto) * dir;
+        case "padrao": return (PAD_ORDER[a.padrao] - PAD_ORDER[b.padrao]) * dir;
+        case "chamada": return (a.numero_chamada - b.numero_chamada) * dir;
+      }
+    };
+    return [...arr].sort(cmp);
+  }, [alunos, escolaId, turmaId, padroes, pctRange, busca, sortKey, sortDir]);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
+  }
 
   function toggle<T>(set: Set<T>, val: T, setter: (s: Set<T>) => void) {
     const n = new Set(set);
@@ -289,52 +312,50 @@ function Page() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-        <aside className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Filter className="h-4 w-4" /> Filtros
-                  {filtrosAtivos > 0 && (
-                    <Badge variant="secondary" className="ml-1">
-                      {filtrosAtivos}
-                    </Badge>
-                  )}
-                </CardTitle>
-                {filtrosAtivos > 0 && (
-                  <Button variant="ghost" size="sm" onClick={limpar}>
-                    <X className="mr-1 h-3 w-3" /> Limpar
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="space-y-1.5">
-                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Buscar aluno
-                </Label>
-                <Input
-                  placeholder="Nome ou nº de chamada"
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                />
-              </div>
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Filter className="h-4 w-4" /> Filtros
+              {filtrosAtivos > 0 && (
+                <Badge variant="secondary" className="ml-1">{filtrosAtivos}</Badge>
+              )}
+            </CardTitle>
+            {filtrosAtivos > 0 && (
+              <Button variant="ghost" size="sm" onClick={limpar}>
+                <X className="mr-1 h-3 w-3" /> Limpar
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                Buscar aluno
+              </Label>
+              <Input
+                placeholder="Nome ou nº de chamada"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
+            </div>
 
-              <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Padrão de Desempenho
-                </Label>
-                {!simuladoId ? (
-                  <p className="text-xs text-muted-foreground">—</p>
-                ) : (
-                  (Object.keys(PADRAO_INFO) as Padrao[]).map((p) => {
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                Padrão de Desempenho
+              </Label>
+              {!simuladoId ? (
+                <p className="text-xs text-muted-foreground">—</p>
+              ) : (
+                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                  {(Object.keys(PADRAO_INFO) as Padrao[]).map((p) => {
                     const info = PADRAO_INFO[p];
                     const count = alunos.filter((a) => a.padrao === p).length;
                     return (
                       <label
                         key={p}
-                        className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-muted/50"
+                        className="flex cursor-pointer items-center gap-1.5 rounded px-1 py-1 text-sm hover:bg-muted/50"
                       >
                         <Checkbox
                           checked={padroes.has(p)}
@@ -344,34 +365,35 @@ function Page() {
                           className="inline-block h-2.5 w-2.5 rounded-full"
                           style={{ background: info.color }}
                         />
-                        <span className="flex-1">{info.label}</span>
-                        <span className="text-xs text-muted-foreground">{count}</span>
+                        <span>{info.label}</span>
+                        <span className="text-xs text-muted-foreground">({count})</span>
                       </label>
                     );
-                  })
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                  % de Acerto ({pctRange[0]}% – {pctRange[1]}%)
-                </Label>
-                <div className="px-1 pt-3">
-                  <Slider
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={pctRange}
-                    onValueChange={(v) => setPctRange([v[0], v[1]] as [number, number])}
-                    disabled={!simuladoId}
-                  />
+                  })}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </aside>
+              )}
+            </div>
 
-        <section>
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                % de Acerto ({pctRange[0]}% – {pctRange[1]}%)
+              </Label>
+              <div className="px-1 pt-3">
+                <Slider
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={pctRange}
+                  onValueChange={(v) => setPctRange([v[0], v[1]] as [number, number])}
+                  disabled={!simuladoId}
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <section>
           <Card>
             <CardHeader>
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -403,11 +425,13 @@ function Page() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Aluno</TableHead>
-                        <TableHead>Escola / Turma</TableHead>
-                        <TableHead className="text-right">Acertos</TableHead>
-                        <TableHead className="text-right">% Acerto</TableHead>
-                        <TableHead>Padrão</TableHead>
+                        <TableHead><SortBtn label="Aluno" k="nome" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></TableHead>
+                        <TableHead><SortBtn label="Escola" k="escola" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></TableHead>
+                        <TableHead><SortBtn label="Turma" k="turma" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></TableHead>
+                        <TableHead className="text-right"><SortBtn label="Nº" k="chamada" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" /></TableHead>
+                        <TableHead className="text-right"><SortBtn label="Acertos" k="acertos" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" /></TableHead>
+                        <TableHead className="text-right"><SortBtn label="% Acerto" k="pct" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" /></TableHead>
+                        <TableHead><SortBtn label="Padrão" k="padrao" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} /></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -435,17 +459,15 @@ function Page() {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-xs text-muted-foreground">
-                                Nº de chamada: {a.numero_chamada}
-                              </div>
                             </TableCell>
                             <TableCell>
                               <div className="text-sm">{a.school_name}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {a.turma_nome}
-                                {a.city ? ` · ${a.city}` : ""}
-                              </div>
+                              {a.city && (
+                                <div className="text-xs text-muted-foreground">{a.city}</div>
+                              )}
                             </TableCell>
+                            <TableCell className="text-sm">{a.turma_nome}</TableCell>
+                            <TableCell className="text-right">{a.numero_chamada}</TableCell>
                             <TableCell className="text-right">
                               {a.acertos}/{a.total_questoes}
                             </TableCell>
@@ -467,7 +489,6 @@ function Page() {
             </CardContent>
           </Card>
         </section>
-      </div>
 
       <Dialog open={!!selecionado} onOpenChange={(o) => !o && setSelecionado(null)}>
         <DialogContent className="max-w-3xl">
@@ -571,5 +592,38 @@ function Page() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function SortBtn<K extends string>({
+  label,
+  k,
+  sortKey,
+  sortDir,
+  onClick,
+  align = "left",
+}: {
+  label: string;
+  k: K;
+  sortKey: K;
+  sortDir: "asc" | "desc";
+  onClick: (k: K) => void;
+  align?: "left" | "right";
+}) {
+  const active = sortKey === k;
+  const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(k)}
+      className={cn(
+        "inline-flex items-center gap-1 font-medium hover:text-foreground",
+        active ? "text-foreground" : "text-muted-foreground",
+        align === "right" && "flex-row-reverse",
+      )}
+    >
+      <span>{label}</span>
+      <Icon className="h-3.5 w-3.5" />
+    </button>
   );
 }
