@@ -483,3 +483,61 @@ export const getResultadosAlunos = createServerFn({ method: "GET" })
         ),
     };
   });
+
+/** Gabarito de um aluno: todas as questões do simulado com a alternativa do aluno e a correta. */
+export const getGabaritoAluno = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { simuladoId: string; turmaId: string; numeroChamada: number }) =>
+    z
+      .object({
+        simuladoId: z.string().uuid(),
+        turmaId: z.string().uuid(),
+        numeroChamada: z.number().int(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await ensureProfessorOrAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: questoes, error: qErr } = await supabaseAdmin
+      .from("questoes")
+      .select("id, numero, resposta_correta")
+      .eq("simulado_id", data.simuladoId)
+      .order("numero", { ascending: true });
+    if (qErr) throw qErr;
+
+    const { data: respostas, error: rErr } = await context.supabase
+      .from("respostas_alunos")
+      .select("questao_id, resposta_escolhida, nome")
+      .eq("simulado_id", data.simuladoId)
+      .eq("turma_id", data.turmaId)
+      .eq("numero_chamada", data.numeroChamada);
+    if (rErr) throw rErr;
+
+    const escolhaPorQ = new Map<string, string>();
+    let nome: string | null = null;
+    for (const r of respostas ?? []) {
+      escolhaPorQ.set(r.questao_id, String(r.resposta_escolhida ?? "").toUpperCase());
+      if (!nome && r.nome) nome = r.nome;
+    }
+
+    let acertos = 0;
+    const itens = (questoes ?? []).map((q: any, idx: number) => {
+      const escolhida = escolhaPorQ.get(q.id) ?? null;
+      const correta = String(q.resposta_correta ?? "").toUpperCase();
+      const isCorrect = escolhida && escolhida === correta;
+      if (isCorrect) acertos += 1;
+      return {
+        numero: q.numero ?? idx + 1,
+        escolhida,
+        correta,
+        status: !escolhida
+          ? ("branco" as const)
+          : isCorrect
+            ? ("certo" as const)
+            : ("errado" as const),
+      };
+    });
+
+    return { nome, acertos, total: itens.length, itens };
+  });
