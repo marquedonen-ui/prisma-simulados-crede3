@@ -33,6 +33,8 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
   const [simuladoId, setSimuladoId] = useState<string>("");
   const [total, setTotal] = useState<number>(20);
   const [answers, setAnswers] = useState<Record<number, Letter>>({});
+  const [anuladas, setAnuladas] = useState<Record<number, boolean>>({});
+
 
   const listFn = useServerFn(listQuestoes);
   const saveFn = useServerFn(saveGabarito);
