@@ -165,6 +165,7 @@ export const saveGabarito = createServerFn({ method: "POST" })
         pontos: prev?.pontos ?? 1,
         resposta_correta: a.resposta_correta,
         anulada: !!a.anulada,
+        disciplina: a.disciplina ?? null,
       };
       if (prev?.id) base.id = prev.id;
       return base;
