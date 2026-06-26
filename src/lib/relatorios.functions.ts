@@ -298,8 +298,8 @@ export const getConclusao = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator(idInput)
   .handler(async ({ data, context }) => {
-    await ensureProfessorOrAdmin(context.supabase, context.userId);
-    const { alunos, turmas } = await carregarDataset(context.supabase, data.simuladoId);
+    const scopeSchoolId = await getScopeSchoolId(context.supabase, context.userId);
+    const { alunos, turmas } = await carregarDataset(context.supabase, data.simuladoId, { scopeSchoolId });
 
     const finPorTurma = new Map<string, number>();
     for (const a of alunos) {
