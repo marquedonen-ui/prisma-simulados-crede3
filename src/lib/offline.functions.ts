@@ -286,6 +286,17 @@ export const importarRespostas = createServerFn({ method: "POST" })
       }
       console.log(`${tag} respostas anteriores removidas: ${delCount ?? 0}`);
 
+      // Limpa registros anteriores de ausentes deste simulado+turma
+      const { error: delAusErr } = await context.supabase
+        .from("alunos_ausentes")
+        .delete()
+        .eq("simulado_id", data.simuladoId)
+        .eq("turma_id", data.turmaId);
+      if (delAusErr) {
+        console.error(`${tag} erro ao limpar ausentes anteriores`, delAusErr);
+        throw delAusErr;
+      }
+
       const inserir: Array<{
         simulado_id: string;
         turma_id: string;
@@ -295,13 +306,37 @@ export const importarRespostas = createServerFn({ method: "POST" })
         resposta_escolhida: string;
       }> = [];
 
+      const ausentes: Array<{
+        simulado_id: string;
+        turma_id: string;
+        numero_chamada: number;
+        nome: string | null;
+      }> = [];
+
       const statsPorAluno = new Map<
         number,
-        { numero_chamada: number; nome?: string; respondidas: number; em_branco: number; acertos: number }
+        { numero_chamada: number; nome?: string; respondidas: number; em_branco: number; acertos: number; ausente?: boolean }
       >();
 
       let questoesNaoEncontradas = 0;
       for (const linha of data.linhas) {
+        if (linha.ausente) {
+          ausentes.push({
+            simulado_id: data.simuladoId,
+            turma_id: data.turmaId,
+            numero_chamada: linha.numero_chamada,
+            nome: linha.nome ?? null,
+          });
+          statsPorAluno.set(linha.numero_chamada, {
+            numero_chamada: linha.numero_chamada,
+            nome: linha.nome,
+            respondidas: 0,
+            em_branco: 0,
+            acertos: 0,
+            ausente: true,
+          });
+          continue;
+        }
         let respondidas = 0;
         let emBranco = 0;
         let acertos = 0;
@@ -347,27 +382,39 @@ export const importarRespostas = createServerFn({ method: "POST" })
       }
 
       console.log(
-        `${tag} parsing: alunos=${statsPorAluno.size} inserir=${inserir.length} questoes_ignoradas=${questoesNaoEncontradas}`,
+        `${tag} parsing: alunos=${statsPorAluno.size} inserir=${inserir.length} ausentes=${ausentes.length} questoes_ignoradas=${questoesNaoEncontradas}`,
       );
 
-      if (inserir.length === 0) {
+      if (inserir.length === 0 && ausentes.length === 0) {
         throw new Error(
           "Nenhuma resposta válida encontrada. Verifique as colunas de alternativas (Q N Options).",
         );
       }
 
-      const { error: upErr } = await context.supabase
-        .from("respostas_alunos")
-        .insert(inserir);
-      if (upErr) {
-        console.error(
-          `${tag} erro ao inserir respostas (code=${(upErr as any).code} message=${upErr.message} details=${(upErr as any).details} hint=${(upErr as any).hint})`,
-        );
-        throw upErr;
+      if (inserir.length > 0) {
+        const { error: upErr } = await context.supabase
+          .from("respostas_alunos")
+          .insert(inserir);
+        if (upErr) {
+          console.error(
+            `${tag} erro ao inserir respostas (code=${(upErr as any).code} message=${upErr.message} details=${(upErr as any).details} hint=${(upErr as any).hint})`,
+          );
+          throw upErr;
+        }
+      }
+
+      if (ausentes.length > 0) {
+        const { error: ausErr } = await context.supabase
+          .from("alunos_ausentes")
+          .insert(ausentes);
+        if (ausErr) {
+          console.error(`${tag} erro ao inserir ausentes`, ausErr);
+          throw ausErr;
+        }
       }
 
       console.log(
-        `${tag} sucesso: ${inserir.length} respostas inseridas para ${statsPorAluno.size} aluno(s)`,
+        `${tag} sucesso: ${inserir.length} respostas / ${ausentes.length} ausentes para ${statsPorAluno.size} aluno(s)`,
       );
 
       const detalhes_alunos = Array.from(statsPorAluno.values())
@@ -378,12 +425,14 @@ export const importarRespostas = createServerFn({ method: "POST" })
           acertos: s.acertos,
           erros: Math.max(0, s.respondidas - s.acertos),
           em_branco: s.em_branco,
+          ausente: !!s.ausente,
         }))
         .sort((a, b) => b.acertos - a.acertos);
 
       return {
         respostas_importadas: inserir.length,
         alunos_processados: statsPorAluno.size,
+        alunos_ausentes: ausentes.length,
         total_questoes: questoes.length,
         detalhes_alunos,
       };
@@ -392,6 +441,7 @@ export const importarRespostas = createServerFn({ method: "POST" })
       throw err;
     }
   });
+
 
 // ============== GERENCIAR IMPORTAÇÕES ==============
 
