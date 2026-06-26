@@ -1,0 +1,1 @@
+ALTER TABLE public.questoes ADD COLUMN IF NOT EXISTS disciplina text;
