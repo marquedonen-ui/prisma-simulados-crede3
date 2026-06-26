@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Prof resp e gestor leem questoes" ON public.questoes;
