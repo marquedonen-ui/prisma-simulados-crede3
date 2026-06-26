@@ -222,6 +222,8 @@ function LoteAlunos({ lote }: { lote: Lote }) {
   const [editing, setEditing] = useState<number | null>(null);
   const [editNome, setEditNome] = useState("");
   const [editNumero, setEditNumero] = useState<number>(0);
+  const [editAnswersFor, setEditAnswersFor] = useState<number | null>(null);
+
 
   const startEdit = (a: AlunoLote) => {
     setEditing(a.numero_chamada);
