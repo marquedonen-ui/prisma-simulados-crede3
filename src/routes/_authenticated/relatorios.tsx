@@ -431,6 +431,9 @@ function ConclusaoPainel({
 function AcertoMedioPainel({
   isLoading,
   data,
+  disciplinas,
+  disciplina,
+  onDisciplinaChange,
 }: {
   isLoading: boolean;
   data: Array<{
@@ -456,7 +459,11 @@ function AcertoMedioPainel({
       }>;
     }>;
   }>;
+  disciplinas: string[];
+  disciplina: string;
+  onDisciplinaChange: (v: string) => void;
 }) {
+
   const [cidade, setCidade] = useState<string | null>(null);
   const [escolaId, setEscolaId] = useState<string | null>(null);
   const cidadeData = cidade ? data.find((c) => c.city === cidade) : null;
