@@ -241,7 +241,7 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
                     {!l.fechado && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="default" size="sm" disabled={fechar.isPending}>
+                          <Button variant="default" size="sm" disabled={fechar.isPending || bloqueadoPorPrazo}>
                             <Lock className="mr-1 h-4 w-4" /> Fechar avaliação
                           </Button>
                         </AlertDialogTrigger>
@@ -274,7 +274,7 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
                     {(!l.fechado || isAdmin) && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="sm" disabled={l.fechado && !isAdmin}>
+                          <Button variant="destructive" size="sm" disabled={(l.fechado && !isAdmin) || bloqueadoPorPrazo}>
                             <Trash2 className="mr-1 h-4 w-4" /> Excluir lote
                           </Button>
                         </AlertDialogTrigger>
@@ -301,7 +301,7 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
                     )}
                   </div>
                 </div>
-                {open && <LoteAlunos lote={l} />}
+                {open && <LoteAlunos lote={l} bloqueadoPorPrazo={bloqueadoPorPrazo} />}
               </div>
             );
           })}
