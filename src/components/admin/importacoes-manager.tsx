@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Pencil, Trash2, ChevronDown, ChevronRight, Database } from "lucide-react";
+import { Loader2, Pencil, Trash2, ChevronDown, ChevronRight, Database, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -11,9 +11,20 @@ import {
   deleteTodasImportacoes,
   deleteImportacaoAluno,
   updateImportacaoAluno,
+  getRespostasAluno,
+  updateRespostasAluno,
 } from "@/lib/offline.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
 import {
   Card,
   CardContent,
