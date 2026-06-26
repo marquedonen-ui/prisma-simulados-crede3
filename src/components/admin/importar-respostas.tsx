@@ -130,6 +130,11 @@ export function ImportarRespostas({
       let nomeCol = headers.findIndex((h) => nomePatterns.some((p) => h === p || h.includes(p)));
       if (nomeCol === -1) nomeCol = 3;
 
+      // Auto-detect coluna "Total de marcas" (col E). Fallback: índice 4.
+      const marcasPatterns = ["TOTALDEMARCAS", "TOTALMARCAS", "MARCAS", "TOTALMARCAS"];
+      let marcasCol = headers.findIndex((h) => marcasPatterns.some((p) => h === p || h.includes(p)));
+      if (marcasCol === -1) marcasCol = 4;
+
       const linhas: Array<{ numero_chamada: number; nome?: string; respostas: Record<string, string> }> = [];
       const ignoradas: Array<{ linha: number; motivo: string; nome?: string; chamadaRaw?: string }> = [];
       for (let r = headerIdx + 1; r < matrix.length; r++) {
