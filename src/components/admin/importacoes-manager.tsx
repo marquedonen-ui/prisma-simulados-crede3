@@ -311,7 +311,7 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
   );
 }
 
-function LoteAlunos({ lote }: { lote: Lote }) {
+function LoteAlunos({ lote, bloqueadoPorPrazo = false }: { lote: Lote; bloqueadoPorPrazo?: boolean }) {
   const qc = useQueryClient();
   const listAlunosFn = useServerFn(listImportacaoAlunos);
   const updFn = useServerFn(updateImportacaoAluno);
