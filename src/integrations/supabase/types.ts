@@ -184,6 +184,7 @@ export type Database = {
           alternativa_e: string | null
           anulada: boolean
           created_at: string
+          disciplina: string | null
           enunciado: string
           id: string
           numero: number
@@ -201,6 +202,7 @@ export type Database = {
           alternativa_e?: string | null
           anulada?: boolean
           created_at?: string
+          disciplina?: string | null
           enunciado: string
           id?: string
           numero: number
@@ -218,6 +220,7 @@ export type Database = {
           alternativa_e?: string | null
           anulada?: boolean
           created_at?: string
+          disciplina?: string | null
           enunciado?: string
           id?: string
           numero?: number

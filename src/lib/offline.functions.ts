@@ -123,6 +123,7 @@ const gabaritoSchema = z.object({
         numero: z.number().int().min(1).max(500),
         resposta_correta: z.enum(["A", "B", "C", "D", "E"]),
         anulada: z.boolean().optional().default(false),
+        disciplina: z.string().max(80).nullable().optional(),
       }),
     )
     .min(1),
@@ -164,6 +165,7 @@ export const saveGabarito = createServerFn({ method: "POST" })
         pontos: prev?.pontos ?? 1,
         resposta_correta: a.resposta_correta,
         anulada: !!a.anulada,
+        disciplina: a.disciplina ?? null,
       };
       if (prev?.id) base.id = prev.id;
       return base;

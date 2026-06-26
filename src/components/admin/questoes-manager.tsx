@@ -34,6 +34,19 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
   const [total, setTotal] = useState<number>(20);
   const [answers, setAnswers] = useState<Record<number, Letter>>({});
   const [anuladas, setAnuladas] = useState<Record<number, boolean>>({});
+  const [disciplinas, setDisciplinas] = useState<Record<number, string>>({});
+
+  const simuladoAtual = useMemo(
+    () => simulados.find((s) => s.id === simuladoId),
+    [simulados, simuladoId],
+  );
+  const disciplinasDisponiveis = useMemo<string[]>(() => {
+    const txt = `${simuladoAtual?.subject ?? ""} ${simuladoAtual?.offer ?? ""}`.toLowerCase();
+    if (txt.includes("human")) return ["Filosofia", "Geografia", "História", "Sociologia"];
+    if (txt.includes("natureza")) return ["Biologia", "Física", "Química"];
+    return [];
+  }, [simuladoAtual]);
+
 
 
   const listFn = useServerFn(listQuestoes);
@@ -51,18 +64,22 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
     if (!simuladoId) {
       setAnswers({});
       setAnuladas({});
+      setDisciplinas({});
       return;
     }
     const map: Record<number, Letter> = {};
     const an: Record<number, boolean> = {};
+    const di: Record<number, string> = {};
     let max = 0;
     for (const q of rows as any[]) {
       map[q.numero] = q.resposta_correta as Letter;
       an[q.numero] = !!q.anulada;
+      if (q.disciplina) di[q.numero] = q.disciplina;
       if (q.numero > max) max = q.numero;
     }
     setAnswers(map);
     setAnuladas(an);
+    setDisciplinas(di);
     if (max > 0) setTotal(max);
   }, [simuladoId, questoesQ.data]);
 
@@ -78,6 +95,7 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
             numero: n,
             resposta_correta: (answers[n] ?? "A") as Letter,
             anulada: !!anuladas[n],
+            disciplina: disciplinas[n] || null,
           };
         }),
 
@@ -158,6 +176,9 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
                 <thead className="sticky top-0 bg-muted text-xs uppercase text-muted-foreground">
                   <tr>
                     <th className="px-3 py-2 text-left">Questão</th>
+                    {disciplinasDisponiveis.length > 0 && (
+                      <th className="px-3 py-2 text-left">Disciplina</th>
+                    )}
                     {LETTERS.map((l) => (
                       <th key={l} className="px-3 py-2 text-center">
                         {l}
@@ -173,6 +194,27 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
                     return (
                       <tr key={n} className={cn("border-t", isAnul && "bg-amber-50 dark:bg-amber-950/20")}>
                         <td className="px-3 py-1.5 font-mono font-medium">{n}</td>
+                        {disciplinasDisponiveis.length > 0 && (
+                          <td className="px-3 py-1.5">
+                            <Select
+                              value={disciplinas[n] ?? ""}
+                              onValueChange={(v) =>
+                                setDisciplinas((prev) => ({ ...prev, [n]: v }))
+                              }
+                            >
+                              <SelectTrigger className="h-8 w-40">
+                                <SelectValue placeholder="Selecione..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {disciplinasDisponiveis.map((d) => (
+                                  <SelectItem key={d} value={d}>
+                                    {d}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                        )}
                         {LETTERS.map((l) => {
                           const isSel = selected === l;
                           return (
