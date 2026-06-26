@@ -395,6 +395,42 @@ export function ImportarRespostas({
               </div>
             </div>
 
+            {resultado.linhas_ignoradas?.length > 0 && (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10">
+                <div className="flex items-start gap-3 px-4 py-3">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                      {resultado.linhas_ignoradas.length} linha(s) da planilha foram ignoradas
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Podem ser alunos transferidos ou que não fizeram a prova. A importação continuou normalmente com os demais.
+                    </p>
+                  </div>
+                </div>
+                <div className="max-h-56 overflow-auto border-t border-amber-500/30">
+                  <table className="w-full text-xs">
+                    <thead className="bg-amber-500/10 text-left uppercase text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-1.5">Linha</th>
+                        <th className="px-3 py-1.5">Nome (se houver)</th>
+                        <th className="px-3 py-1.5">Motivo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {resultado.linhas_ignoradas.map((l: any, i: number) => (
+                        <tr key={i} className="border-t border-amber-500/20">
+                          <td className="px-3 py-1.5 font-mono">{l.linha}</td>
+                          <td className="px-3 py-1.5">{l.nome || <span className="text-muted-foreground italic">—</span>}</td>
+                          <td className="px-3 py-1.5 text-muted-foreground">{l.motivo}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             {resultado.detalhes_alunos?.length > 0 && (
               <div className="rounded-md border">
                 <div className="border-b bg-muted/40 px-3 py-2">
