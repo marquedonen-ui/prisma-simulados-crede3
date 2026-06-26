@@ -270,27 +270,36 @@ export function ImportarRespostas({
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5">
-            <Label>Escola</Label>
-            <Select
-              value={schoolId}
-              onValueChange={(v) => {
-                setSchoolId(v);
-                setTurmaId("");
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent>
-                {schools.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name} ({s.inep})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {fixedSchoolId ? (
+            <div className="space-y-1.5">
+              <Label>Escola</Label>
+              <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                {schools.find((s) => s.id === fixedSchoolId)?.name ?? "—"}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label>Escola</Label>
+              <Select
+                value={schoolId}
+                onValueChange={(v) => {
+                  setSchoolId(v);
+                  setTurmaId("");
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {schools.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name} ({s.inep})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         {semQuestoes && (
