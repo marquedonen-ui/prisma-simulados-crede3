@@ -18,7 +18,9 @@ import {
   getPadraoDesempenho,
   getConclusao,
   getAcertoMedio,
+  listDisciplinasSimulado,
 } from "@/lib/relatorios.functions";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Select,
