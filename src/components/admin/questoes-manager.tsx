@@ -64,18 +64,22 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
     if (!simuladoId) {
       setAnswers({});
       setAnuladas({});
+      setDisciplinas({});
       return;
     }
     const map: Record<number, Letter> = {};
     const an: Record<number, boolean> = {};
+    const di: Record<number, string> = {};
     let max = 0;
     for (const q of rows as any[]) {
       map[q.numero] = q.resposta_correta as Letter;
       an[q.numero] = !!q.anulada;
+      if (q.disciplina) di[q.numero] = q.disciplina;
       if (q.numero > max) max = q.numero;
     }
     setAnswers(map);
     setAnuladas(an);
+    setDisciplinas(di);
     if (max > 0) setTotal(max);
   }, [simuladoId, questoesQ.data]);
 
@@ -91,6 +95,7 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
             numero: n,
             resposta_correta: (answers[n] ?? "A") as Letter,
             anulada: !!anuladas[n],
+            disciplina: disciplinas[n] || null,
           };
         }),
 
