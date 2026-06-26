@@ -751,6 +751,8 @@ export const updateImportacaoAluno = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await ensureProfessorOrAdmin(context.supabase, context.userId);
+    await ensureTurmaAccess(context.supabase, context.userId, data.turmaId);
+    await assertLoteAberto(context.supabase, data.simuladoId, data.turmaId);
     const patch: { nome?: string | null; numero_chamada?: number } = {};
     if (data.nome !== undefined) patch.nome = data.nome && data.nome.length ? data.nome : null;
     if (data.novoNumero !== undefined && data.novoNumero !== data.numeroChamada) {
