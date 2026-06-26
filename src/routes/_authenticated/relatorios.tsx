@@ -212,7 +212,7 @@ function PadraoDesempenhoPainel({
     if (escolaData) {
       const rows = escolaData.turmas.map((t) => toPct(t.name, t.faixas, t.total));
       if (escolaData.total > 0)
-        rows.push(toPct(`Escola — ${escolaData.name}`, escolaData.faixas, escolaData.total));
+        rows.push(toPct(escolaData.name, escolaData.faixas, escolaData.total));
       return rows;
     }
     if (cidadeData) {
@@ -388,7 +388,7 @@ function ConclusaoPainel({
       }));
       if (escolaData.finalizaram + escolaData.nao_finalizaram > 0) {
         rows.push({
-          label: `Escola — ${escolaData.name}`,
+          label: escolaData.name,
           Finalizaram: escolaData.finalizaram,
           "Não finalizaram": escolaData.nao_finalizaram,
           _total:
@@ -565,7 +565,7 @@ function AcertoMedioPainel({
       }));
       if (escolaData.acertos + escolaData.erros > 0) {
         rows.push({
-          label: `Escola — ${escolaData.name}`,
+          label: escolaData.name,
           "% Acerto": escolaData.pct_acerto,
           "% Erro": escolaData.pct_erro,
           _acertos: escolaData.acertos,
