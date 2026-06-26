@@ -576,7 +576,7 @@ export const listImportacoes = createServerFn({ method: "GET" })
       turmaIds.length
         ? context.supabase
             .from("turmas")
-            .select("id, nome, schools(name, inep)")
+            .select("id, nome, school_id, schools(id, name, inep)")
             .in("id", turmaIds)
         : Promise.resolve({ data: [], error: null } as any),
     ]);
