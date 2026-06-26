@@ -402,7 +402,13 @@ export function ImportarRespostas({
                   <p className="text-sm text-muted-foreground">
                     {resultado.respostas_importadas} respostas de {resultado.alunos_processados}{" "}
                     aluno(s) foram importadas para o simulado ({resultado.total_questoes} questões).
+                    {resultado.alunos_ausentes ? (
+                      <> · <span className="font-medium text-amber-700 dark:text-amber-400">
+                        {resultado.alunos_ausentes} aluno(s) ausente(s)
+                      </span> registrado(s) para 2ª chamada.</>
+                    ) : null}
                   </p>
+
                 </div>
               </div>
             </div>
