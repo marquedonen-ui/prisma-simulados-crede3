@@ -27,7 +27,10 @@ export const listQuestoes = createServerFn({ method: "GET" })
     z.object({ simuladoId: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase
+    await ensureProfessorOrAdmin(context.supabase, context.userId);
+    // resposta_correta is column-locked to service_role; use admin client after role check.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
       .from("questoes")
       .select("*")
       .eq("simulado_id", data.simuladoId)
@@ -35,6 +38,7 @@ export const listQuestoes = createServerFn({ method: "GET" })
     if (error) throw error;
     return rows ?? [];
   });
+
 
 const questaoSchema = z.object({
   id: z.string().uuid().optional(),
