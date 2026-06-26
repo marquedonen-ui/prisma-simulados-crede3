@@ -49,10 +49,25 @@ const ROLE_LABELS: Record<string, string> = {
 const ROLE_OPTIONS = ["professor_responsavel", "gestor", "admin"] as const;
 
 function genTempPassword() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let out = "";
-  for (let i = 0; i < 10; i++) out += chars[Math.floor(Math.random() * chars.length)];
-  return out + "!";
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lower = "abcdefghijkmnopqrstuvwxyz";
+  const numbers = "23456789";
+  const symbols = "!@#$%&*?";
+  const groups = [upper, lower, numbers, symbols];
+  const chars = groups.join("");
+  const pick = (pool: string) => pool[Math.floor(Math.random() * pool.length)];
+  const password = [upper, lower, numbers, symbols].map(pick);
+  for (let i = password.length; i < 14; i++) password.push(pick(chars));
+  return password.sort(() => Math.random() - 0.5).join("");
+}
+
+function isStrongEnoughPassword(password?: string) {
+  if (!password || password.length < 10) return false;
+  return /[A-Z]/.test(password) && /[a-z]/.test(password) && /\d/.test(password) && /[^A-Za-z0-9]/.test(password);
+}
+
+function toastPasswordPolicy() {
+  toast.error("Use uma senha mais forte, com pelo menos 10 caracteres, letras maiúsculas, minúsculas, números e símbolos.");
 }
 
 export function UsersManager({ schools }: { schools: School[] }) {
@@ -71,7 +86,11 @@ export function UsersManager({ schools }: { schools: School[] }) {
 
   const create = useMutation({
     mutationFn: (payload: any) => createFn({ data: payload }),
-    onSuccess: () => {
+    onSuccess: (result: any) => {
+      if (result?.ok === false) {
+        toast.error(result.error ?? "Senha recusada pelo sistema.");
+        return;
+      }
       toast.success("Usuário criado.");
       setOpen(false);
       qc.invalidateQueries({ queryKey: ["managed-users"] });
@@ -81,7 +100,11 @@ export function UsersManager({ schools }: { schools: School[] }) {
 
   const update = useMutation({
     mutationFn: (payload: any) => updateFn({ data: payload }),
-    onSuccess: () => {
+    onSuccess: (result: any) => {
+      if (result?.ok === false) {
+        toast.error(result.error ?? "Senha recusada pelo sistema.");
+        return;
+      }
       toast.success("Usuário atualizado.");
       setOpen(false);
       setPwOpen(false);
@@ -134,8 +157,8 @@ export function UsersManager({ schools }: { schools: School[] }) {
       return;
     }
     if (editing._new) {
-      if (!editing.password || editing.password.length < 8) {
-        toast.error("A senha deve ter pelo menos 8 caracteres.");
+      if (!isStrongEnoughPassword(editing.password)) {
+        toastPasswordPolicy();
         return;
       }
       create.mutate({
@@ -146,8 +169,8 @@ export function UsersManager({ schools }: { schools: School[] }) {
         school_id,
       });
     } else {
-      if (editing.password && editing.password.length < 8) {
-        toast.error("A nova senha deve ter pelo menos 8 caracteres.");
+      if (editing.password && !isStrongEnoughPassword(editing.password)) {
+        toastPasswordPolicy();
         return;
       }
       update.mutate({
@@ -161,8 +184,8 @@ export function UsersManager({ schools }: { schools: School[] }) {
   }
 
   function changePw() {
-    if (!newPw || newPw.length < 8) {
-      toast.error("Senha deve ter ao menos 8 caracteres.");
+    if (!isStrongEnoughPassword(newPw)) {
+      toastPasswordPolicy();
       return;
     }
     update.mutate({ user_id: editing.user_id, new_password: newPw });
@@ -295,14 +318,14 @@ export function UsersManager({ schools }: { schools: School[] }) {
                     value={editing.password ?? ""}
                     onChange={(e) => setEditing({ ...editing, password: e.target.value })}
                     required={editing._new}
-                    minLength={8}
-                    placeholder={editing._new ? "Mínimo 8 caracteres" : "Deixe em branco para manter a atual"}
+                    minLength={10}
+                    placeholder={editing._new ? "Mínimo 10 caracteres" : "Deixe em branco para manter a atual"}
                     autoComplete="new-password"
                   />
                   <p className="text-xs text-muted-foreground">
                     {editing._new
-                      ? "Informe esta senha ao usuário — ele poderá alterá-la depois."
-                      : "Preencha apenas se desejar redefinir a senha deste usuário."}
+                      ? "Use letras maiúsculas, minúsculas, números e símbolos. Evite senhas comuns."
+                      : "Preencha apenas se desejar redefinir a senha; use letras, números e símbolos."}
                   </p>
                 </div>
 
@@ -364,7 +387,10 @@ export function UsersManager({ schools }: { schools: School[] }) {
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label>Nova senha</Label>
-                <PasswordInput value={newPw} onChange={(e) => setNewPw(e.target.value)} minLength={8} />
+                <PasswordInput value={newPw} onChange={(e) => setNewPw(e.target.value)} minLength={10} />
+                <p className="text-xs text-muted-foreground">
+                  Use pelo menos 10 caracteres com letras maiúsculas, minúsculas, números e símbolos.
+                </p>
               </div>
               <Button onClick={changePw} disabled={update.isPending} className="w-full">
                 {update.isPending ? "Atualizando..." : "Atualizar senha"}
