@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Pencil, Trash2, ChevronDown, ChevronRight, Database, ListChecks } from "lucide-react";
+import { Loader2, Pencil, Trash2, ChevronDown, ChevronRight, Database, ListChecks, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -13,6 +13,7 @@ import {
   updateImportacaoAluno,
   getRespostasAluno,
   updateRespostasAluno,
+  addAlunoAusente,
 } from "@/lib/offline.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -273,6 +274,30 @@ function LoteAlunos({ lote }: { lote: Lote }) {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
+  const addFn = useServerFn(addAlunoAusente);
+  const [novoNum, setNovoNum] = useState<string>("");
+  const [novoNome, setNovoNome] = useState<string>("");
+  const add = useMutation({
+    mutationFn: () =>
+      addFn({
+        data: {
+          simuladoId: lote.simulado_id,
+          turmaId: lote.turma_id,
+          numeroChamada: parseInt(novoNum || "0", 10),
+          nome: novoNome.trim() || null,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Aluno adicionado para 2ª chamada. Clique no ícone de respostas para registrá-las.");
+      setNovoNum("");
+      setNovoNome("");
+      qc.invalidateQueries({ queryKey: ["importacao-alunos", lote.simulado_id, lote.turma_id] });
+      qc.invalidateQueries({ queryKey: ["importacoes"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
+
+
   return (
     <div className="border-t bg-muted/30 p-3">
       {alunosQ.isLoading && (
@@ -362,6 +387,42 @@ function LoteAlunos({ lote }: { lote: Lote }) {
           </div>
         ))}
       </div>
+
+      <form
+        className="mt-3 flex flex-wrap items-end gap-2 rounded-md border border-dashed bg-card/50 p-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const n = parseInt(novoNum || "0", 10);
+          if (!n || n < 1) {
+            toast.error("Informe um nº de chamada válido.");
+            return;
+          }
+          add.mutate();
+        }}
+      >
+        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+          <UserPlus className="h-4 w-4 text-primary" />
+          Adicionar aluno (2ª chamada)
+        </div>
+        <Input
+          type="number"
+          min={1}
+          value={novoNum}
+          onChange={(e) => setNovoNum(e.target.value)}
+          placeholder="nº"
+          className="h-8 w-20"
+        />
+        <Input
+          value={novoNome}
+          onChange={(e) => setNovoNome(e.target.value)}
+          placeholder="Nome do aluno"
+          className="h-8 min-w-[200px] flex-1"
+        />
+        <Button type="submit" size="sm" disabled={add.isPending}>
+          {add.isPending ? "Adicionando..." : "Adicionar"}
+        </Button>
+      </form>
+
       <EditAnswersDialog
         open={editAnswersFor !== null}
         onClose={() => setEditAnswersFor(null)}

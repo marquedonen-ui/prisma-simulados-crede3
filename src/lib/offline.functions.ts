@@ -723,6 +723,51 @@ export const updateImportacaoAluno = createServerFn({ method: "POST" })
   });
 
 
+export const addAlunoAusente = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: { simuladoId: string; turmaId: string; numeroChamada: number; nome?: string | null }) =>
+      z
+        .object({
+          simuladoId: z.string().uuid(),
+          turmaId: z.string().uuid(),
+          numeroChamada: z.number().int().min(1).max(9999),
+          nome: z.string().trim().max(200).nullable().optional(),
+        })
+        .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await ensureProfessorOrAdmin(context.supabase, context.userId);
+
+    const { data: jaResp } = await context.supabase
+      .from("respostas_alunos")
+      .select("numero_chamada")
+      .eq("simulado_id", data.simuladoId)
+      .eq("turma_id", data.turmaId)
+      .eq("numero_chamada", data.numeroChamada)
+      .limit(1);
+    const { data: jaAus } = await context.supabase
+      .from("alunos_ausentes")
+      .select("numero_chamada")
+      .eq("simulado_id", data.simuladoId)
+      .eq("turma_id", data.turmaId)
+      .eq("numero_chamada", data.numeroChamada)
+      .limit(1);
+    if ((jaResp && jaResp.length) || (jaAus && jaAus.length)) {
+      throw new Error(`Já existe um aluno com nº ${data.numeroChamada} neste lote.`);
+    }
+
+    const nome = data.nome && data.nome.trim().length ? data.nome.trim() : null;
+    const { error } = await context.supabase.from("alunos_ausentes").insert({
+      simulado_id: data.simuladoId,
+      turma_id: data.turmaId,
+      numero_chamada: data.numeroChamada,
+      nome,
+    });
+    if (error) throw error;
+    return { ok: true };
+  });
+
 export const getRespostasAluno = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { simuladoId: string; turmaId: string; numeroChamada: number }) =>
