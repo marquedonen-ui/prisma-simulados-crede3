@@ -124,11 +124,17 @@ export const updateManagedUser = createServerFn({ method: "POST" })
       const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
         password: data.new_password,
       });
-      if (error) throw error;
+      if (error) {
+        if ((error as any).code === "weak_password" || /weak/i.test(error.message)) {
+          throw new Error("Senha muito fraca. Use ao menos 8 caracteres com letras, números e símbolos.");
+        }
+        throw error;
+      }
     }
 
     return { ok: true };
   });
+
 
 export const deleteManagedUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
