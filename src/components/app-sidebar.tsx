@@ -49,6 +49,7 @@ export function AppSidebar() {
       ? [{ title: "Administração / Escola", url: "/admin-escola", icon: Shield }]
       : []),
     ...(isAdmin ? [{ title: "Administração", url: "/admin", icon: Shield }] : []),
+    { title: "Cronograma", url: "/cronograma", icon: CalendarDays },
   ];
 
   const roleLabels: Record<string, string> = {
