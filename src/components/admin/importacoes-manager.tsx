@@ -310,15 +310,21 @@ function LoteAlunos({ lote }: { lote: Lote }) {
                 <span className="flex-1 truncate">
                   {a.nome ?? <span className="italic text-muted-foreground">Nome não informado</span>}
                 </span>
+                {a.ausente ? (
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
+                    Ausente
+                  </span>
+                ) : null}
                 <span className="text-xs text-muted-foreground">{a.respostas} resp.</span>
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant={a.ausente ? "default" : "outline"}
                   onClick={() => setEditAnswersFor(a.numero_chamada)}
-                  title="Editar respostas"
+                  title={a.ausente ? "Inserir respostas da 2ª chamada" : "Editar respostas"}
                 >
                   <ListChecks className="h-3.5 w-3.5" />
                 </Button>
+
                 <Button size="sm" variant="outline" onClick={() => startEdit(a)} title="Editar nome / nº">
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
