@@ -307,9 +307,18 @@ function LoteAlunos({ lote }: { lote: Lote }) {
                   {a.nome ?? <span className="italic text-muted-foreground">Nome não informado</span>}
                 </span>
                 <span className="text-xs text-muted-foreground">{a.respostas} resp.</span>
-                <Button size="sm" variant="outline" onClick={() => startEdit(a)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setEditAnswersFor(a.numero_chamada)}
+                  title="Editar respostas"
+                >
+                  <ListChecks className="h-3.5 w-3.5" />
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => startEdit(a)} title="Editar nome / nº">
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
+
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button size="sm" variant="destructive">
