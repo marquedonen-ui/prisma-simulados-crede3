@@ -135,7 +135,7 @@ export function ImportarRespostas({
       let marcasCol = headers.findIndex((h) => marcasPatterns.some((p) => h === p || h.includes(p)));
       if (marcasCol === -1) marcasCol = 4;
 
-      const linhas: Array<{ numero_chamada: number; nome?: string; respostas: Record<string, string> }> = [];
+      const linhas: Array<{ numero_chamada: number; nome?: string; respostas: Record<string, string>; ausente?: boolean }> = [];
       const ignoradas: Array<{ linha: number; motivo: string; nome?: string; chamadaRaw?: string }> = [];
       for (let r = headerIdx + 1; r < matrix.length; r++) {
         const row = matrix[r];
