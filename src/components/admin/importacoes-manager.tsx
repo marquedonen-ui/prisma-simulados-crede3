@@ -79,11 +79,21 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
   const delTudoFn = useServerFn(deleteTodasImportacoes);
   const fecharFn = useServerFn(fecharLote);
   const reabrirFn = useServerFn(reabrirLote);
+  const prazoFn = useServerFn(getPrazoInsercao);
 
   const lotesQ = useQuery({
     queryKey: ["importacoes"],
     queryFn: () => listFn({}),
   });
+
+  const prazoQ = useQuery({
+    queryKey: ["prazo-insercao"],
+    queryFn: () => prazoFn({}),
+  });
+  const bloqueadoPorPrazo = !!prazoQ.data?.bloqueado;
+  const deadlineFmt = prazoQ.data?.deadline
+    ? prazoQ.data.deadline.split("-").reverse().join("/")
+    : null;
 
   const [openKey, setOpenKey] = useState<string | null>(null);
 
