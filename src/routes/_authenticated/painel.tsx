@@ -70,8 +70,6 @@ const goals = [
 ];
 
 function Painel() {
-  const navigate = useNavigate();
-  const { user } = Route.useRouteContext();
   const getRole = useServerFn(getMyRole);
   const bootstrap = useServerFn(bootstrapFirstAdmin);
 
@@ -85,10 +83,6 @@ function Painel() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Falha"),
   });
 
-  async function signOut() {
-    await supabase.auth.signOut();
-    navigate({ to: "/" });
-  }
 
   return (
     <div className="min-h-screen bg-background">
