@@ -31,7 +31,8 @@ export const listSimuladosComRespostas = createServerFn({ method: "GET" })
       .from("respostas_alunos")
       .select("simulado_id, turma_id, numero_chamada")
       .in("simulado_id", ids)
-      .not("turma_id", "is", null);
+      .not("turma_id", "is", null)
+      .range(0, 49999);
     return (simulados ?? []).map((s: any) => {
       const rs = (resp ?? []).filter((r: any) => r.simulado_id === s.id);
       const alunos = new Set(rs.map((r: any) => `${r.turma_id}|${r.numero_chamada}`));
@@ -72,7 +73,8 @@ async function carregarDataset(supabase: any, simuladoId: string) {
     .select("turma_id, numero_chamada, nome, questao_id, resposta_escolhida")
     .eq("simulado_id", simuladoId)
     .not("turma_id", "is", null)
-    .not("numero_chamada", "is", null);
+    .not("numero_chamada", "is", null)
+    .range(0, 49999);
   if (rErr) throw rErr;
 
 

@@ -475,7 +475,8 @@ export const listImportacaoAlunos = createServerFn({ method: "GET" })
       .select("numero_chamada, nome")
       .eq("simulado_id", data.simuladoId)
       .eq("turma_id", data.turmaId)
-      .not("numero_chamada", "is", null);
+      .not("numero_chamada", "is", null)
+      .range(0, 49999);
     if (error) throw error;
     const map = new Map<number, { numero_chamada: number; nome: string | null; respostas: number }>();
     for (const r of (rows ?? []) as any[]) {
