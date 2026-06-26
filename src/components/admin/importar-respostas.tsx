@@ -153,15 +153,10 @@ export function ImportarRespostas({
           });
           continue;
         }
-        // Coluna E vazia => aluno ausente: não importa respostas, apenas registra.
+        // Coluna E vazia => aluno ausente: registra como ausente (sem respostas) para 2ª chamada manual.
         const rawMarcas = String(row?.[marcasCol] ?? "").trim();
         if (rawMarcas === "") {
-          ignoradas.push({
-            linha: linhaPlanilha,
-            motivo: "Ausente (coluna 'Total de marcas' vazia)",
-            nome,
-            chamadaRaw: rawChamada,
-          });
+          linhas.push({ numero_chamada, nome, respostas: {}, ausente: true });
           continue;
         }
         const respostas: Record<string, string> = {};
@@ -176,6 +171,7 @@ export function ImportarRespostas({
         }
         linhas.push({ numero_chamada, nome, respostas });
       }
+
 
       if (linhas.length === 0)
         throw new Error(
