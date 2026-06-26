@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { ListChecks, Loader2, ArrowUpDown } from "lucide-react";
-import { listSimuladosComRespostas, getRelatorioQuestoes } from "@/lib/relatorios.functions";
+import { listSimuladosComRespostas, getRelatorioQuestoes, getResultadosAlunos } from "@/lib/relatorios.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Select,
@@ -41,25 +41,62 @@ const padraoMeta: Record<Padrao, { label: string; bg: string; text: string }> = 
 function Page() {
   const listSimFn = useServerFn(listSimuladosComRespostas);
   const getQFn = useServerFn(getRelatorioQuestoes);
+  const getResFn = useServerFn(getResultadosAlunos);
 
   const [simuladoId, setSimuladoId] = useState("");
+  const [escolaId, setEscolaId] = useState<string>("__all");
+  const [turmaId, setTurmaId] = useState<string>("__all");
   const [disciplina, setDisciplina] = useState<string>("__all");
   const [sortBy, setSortBy] = useState<"numero" | "acertos_desc" | "acertos_asc" | "pct_desc" | "pct_asc">(
     "numero",
   );
 
   const simQ = useQuery({ queryKey: ["rel-sims"], queryFn: () => listSimFn() });
-  const dataQ = useQuery({
-    queryKey: ["rel-questoes", simuladoId],
-    queryFn: () => getQFn({ data: { simuladoId } }),
+  const alunosQ = useQuery({
+    queryKey: ["rel-questoes-alunos", simuladoId],
+    queryFn: () => getResFn({ data: { simuladoId } }),
     enabled: !!simuladoId,
   });
+  const dataQ = useQuery({
+    queryKey: ["rel-questoes", simuladoId, escolaId, turmaId],
+    queryFn: () =>
+      getQFn({
+        data: {
+          simuladoId,
+          escolaId: escolaId === "__all" ? null : escolaId,
+          turmaId: turmaId === "__all" ? null : turmaId,
+        },
+      }),
+    enabled: !!simuladoId,
+  });
+
+  const alunos = alunosQ.data?.alunos ?? [];
+
+  const escolasDisponiveis = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const a of alunos) m.set(a.school_id ?? "sem", a.school_name);
+    return Array.from(m.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [alunos]);
+
+  const turmasDisponiveis = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const a of alunos) {
+      if (escolaId !== "__all" && (a.school_id ?? "sem") !== escolaId) continue;
+      m.set(a.turma_id, a.turma_nome);
+    }
+    return Array.from(m.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [alunos, escolaId]);
 
   const disciplinas = useMemo(() => {
     const set = new Set<string>();
     (dataQ.data ?? []).forEach((q) => q.disciplina && set.add(q.disciplina));
     return Array.from(set).sort();
   }, [dataQ.data]);
+
 
   const linhas = useMemo(() => {
     let arr = [...(dataQ.data ?? [])];
@@ -106,12 +143,19 @@ function Page() {
       <Card>
         <CardHeader>
           <CardTitle>Filtros</CardTitle>
-          <CardDescription>Selecione o simulado e, se desejar, filtre por disciplina.</CardDescription>
+          <CardDescription>Selecione o simulado, escola e turma. Filtre opcionalmente por disciplina.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
           <div className="space-y-1">
             <Label>Simulado</Label>
-            <Select value={simuladoId} onValueChange={setSimuladoId}>
+            <Select
+              value={simuladoId}
+              onValueChange={(v) => {
+                setSimuladoId(v);
+                setEscolaId("__all");
+                setTurmaId("__all");
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder={simQ.isLoading ? "Carregando..." : "Selecione"} />
               </SelectTrigger>
@@ -124,6 +168,50 @@ function Page() {
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-1">
+            <Label>Escola</Label>
+            <Select
+              value={escolaId}
+              onValueChange={(v) => {
+                setEscolaId(v);
+                setTurmaId("__all");
+              }}
+              disabled={!simuladoId || escolasDisponiveis.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Todas as escolas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all">Todas as escolas</SelectItem>
+                {escolasDisponiveis.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>
+                    {e.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label>Turma</Label>
+            <Select
+              value={turmaId}
+              onValueChange={setTurmaId}
+              disabled={!simuladoId || turmasDisponiveis.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Todas as turmas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all">Todas as turmas</SelectItem>
+                {turmasDisponiveis.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-1">
             <Label>Disciplina</Label>
             <Select value={disciplina} onValueChange={setDisciplina} disabled={!simuladoId}>

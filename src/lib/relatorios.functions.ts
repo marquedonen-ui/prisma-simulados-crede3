@@ -554,7 +554,15 @@ export const getGabaritoAluno = createServerFn({ method: "GET" })
 /** Relatório por questão: acertos, erros, brancos, % e disciplina. */
 export const getRelatorioQuestoes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(idInput)
+  .inputValidator((d: { simuladoId: string; escolaId?: string | null; turmaId?: string | null }) =>
+    z
+      .object({
+        simuladoId: z.string().uuid(),
+        escolaId: z.string().uuid().nullable().optional(),
+        turmaId: z.string().uuid().nullable().optional(),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     await ensureProfessorOrAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -568,10 +576,29 @@ export const getRelatorioQuestoes = createServerFn({ method: "GET" })
     const respostas = await fetchAllRows<any>(() =>
       context.supabase
         .from("respostas_alunos")
-        .select("questao_id, resposta_escolhida")
+        .select("questao_id, resposta_escolhida, turma_id")
         .eq("simulado_id", data.simuladoId)
         .not("turma_id", "is", null),
     );
+
+    // Filtro escola/turma: descobrir turma_ids permitidos.
+    let allowedTurmaIds: Set<string> | null = null;
+    if (data.turmaId) {
+      allowedTurmaIds = new Set([data.turmaId]);
+    } else if (data.escolaId) {
+      const turmaIds = Array.from(new Set((respostas ?? []).map((r: any) => r.turma_id)));
+      if (turmaIds.length) {
+        const { data: turmas } = await context.supabase
+          .from("turmas")
+          .select("id, school_id")
+          .in("id", turmaIds);
+        allowedTurmaIds = new Set(
+          (turmas ?? []).filter((t: any) => t.school_id === data.escolaId).map((t: any) => t.id),
+        );
+      } else {
+        allowedTurmaIds = new Set();
+      }
+    }
 
     const byId = new Map<string, any>((questoes ?? []).map((q: any) => [q.id, q]));
     const stats = new Map<string, { acertos: number; erros: number; brancos: number }>();
@@ -579,6 +606,7 @@ export const getRelatorioQuestoes = createServerFn({ method: "GET" })
       stats.set(q.id, { acertos: 0, erros: 0, brancos: 0 });
     }
     for (const r of respostas ?? []) {
+      if (allowedTurmaIds && !allowedTurmaIds.has(r.turma_id)) continue;
       const s = stats.get(r.questao_id);
       const q = byId.get(r.questao_id);
       if (!s || !q) continue;
@@ -613,5 +641,6 @@ export const getRelatorioQuestoes = createServerFn({ method: "GET" })
       };
     });
   });
+
 
 
