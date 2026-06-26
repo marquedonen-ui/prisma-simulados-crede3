@@ -197,8 +197,22 @@ function PadraoDesempenhoPainel({
     if (cidadeData) {
       return cidadeData.escolas.map((e) => toPct(e.name, e.faixas, e.total, e.school_id));
     }
-    return data.map((c) => toPct(c.city, c.faixas, c.total));
+    const rows = data.map((c) => toPct(c.city, c.faixas, c.total));
+    const geral = data.reduce(
+      (acc, c) => {
+        acc.total += c.total;
+        acc.faixas.muito_critico += c.faixas.muito_critico;
+        acc.faixas.critico += c.faixas.critico;
+        acc.faixas.intermediario += c.faixas.intermediario;
+        acc.faixas.adequado += c.faixas.adequado;
+        return acc;
+      },
+      { total: 0, faixas: { muito_critico: 0, critico: 0, intermediario: 0, adequado: 0 } },
+    );
+    if (geral.total > 0) rows.push(toPct("CREDE 3", geral.faixas, geral.total));
+    return rows;
   }, [data, cidadeData, escolaData]);
+
 
   const onBarClick = (d: any) => {
     if (escolaData) return;
