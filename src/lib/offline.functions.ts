@@ -1057,3 +1057,21 @@ export const reabrirLote = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+
+// Retorna o prazo limite (data_fim) do cronograma para "Inserção dos resultados..."
+// e se o usuário atual está bloqueado por já ter ultrapassado essa data.
+export const getPrazoInsercao = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const deadline = await getInsercaoDeadlineDate(context.supabase);
+    const isAdm = await isAdminUser(context.supabase, context.userId);
+    const todayLocal = (() => {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    })();
+    const expirado = !!deadline && todayLocal > deadline;
+    return { deadline, expirado, bloqueado: expirado && !isAdm };
+  });
