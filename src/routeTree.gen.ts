@@ -19,6 +19,7 @@ import { Route as AuthenticatedRelatoriosAlunosRouteImport } from './routes/_aut
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedGabaritoRouteImport } from './routes/_authenticated/gabarito'
+import { Route as AuthenticatedCronogramaRouteImport } from './routes/_authenticated/cronograma'
 import { Route as AuthenticatedCorrecaoRouteImport } from './routes/_authenticated/correcao'
 import { Route as AuthenticatedAdminEscolaRouteImport } from './routes/_authenticated/admin-escola'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
@@ -76,6 +77,11 @@ const AuthenticatedGabaritoRoute = AuthenticatedGabaritoRouteImport.update({
   path: '/gabarito',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCronogramaRoute = AuthenticatedCronogramaRouteImport.update({
+  id: '/cronograma',
+  path: '/cronograma',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedCorrecaoRoute = AuthenticatedCorrecaoRouteImport.update({
   id: '/correcao',
   path: '/correcao',
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/admin-escola': typeof AuthenticatedAdminEscolaRoute
   '/correcao': typeof AuthenticatedCorrecaoRoute
+  '/cronograma': typeof AuthenticatedCronogramaRoute
   '/gabarito': typeof AuthenticatedGabaritoRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
@@ -128,6 +135,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/admin-escola': typeof AuthenticatedAdminEscolaRoute
   '/correcao': typeof AuthenticatedCorrecaoRoute
+  '/cronograma': typeof AuthenticatedCronogramaRoute
   '/gabarito': typeof AuthenticatedGabaritoRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
@@ -146,6 +154,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/admin-escola': typeof AuthenticatedAdminEscolaRoute
   '/_authenticated/correcao': typeof AuthenticatedCorrecaoRoute
+  '/_authenticated/cronograma': typeof AuthenticatedCronogramaRoute
   '/_authenticated/gabarito': typeof AuthenticatedGabaritoRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
@@ -164,6 +173,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/admin-escola'
     | '/correcao'
+    | '/cronograma'
     | '/gabarito'
     | '/painel'
     | '/relatorios'
@@ -180,6 +190,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/admin-escola'
     | '/correcao'
+    | '/cronograma'
     | '/gabarito'
     | '/painel'
     | '/relatorios'
@@ -197,6 +208,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/admin-escola'
     | '/_authenticated/correcao'
+    | '/_authenticated/cronograma'
     | '/_authenticated/gabarito'
     | '/_authenticated/painel'
     | '/_authenticated/relatorios'
@@ -286,6 +298,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGabaritoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/cronograma': {
+      id: '/_authenticated/cronograma'
+      path: '/cronograma'
+      fullPath: '/cronograma'
+      preLoaderRoute: typeof AuthenticatedCronogramaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/correcao': {
       id: '/_authenticated/correcao'
       path: '/correcao'
@@ -328,6 +347,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAdminEscolaRoute: typeof AuthenticatedAdminEscolaRoute
   AuthenticatedCorrecaoRoute: typeof AuthenticatedCorrecaoRoute
+  AuthenticatedCronogramaRoute: typeof AuthenticatedCronogramaRoute
   AuthenticatedGabaritoRoute: typeof AuthenticatedGabaritoRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
@@ -342,6 +362,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAdminEscolaRoute: AuthenticatedAdminEscolaRoute,
   AuthenticatedCorrecaoRoute: AuthenticatedCorrecaoRoute,
+  AuthenticatedCronogramaRoute: AuthenticatedCronogramaRoute,
   AuthenticatedGabaritoRoute: AuthenticatedGabaritoRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
