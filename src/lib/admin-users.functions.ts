@@ -13,12 +13,13 @@ export const listManagedUsers = createServerFn({ method: "GET" })
     await ensureAdmin(context.supabase, context.userId);
     const { data: profiles, error } = await context.supabase
       .from("profiles")
-      .select("id, full_name, email, school_id, schools(name, inep)")
+      .select("id, full_name, email, school_id, cargo, disciplinas, serie, turno, schools(name, inep)")
       .order("full_name", { ascending: true });
     if (error) throw error;
 
     const ids = (profiles ?? []).map((p: any) => p.id);
     let rolesByUser = new Map<string, string[]>();
+    let turmasByUser = new Map<string, string[]>();
     if (ids.length) {
       const { data: roles } = await context.supabase
         .from("user_roles")
@@ -29,6 +30,15 @@ export const listManagedUsers = createServerFn({ method: "GET" })
         arr.push(r.role);
         rolesByUser.set(r.user_id, arr);
       }
+      const { data: pts } = await context.supabase
+        .from("professor_turmas")
+        .select("user_id, turma_id")
+        .in("user_id", ids);
+      for (const r of pts ?? []) {
+        const arr = turmasByUser.get(r.user_id) ?? [];
+        arr.push(r.turma_id);
+        turmasByUser.set(r.user_id, arr);
+      }
     }
 
     return (profiles ?? []).map((p: any) => ({
@@ -38,11 +48,24 @@ export const listManagedUsers = createServerFn({ method: "GET" })
       school_id: p.school_id,
       school_name: p.schools?.name ?? null,
       school_inep: p.schools?.inep ?? null,
+      cargo: p.cargo ?? null,
+      disciplinas: (p.disciplinas as string[] | null) ?? [],
+      serie: p.serie ?? null,
+      turno: p.turno ?? null,
+      turma_ids: turmasByUser.get(p.id) ?? [],
       roles: rolesByUser.get(p.id) ?? [],
     }));
   });
 
-const ROLES = ["admin", "professor", "professor_responsavel", "gestor", "aluno"] as const;
+const ROLES = [
+  "admin",
+  "professor",
+  "professor_responsavel",
+  "gestor",
+  "aluno",
+  "superintendente",
+  "professor_escola",
+] as const;
 
 const PASSWORD_POLICY_MESSAGE =
   "Senha muito fraca ou conhecida em vazamentos. Use uma senha diferente, com letras maiúsculas, minúsculas, números e símbolos.";
@@ -63,21 +86,38 @@ function getPasswordErrorMessage(error: unknown) {
   return null;
 }
 
-const createSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8).max(72),
-  full_name: z.string().trim().min(2).max(200),
-  role: z.enum(ROLES),
-  school_id: z.string().uuid().nullable().optional(),
+const profileExtrasSchema = z.object({
+  cargo: z.string().trim().max(60).nullable().optional(),
+  disciplinas: z.array(z.string().trim().max(60)).max(20).nullable().optional(),
+  serie: z.string().trim().max(60).nullable().optional(),
+  turno: z.string().trim().max(30).nullable().optional(),
+  turma_ids: z.array(z.string().uuid()).max(50).nullable().optional(),
 });
+
+const createSchema = z
+  .object({
+    email: z.string().email(),
+    password: z.string().min(8).max(72),
+    full_name: z.string().trim().min(2).max(200),
+    role: z.enum(ROLES),
+    school_id: z.string().uuid().nullable().optional(),
+  })
+  .merge(profileExtrasSchema);
+
+const SCHOOL_REQUIRED_ROLES = new Set([
+  "professor_responsavel",
+  "gestor",
+  "professor_escola",
+  "professor",
+]);
 
 export const createManagedUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => createSchema.parse(d))
   .handler(async ({ data, context }) => {
     await ensureAdmin(context.supabase, context.userId);
-    if ((data.role === "professor_responsavel" || data.role === "gestor") && !data.school_id) {
-      throw new Error("Professor responsável e Gestor precisam de uma escola.");
+    if (SCHOOL_REQUIRED_ROLES.has(data.role) && !data.school_id) {
+      throw new Error("Este perfil precisa estar vinculado a uma escola.");
     }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -107,24 +147,38 @@ export const createManagedUser = createServerFn({ method: "POST" })
 
     const userId = created.user!.id;
 
-    // Garantir perfil (trigger já insere, mas garantimos os campos)
     await supabaseAdmin
       .from("profiles")
-      .update({ full_name: data.full_name, school_id: data.school_id ?? null })
+      .update({
+        full_name: data.full_name,
+        school_id: data.school_id ?? null,
+        cargo: data.cargo ?? null,
+        disciplinas: data.disciplinas ?? null,
+        serie: data.serie ?? null,
+        turno: data.turno ?? null,
+      })
       .eq("id", userId);
 
     await supabaseAdmin.from("user_roles").insert({ user_id: userId, role: data.role });
 
+    if (data.role === "professor_escola" && data.turma_ids && data.turma_ids.length) {
+      await supabaseAdmin
+        .from("professor_turmas")
+        .insert(data.turma_ids.map((tid) => ({ user_id: userId, turma_id: tid })));
+    }
+
     return { ok: true, id: userId };
   });
 
-const updateSchema = z.object({
-  user_id: z.string().uuid(),
-  full_name: z.string().trim().min(2).max(200).optional(),
-  role: z.enum(ROLES).optional(),
-  school_id: z.string().uuid().nullable().optional(),
-  new_password: z.string().min(8).max(72).optional().nullable(),
-});
+const updateSchema = z
+  .object({
+    user_id: z.string().uuid(),
+    full_name: z.string().trim().min(2).max(200).optional(),
+    role: z.enum(ROLES).optional(),
+    school_id: z.string().uuid().nullable().optional(),
+    new_password: z.string().min(8).max(72).optional().nullable(),
+  })
+  .merge(profileExtrasSchema);
 
 export const updateManagedUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -133,17 +187,29 @@ export const updateManagedUser = createServerFn({ method: "POST" })
     await ensureAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    if (data.full_name !== undefined || data.school_id !== undefined) {
-      const patch: any = {};
-      if (data.full_name !== undefined) patch.full_name = data.full_name;
-      if (data.school_id !== undefined) patch.school_id = data.school_id;
+    const patch: any = {};
+    if (data.full_name !== undefined) patch.full_name = data.full_name;
+    if (data.school_id !== undefined) patch.school_id = data.school_id;
+    if (data.cargo !== undefined) patch.cargo = data.cargo;
+    if (data.disciplinas !== undefined) patch.disciplinas = data.disciplinas;
+    if (data.serie !== undefined) patch.serie = data.serie;
+    if (data.turno !== undefined) patch.turno = data.turno;
+    if (Object.keys(patch).length) {
       await supabaseAdmin.from("profiles").update(patch).eq("id", data.user_id);
     }
 
     if (data.role) {
-      // Substitui papéis pelo único papel selecionado (mantemos 1 papel por usuário no admin)
       await supabaseAdmin.from("user_roles").delete().eq("user_id", data.user_id);
       await supabaseAdmin.from("user_roles").insert({ user_id: data.user_id, role: data.role });
+    }
+
+    if (data.turma_ids !== undefined && data.turma_ids !== null) {
+      await supabaseAdmin.from("professor_turmas").delete().eq("user_id", data.user_id);
+      if (data.turma_ids.length) {
+        await supabaseAdmin
+          .from("professor_turmas")
+          .insert(data.turma_ids.map((tid) => ({ user_id: data.user_id, turma_id: tid })));
+      }
     }
 
     if (data.new_password) {
@@ -165,7 +231,6 @@ export const updateManagedUser = createServerFn({ method: "POST" })
 
     return { ok: true };
   });
-
 
 export const deleteManagedUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
