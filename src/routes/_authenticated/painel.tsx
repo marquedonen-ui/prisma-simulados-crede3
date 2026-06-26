@@ -101,12 +101,6 @@ function Painel() {
               <p className="text-xs text-muted-foreground">CREDE 3</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-muted-foreground sm:inline">{user.email}</span>
-            <Button variant="outline" size="sm" onClick={signOut}>
-              Sair
-            </Button>
-          </div>
         </div>
       </header>
 
