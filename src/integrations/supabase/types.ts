@@ -143,6 +143,27 @@ export type Database = {
         }
         Relationships: []
       }
+      lotes_fechados: {
+        Row: {
+          fechado_em: string
+          fechado_por: string | null
+          simulado_id: string
+          turma_id: string
+        }
+        Insert: {
+          fechado_em?: string
+          fechado_por?: string | null
+          simulado_id: string
+          turma_id: string
+        }
+        Update: {
+          fechado_em?: string
+          fechado_por?: string | null
+          simulado_id?: string
+          turma_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
