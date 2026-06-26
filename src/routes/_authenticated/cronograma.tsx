@@ -38,12 +38,13 @@ type Item = {
 type Status = "Pendente" | "Em Processo" | "Realizada";
 
 function computeStatus(inicio: string, fim: string): Status {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const ini = new Date(inicio + "T00:00:00");
-  const end = new Date(fim + "T00:00:00");
-  if (today < ini) return "Pendente";
-  if (today > end) return "Realizada";
+  const d = new Date();
+  const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  // Normaliza para YYYY-MM-DD (ignora qualquer parte de hora que venha do banco)
+  const ini = String(inicio).slice(0, 10);
+  const end = String(fim).slice(0, 10);
+  if (todayStr < ini) return "Pendente";
+  if (todayStr > end) return "Realizada";
   return "Em Processo";
 }
 
