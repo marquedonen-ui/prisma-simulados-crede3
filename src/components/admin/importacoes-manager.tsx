@@ -71,11 +71,13 @@ type AlunoLote = {
 };
 
 
-export function ImportacoesManager() {
+export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {}) {
   const qc = useQueryClient();
   const listFn = useServerFn(listImportacoes);
   const delLoteFn = useServerFn(deleteImportacao);
   const delTudoFn = useServerFn(deleteTodasImportacoes);
+  const fecharFn = useServerFn(fecharLote);
+  const reabrirFn = useServerFn(reabrirLote);
 
   const lotesQ = useQuery({
     queryKey: ["importacoes"],
