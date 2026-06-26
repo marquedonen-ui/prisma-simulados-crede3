@@ -197,8 +197,22 @@ function PadraoDesempenhoPainel({
     if (cidadeData) {
       return cidadeData.escolas.map((e) => toPct(e.name, e.faixas, e.total, e.school_id));
     }
-    return data.map((c) => toPct(c.city, c.faixas, c.total));
+    const rows = data.map((c) => toPct(c.city, c.faixas, c.total));
+    const geral = data.reduce(
+      (acc, c) => {
+        acc.total += c.total;
+        acc.faixas.muito_critico += c.faixas.muito_critico;
+        acc.faixas.critico += c.faixas.critico;
+        acc.faixas.intermediario += c.faixas.intermediario;
+        acc.faixas.adequado += c.faixas.adequado;
+        return acc;
+      },
+      { total: 0, faixas: { muito_critico: 0, critico: 0, intermediario: 0, adequado: 0 } },
+    );
+    if (geral.total > 0) rows.push(toPct("CREDE 3", geral.faixas, geral.total));
+    return rows;
   }, [data, cidadeData, escolaData]);
+
 
   const onBarClick = (d: any) => {
     if (escolaData) return;
@@ -350,13 +364,32 @@ function ConclusaoPainel({
         _total: e.matriculados || e.finalizaram + e.nao_finalizaram,
       }));
     }
-    return data.map((c) => ({
+    const rows = data.map((c) => ({
       label: c.city,
       Finalizaram: c.finalizaram,
       "Não finalizaram": c.nao_finalizaram,
       _total: c.matriculados || c.finalizaram + c.nao_finalizaram,
     }));
+    const geral = data.reduce(
+      (acc, c) => {
+        acc.fin += c.finalizaram;
+        acc.naofin += c.nao_finalizaram;
+        acc.mat += c.matriculados || c.finalizaram + c.nao_finalizaram;
+        return acc;
+      },
+      { fin: 0, naofin: 0, mat: 0 },
+    );
+    if (geral.fin + geral.naofin > 0) {
+      rows.push({
+        label: "CREDE 3",
+        Finalizaram: geral.fin,
+        "Não finalizaram": geral.naofin,
+        _total: geral.mat || geral.fin + geral.naofin,
+      });
+    }
+    return rows;
   }, [data, cidadeData, escolaData]);
+
 
   const onBarClick = (d: any) => {
     if (escolaData) return;
@@ -489,13 +522,28 @@ function AcertoMedioPainel({
         _erros: e.erros,
       }));
     }
-    return data.map((c) => ({
+    const rows = data.map((c) => ({
       label: c.city,
       "% Acerto": c.pct_acerto,
       "% Erro": c.pct_erro,
       _acertos: c.acertos,
       _erros: c.erros,
     }));
+    const totA = data.reduce((s, c) => s + c.acertos, 0);
+    const totE = data.reduce((s, c) => s + c.erros, 0);
+    const tot = totA + totE;
+    if (tot > 0) {
+      const pa = Math.round((totA / tot) * 1000) / 10;
+      rows.push({
+        label: "CREDE 3",
+        "% Acerto": pa,
+        "% Erro": Math.round((100 - pa) * 10) / 10,
+        _acertos: totA,
+        _erros: totE,
+      });
+    }
+    return rows;
+
   }, [data, cidadeData, escolaData]);
 
   const onBarClick = (d: any) => {
