@@ -91,11 +91,11 @@ export function AppSidebar() {
   const baseLabel = primaryRole ? (roleLabels[primaryRole] ?? primaryRole) : null;
   const roleLabel =
     primaryRole === "gestor" && profile?.cargo ? `${baseLabel} — ${profile.cargo}` : baseLabel;
-  const initials = (profile?.fullName ?? profile?.email ?? "?")
+  const initials = String(profile?.fullName ?? profile?.email ?? "?")
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
-    .map((s) => s[0]?.toUpperCase() ?? "")
+    .map((s: string) => s[0]?.toUpperCase() ?? "")
     .join("");
 
   return (
