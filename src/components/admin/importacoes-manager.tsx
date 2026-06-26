@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Pencil, Trash2, ChevronDown, ChevronRight, Database, ListChecks, UserPlus } from "lucide-react";
+import { Loader2, Pencil, Trash2, ChevronDown, ChevronRight, Database, ListChecks, UserPlus, Lock, LockOpen } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -14,6 +14,8 @@ import {
   getRespostasAluno,
   updateRespostasAluno,
   addAlunoAusente,
+  fecharLote,
+  reabrirLote,
 } from "@/lib/offline.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
