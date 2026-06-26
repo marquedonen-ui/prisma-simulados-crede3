@@ -247,7 +247,7 @@ function Page() {
                   <Button size="sm" variant="outline" onClick={() => setOpenId(d.id)}>
                     Comentários
                   </Button>
-                  {(isAdmin || d.autor_id === profileQ.data?.id) && (
+                  {(isAdmin || d.autor_id === (profileQ.data as any)?.id) && (
                     <Button size="sm" variant="ghost" onClick={() => deleteM.mutate(d.id)}>
                       Excluir
                     </Button>
