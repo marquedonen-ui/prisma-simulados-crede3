@@ -635,18 +635,6 @@ export const deleteTodasImportacoes = createServerFn({ method: "POST" })
   });
 
 
-export const deleteTodasImportacoes = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    await ensureAdmin(context.supabase, context.userId);
-    const { error, count } = await context.supabase
-      .from("respostas_alunos")
-      .delete({ count: "exact" })
-      .not("turma_id", "is", null);
-    if (error) throw error;
-    return { ok: true, removidas: count ?? 0 };
-  });
-
 export const deleteImportacaoAluno = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { simuladoId: string; turmaId: string; numeroChamada: number }) =>
@@ -667,8 +655,15 @@ export const deleteImportacaoAluno = createServerFn({ method: "POST" })
       .eq("turma_id", data.turmaId)
       .eq("numero_chamada", data.numeroChamada);
     if (error) throw error;
+    await context.supabase
+      .from("alunos_ausentes")
+      .delete()
+      .eq("simulado_id", data.simuladoId)
+      .eq("turma_id", data.turmaId)
+      .eq("numero_chamada", data.numeroChamada);
     return { ok: true, removidas: count ?? 0 };
   });
+
 
 export const updateImportacaoAluno = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
