@@ -131,13 +131,23 @@ export function ImportarRespostas({
       if (nomeCol === -1) nomeCol = 3;
 
       const linhas: Array<{ numero_chamada: number; nome?: string; respostas: Record<string, string> }> = [];
+      const ignoradas: Array<{ linha: number; motivo: string; nome?: string; chamadaRaw?: string }> = [];
       for (let r = headerIdx + 1; r < matrix.length; r++) {
         const row = matrix[r];
-        if (!row || row.length === 0) continue;
-        const rawChamada = String(row[chamadaCol] ?? "").trim();
+        const linhaPlanilha = r + 1; // 1-indexed para o usuário
+        const rawChamada = String(row?.[chamadaCol] ?? "").trim();
+        const nome = String(row?.[nomeCol] ?? "").trim().slice(0, 200) || undefined;
+        if (!row || row.length === 0 || (!rawChamada && !nome)) continue; // linha totalmente vazia: silêncio
         const numero_chamada = parseInt(rawChamada.replace(/\D/g, ""), 10);
-        if (!numero_chamada || numero_chamada < 1) continue;
-        const nome = String(row[nomeCol] ?? "").trim().slice(0, 200) || undefined;
+        if (!numero_chamada || numero_chamada < 1) {
+          ignoradas.push({
+            linha: linhaPlanilha,
+            motivo: rawChamada ? `nº de chamada inválido ("${rawChamada}")` : "nº de chamada em branco",
+            nome,
+            chamadaRaw: rawChamada,
+          });
+          continue;
+        }
         const respostas: Record<string, string> = {};
         for (let c = 0; c < headers.length; c++) {
           const h = headers[c];
@@ -156,14 +166,17 @@ export function ImportarRespostas({
           "Nenhuma linha válida. Verifique se há coluna 'Núm. da lista' (ou nº de chamada na coluna C) e colunas 'Q N Options'.",
         );
 
-      return importFn({ data: { simuladoId, schoolId, turmaId, linhas } });
+      const resp = await importFn({ data: { simuladoId, schoolId, turmaId, linhas } });
+      return { ...resp, linhas_ignoradas: ignoradas } as any;
     },
     onSuccess: (r) => {
       setResultado(r);
+      const ign = r.linhas_ignoradas?.length ?? 0;
       toast.success(
-        `${r.respostas_importadas} respostas de ${r.alunos_processados} aluno(s) importadas!`,
+        `${r.respostas_importadas} respostas de ${r.alunos_processados} aluno(s) importadas${ign ? ` · ${ign} linha(s) ignorada(s)` : ""}.`,
       );
     },
+
     onError: (e) => toast.error(e instanceof Error ? e.message : "Falha na importação"),
   });
 
