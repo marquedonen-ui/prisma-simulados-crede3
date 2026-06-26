@@ -499,6 +499,7 @@ function AcertoMedioPainel({
   disciplinas,
   disciplina,
   onDisciplinaChange,
+  scoped = false,
 }: {
   isLoading: boolean;
   data: Array<{
