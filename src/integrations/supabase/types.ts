@@ -65,6 +65,48 @@ export type Database = {
           },
         ]
       }
+      alunos_ausentes: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string | null
+          numero_chamada: number
+          simulado_id: string
+          turma_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome?: string | null
+          numero_chamada: number
+          simulado_id: string
+          turma_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string | null
+          numero_chamada?: number
+          simulado_id?: string
+          turma_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alunos_ausentes_simulado_id_fkey"
+            columns: ["simulado_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostic_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alunos_ausentes_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       diagnostic_assessments: {
         Row: {
           answer_sheet_pdf_path: string | null
