@@ -69,23 +69,35 @@ function faixaDeAcertos(n: number): keyof Faixas {
  * Retorna por aluno (turma_id + numero_chamada), com acertos, total_respondidas
  * e metadados (escola, município, matrícula da turma).
  */
-async function carregarDataset(supabase: any, simuladoId: string) {
+async function carregarDataset(
+  supabase: any,
+  simuladoId: string,
+  opts?: { disciplina?: string | null },
+) {
   // Use service role to read the answer key (resposta_correta) without exposing
   // it via RLS to professor_responsavel/gestor. Callers must enforce role checks first.
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: questoes, error: qErr } = await supabaseAdmin
     .from("questoes")
-    .select("id, resposta_correta, anulada")
+    .select("id, resposta_correta, anulada, disciplina")
     .eq("simulado_id", simuladoId);
   if (qErr) throw qErr;
+  const disciplinaFilter = (opts?.disciplina ?? "").trim();
+  const questoesFiltradas = disciplinaFilter
+    ? (questoes ?? []).filter(
+        (q: any) => String(q.disciplina ?? "").trim() === disciplinaFilter,
+      )
+    : (questoes ?? []);
+  const allowedIds = new Set<string>(questoesFiltradas.map((q: any) => q.id));
   const correct = new Map<string, string>(
-    (questoes ?? []).map((q: any) => [q.id, q.resposta_correta]),
+    questoesFiltradas.map((q: any) => [q.id, q.resposta_correta]),
   );
   const anulada = new Map<string, boolean>(
-    (questoes ?? []).map((q: any) => [q.id, !!q.anulada]),
+    questoesFiltradas.map((q: any) => [q.id, !!q.anulada]),
   );
 
-  const totalQuestoes = (questoes ?? []).length;
+  const totalQuestoes = questoesFiltradas.length;
+
 
   const respostas = await fetchAllRows<any>(() =>
     supabase
