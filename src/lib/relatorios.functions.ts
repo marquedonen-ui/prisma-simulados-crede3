@@ -257,7 +257,8 @@ export const getPadraoDesempenho = createServerFn({ method: "GET" })
   .inputValidator(idInput)
   .handler(async ({ data, context }) => {
     const scopeSchoolId = await getScopeSchoolId(context.supabase, context.userId);
-    const { alunos } = await carregarDataset(context.supabase, data.simuladoId, { scopeSchoolId });
+    const scopeTurmaIds = await getScopeTurmaIds(context.supabase, context.userId);
+    const { alunos } = await carregarDataset(context.supabase, data.simuladoId, { scopeSchoolId, scopeTurmaIds });
 
     const porCidade = new Map<
       string,
