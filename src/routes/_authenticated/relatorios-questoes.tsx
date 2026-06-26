@@ -3,7 +3,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { ListChecks, Loader2, ArrowUpDown } from "lucide-react";
-import { listSimuladosComRespostas, getRelatorioQuestoes, getResultadosAlunos } from "@/lib/relatorios.functions";
+import { listSimuladosComRespostas, getRelatorioQuestoes, getResultadosAlunos, getMyReportScope } from "@/lib/relatorios.functions";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Select,
