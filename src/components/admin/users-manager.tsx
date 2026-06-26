@@ -120,6 +120,7 @@ export function UsersManager({ schools }: { schools: School[] }) {
       role: u.roles?.[0] ?? "professor_responsavel",
       school_id: u.school_id ?? "",
       email: u.email,
+      password: "",
     });
     setOpen(true);
   }
@@ -133,6 +134,10 @@ export function UsersManager({ schools }: { schools: School[] }) {
       return;
     }
     if (editing._new) {
+      if (!editing.password || editing.password.length < 8) {
+        toast.error("A senha deve ter pelo menos 8 caracteres.");
+        return;
+      }
       create.mutate({
         email: editing.email.trim(),
         password: editing.password,
@@ -141,11 +146,16 @@ export function UsersManager({ schools }: { schools: School[] }) {
         school_id,
       });
     } else {
+      if (editing.password && editing.password.length < 8) {
+        toast.error("A nova senha deve ter pelo menos 8 caracteres.");
+        return;
+      }
       update.mutate({
         user_id: editing.user_id,
         full_name: editing.full_name.trim(),
         role: editing.role,
         school_id,
+        new_password: editing.password ? editing.password : null,
       });
     }
   }
