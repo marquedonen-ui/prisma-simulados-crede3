@@ -87,7 +87,7 @@ export const corrigirSimulado = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: questoes, error: qErr } = await supabaseAdmin
       .from("questoes")
-      .select("id, resposta_correta, pontos")
+      .select("id, resposta_correta, pontos, anulada")
       .eq("simulado_id", simuladoId);
     if (qErr) throw qErr;
 
@@ -96,7 +96,10 @@ export const corrigirSimulado = createServerFn({ method: "POST" })
     }
 
     const questaoMap = new Map(
-      questoes.map((q) => [q.id, { correta: q.resposta_correta.toUpperCase(), pontos: q.pontos }]),
+      questoes.map((q: any) => [
+        q.id,
+        { correta: String(q.resposta_correta).toUpperCase(), pontos: q.pontos, anulada: !!q.anulada },
+      ]),
     );
     const totalQuestoes = questoes.length;
 
@@ -117,7 +120,7 @@ export const corrigirSimulado = createServerFn({ method: "POST" })
       if (!q) continue;
       const key = r.aluno_id ? `a:${r.aluno_id}` : r.usuario_id ? `u:${r.usuario_id}` : null;
       if (!key) continue;
-      const acertou = (r.resposta_escolhida ?? "").toUpperCase() === q.correta;
+      const acertou = q.anulada || (r.resposta_escolhida ?? "").toUpperCase() === q.correta;
       const cur = porAluno.get(key) ?? { acertos: 0, pontuacao: 0 };
       if (acertou) {
         cur.acertos += 1;
@@ -125,6 +128,7 @@ export const corrigirSimulado = createServerFn({ method: "POST" })
       }
       porAluno.set(key, cur);
     }
+
 
     const agora = new Date().toISOString();
     const onlineRows: any[] = [];

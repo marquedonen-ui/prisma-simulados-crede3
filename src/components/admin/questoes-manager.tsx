@@ -33,6 +33,8 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
   const [simuladoId, setSimuladoId] = useState<string>("");
   const [total, setTotal] = useState<number>(20);
   const [answers, setAnswers] = useState<Record<number, Letter>>({});
+  const [anuladas, setAnuladas] = useState<Record<number, boolean>>({});
+
 
   const listFn = useServerFn(listQuestoes);
   const saveFn = useServerFn(saveGabarito);
@@ -48,17 +50,22 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
     const rows = questoesQ.data ?? [];
     if (!simuladoId) {
       setAnswers({});
+      setAnuladas({});
       return;
     }
     const map: Record<number, Letter> = {};
+    const an: Record<number, boolean> = {};
     let max = 0;
     for (const q of rows as any[]) {
       map[q.numero] = q.resposta_correta as Letter;
+      an[q.numero] = !!q.anulada;
       if (q.numero > max) max = q.numero;
     }
     setAnswers(map);
+    setAnuladas(an);
     if (max > 0) setTotal(max);
   }, [simuladoId, questoesQ.data]);
+
 
   const save = useMutation({
     mutationFn: () => {
@@ -67,8 +74,13 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
         total,
         answers: Array.from({ length: total }, (_, i) => {
           const n = i + 1;
-          return { numero: n, resposta_correta: (answers[n] ?? "A") as Letter };
+          return {
+            numero: n,
+            resposta_correta: (answers[n] ?? "A") as Letter,
+            anulada: !!anuladas[n],
+          };
         }),
+
       };
       return saveFn({ data: payload });
     },
@@ -151,13 +163,15 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
                         {l}
                       </th>
                     ))}
+                    <th className="px-3 py-2 text-center">Anulada</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Array.from({ length: total }, (_, i) => i + 1).map((n) => {
                     const selected = answers[n];
+                    const isAnul = !!anuladas[n];
                     return (
-                      <tr key={n} className="border-t">
+                      <tr key={n} className={cn("border-t", isAnul && "bg-amber-50 dark:bg-amber-950/20")}>
                         <td className="px-3 py-1.5 font-mono font-medium">{n}</td>
                         {LETTERS.map((l) => {
                           const isSel = selected === l;
@@ -166,6 +180,7 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
                               <button
                                 type="button"
                                 aria-label={`Questão ${n} alternativa ${l}`}
+                                disabled={isAnul}
                                 onClick={() =>
                                   setAnswers((prev) => ({ ...prev, [n]: l }))
                                 }
@@ -174,6 +189,7 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
                                   isSel
                                     ? "border-primary bg-primary text-primary-foreground shadow"
                                     : "border-muted-foreground/30 bg-background text-muted-foreground hover:border-primary/60 hover:text-foreground",
+                                  isAnul && "opacity-40 cursor-not-allowed",
                                 )}
                               >
                                 {l}
@@ -181,9 +197,28 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
                             </td>
                           );
                         })}
+                        <td className="px-3 py-1.5 text-center">
+                          <label className="inline-flex items-center justify-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 cursor-pointer accent-amber-600"
+                              checked={isAnul}
+                              onChange={(e) =>
+                                setAnuladas((prev) => ({ ...prev, [n]: e.target.checked }))
+                              }
+                              aria-label={`Questão ${n} anulada`}
+                            />
+                            {isAnul && (
+                              <span className="ml-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+                                Anulada
+                              </span>
+                            )}
+                          </label>
+                        </td>
                       </tr>
                     );
                   })}
+
                 </tbody>
               </table>
             </div>

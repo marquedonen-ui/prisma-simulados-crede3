@@ -122,6 +122,7 @@ const gabaritoSchema = z.object({
       z.object({
         numero: z.number().int().min(1).max(500),
         resposta_correta: z.enum(["A", "B", "C", "D", "E"]),
+        anulada: z.boolean().optional().default(false),
       }),
     )
     .min(1),
@@ -162,6 +163,7 @@ export const saveGabarito = createServerFn({ method: "POST" })
         alternativa_e: prev?.alternativa_e ?? null,
         pontos: prev?.pontos ?? 1,
         resposta_correta: a.resposta_correta,
+        anulada: !!a.anulada,
       };
       if (prev?.id) base.id = prev.id;
       return base;
@@ -173,6 +175,7 @@ export const saveGabarito = createServerFn({ method: "POST" })
     if (error) throw error;
     return { ok: true, total: data.total };
   });
+
 
 // ============== ALUNOS ==============
 
@@ -261,7 +264,7 @@ export const importarRespostas = createServerFn({ method: "POST" })
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: questoes, error: qErr } = await supabaseAdmin
         .from("questoes")
-        .select("id, numero, resposta_correta")
+        .select("id, numero, resposta_correta, anulada")
         .eq("simulado_id", data.simuladoId);
       if (qErr) {
         console.error(`${tag} erro ao carregar questões`, qErr);
@@ -275,6 +278,10 @@ export const importarRespostas = createServerFn({ method: "POST" })
       const correctById = new Map<string, string>(
         questoes.map((q: any) => [q.id, q.resposta_correta]),
       );
+      const anuladaById = new Map<string, boolean>(
+        questoes.map((q: any) => [q.id, !!q.anulada]),
+      );
+
 
       const { error: delErr, count: delCount } = await context.supabase
         .from("respostas_alunos")
@@ -349,12 +356,15 @@ export const importarRespostas = createServerFn({ method: "POST" })
             continue;
           }
           const alt = String(v ?? "").trim().toUpperCase();
-          if (!["A", "B", "C", "D", "E"].includes(alt)) {
-            emBranco++;
+          const isAlt = ["A", "B", "C", "D", "E"].includes(alt);
+          const anulada = anuladaById.get(qid) === true;
+          if (!isAlt) {
+            if (anulada) acertos++;
+            else emBranco++;
             continue;
           }
           respondidas++;
-          if (correctById.get(qid) === alt) acertos++;
+          if (anulada || correctById.get(qid) === alt) acertos++;
           inserir.push({
             simulado_id: data.simuladoId,
             turma_id: data.turmaId,
@@ -364,6 +374,7 @@ export const importarRespostas = createServerFn({ method: "POST" })
             resposta_escolhida: alt,
           });
         }
+
 
         const prev = statsPorAluno.get(linha.numero_chamada);
         if (prev) {

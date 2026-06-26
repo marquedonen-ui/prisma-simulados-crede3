@@ -75,12 +75,16 @@ async function carregarDataset(supabase: any, simuladoId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: questoes, error: qErr } = await supabaseAdmin
     .from("questoes")
-    .select("id, resposta_correta")
+    .select("id, resposta_correta, anulada")
     .eq("simulado_id", simuladoId);
   if (qErr) throw qErr;
   const correct = new Map<string, string>(
     (questoes ?? []).map((q: any) => [q.id, q.resposta_correta]),
   );
+  const anulada = new Map<string, boolean>(
+    (questoes ?? []).map((q: any) => [q.id, !!q.anulada]),
+  );
+
   const totalQuestoes = (questoes ?? []).length;
 
   const respostas = await fetchAllRows<any>(() =>
@@ -135,9 +139,10 @@ async function carregarDataset(supabase: any, simuladoId: string) {
     const alt = String(r.resposta_escolhida ?? "").toUpperCase();
     if (["A", "B", "C", "D", "E"].includes(alt)) {
       a.respondidas += 1;
-      if (correct.get(r.questao_id) === alt) a.acertos += 1;
+      if (anulada.get(r.questao_id) || correct.get(r.questao_id) === alt) a.acertos += 1;
     }
   }
+
 
   return {
     totalQuestoes,
@@ -501,7 +506,7 @@ export const getGabaritoAluno = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: questoes, error: qErr } = await supabaseAdmin
       .from("questoes")
-      .select("id, numero, resposta_correta")
+      .select("id, numero, resposta_correta, anulada")
       .eq("simulado_id", data.simuladoId)
       .order("numero", { ascending: true });
     if (qErr) throw qErr;
@@ -525,19 +530,24 @@ export const getGabaritoAluno = createServerFn({ method: "GET" })
     const itens = (questoes ?? []).map((q: any, idx: number) => {
       const escolhida = escolhaPorQ.get(q.id) ?? null;
       const correta = String(q.resposta_correta ?? "").toUpperCase();
-      const isCorrect = escolhida && escolhida === correta;
+      const isAnulada = !!q.anulada;
+      const isCorrect = isAnulada || (escolhida && escolhida === correta);
       if (isCorrect) acertos += 1;
       return {
         numero: q.numero ?? idx + 1,
         escolhida,
         correta,
-        status: !escolhida
-          ? ("branco" as const)
-          : isCorrect
-            ? ("certo" as const)
-            : ("errado" as const),
+        anulada: isAnulada,
+        status: isAnulada
+          ? ("anulada" as const)
+          : !escolhida
+            ? ("branco" as const)
+            : escolhida === correta
+              ? ("certo" as const)
+              : ("errado" as const),
       };
     });
 
     return { nome, acertos, total: itens.length, itens };
   });
+
