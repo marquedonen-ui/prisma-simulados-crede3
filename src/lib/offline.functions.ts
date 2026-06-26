@@ -134,16 +134,17 @@ export const saveGabarito = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => gabaritoSchema.parse(d))
   .handler(async ({ data, context }) => {
     await ensureProfessorOrAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Remove questões com número > total
-    await context.supabase
+    await supabaseAdmin
       .from("questoes")
       .delete()
       .eq("simulado_id", data.simulado_id)
       .gt("numero", data.total);
 
     // Carrega existentes para preservar enunciado/alternativas se houver
-    const { data: existing, error: exErr } = await context.supabase
+    const { data: existing, error: exErr } = await supabaseAdmin
       .from("questoes")
       .select("id, numero, enunciado, alternativa_a, alternativa_b, alternativa_c, alternativa_d, alternativa_e, pontos")
       .eq("simulado_id", data.simulado_id);
@@ -171,7 +172,7 @@ export const saveGabarito = createServerFn({ method: "POST" })
       return base;
     });
 
-    const { error } = await context.supabase
+    const { error } = await supabaseAdmin
       .from("questoes")
       .upsert(rows, { onConflict: "simulado_id,numero" });
     if (error) throw error;
