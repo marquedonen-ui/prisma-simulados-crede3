@@ -107,6 +107,42 @@ export type Database = {
           },
         ]
       }
+      cronograma: {
+        Row: {
+          acao: string
+          created_at: string
+          data_fim: string
+          data_inicio: string
+          id: string
+          ordem: number
+          periodo_label: string
+          responsaveis: string
+          updated_at: string
+        }
+        Insert: {
+          acao: string
+          created_at?: string
+          data_fim: string
+          data_inicio: string
+          id?: string
+          ordem?: number
+          periodo_label: string
+          responsaveis: string
+          updated_at?: string
+        }
+        Update: {
+          acao?: string
+          created_at?: string
+          data_fim?: string
+          data_inicio?: string
+          id?: string
+          ordem?: number
+          periodo_label?: string
+          responsaveis?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       diagnostic_assessments: {
         Row: {
           answer_sheet_pdf_path: string | null
