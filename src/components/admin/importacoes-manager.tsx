@@ -327,7 +327,7 @@ function LoteAlunos({ lote, bloqueadoPorPrazo = false }: { lote: Lote; bloqueado
   const [editNome, setEditNome] = useState("");
   const [editNumero, setEditNumero] = useState<number>(0);
   const [editAnswersFor, setEditAnswersFor] = useState<number | null>(null);
-  const locked = locked || bloqueadoPorPrazo;
+  const locked = lote.fechado || bloqueadoPorPrazo;
 
 
   const startEdit = (a: AlunoLote) => {
