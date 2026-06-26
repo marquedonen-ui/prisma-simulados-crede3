@@ -34,7 +34,8 @@ export const listSimuladosCorrecao = createServerFn({ method: "GET" })
       context.supabase
         .from("respostas_alunos")
         .select("simulado_id, usuario_id")
-        .in("simulado_id", ids),
+        .in("simulado_id", ids)
+        .range(0, 49999),
       context.supabase.from("questoes").select("simulado_id").in("simulado_id", ids),
       context.supabase
         .from("resultados_simulados")
@@ -87,7 +88,8 @@ export const corrigirSimulado = createServerFn({ method: "POST" })
     const { data: respostas, error: rErr } = await context.supabase
       .from("respostas_alunos")
       .select("usuario_id, aluno_id, questao_id, resposta_escolhida")
-      .eq("simulado_id", simuladoId);
+      .eq("simulado_id", simuladoId)
+      .range(0, 49999);
     if (rErr) throw rErr;
     if (!respostas || respostas.length === 0) {
       throw new Error("Nenhum aluno respondeu este simulado ainda.");
