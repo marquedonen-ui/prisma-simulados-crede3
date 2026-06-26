@@ -584,7 +584,7 @@ function AcertoMedioPainel({
   }, [data, cidadeData, escolaData]);
 
   const onBarClick = (d: any) => {
-    if (escolaData) return;
+    if (scoped || escolaData) return;
     if (cidadeData) {
       const e = cidadeData.escolas.find((x) => x.name === d.label);
       if (e) setEscolaId(e.school_id);
@@ -592,18 +592,22 @@ function AcertoMedioPainel({
       setCidade(d.label);
     }
   };
-  const onBack = escolaData
-    ? () => setEscolaId(null)
-    : cidade
-      ? () => setCidade(null)
-      : undefined;
+  const onBack = scoped
+    ? undefined
+    : escolaData
+      ? () => setEscolaId(null)
+      : cidade
+        ? () => setCidade(null)
+        : undefined;
   const backLabel = escolaData ? "Voltar para escolas" : "Voltar para municípios";
-  const description = escolaData
-    ? `Turmas da escola ${escolaData.name}.`
-    : cidade
-      ? `Escolas do município de ${cidade}. Clique em uma barra para ver as turmas.`
-      : "Por município. Clique em uma barra para abrir as escolas.";
-  const drillable = !escolaData;
+  const description = scoped
+    ? `Turmas da escola${escolaData ? ` ${escolaData.name}` : ""}.`
+    : escolaData
+      ? `Turmas da escola ${escolaData.name}.`
+      : cidade
+        ? `Escolas do município de ${cidade}. Clique em uma barra para ver as turmas.`
+        : "Por município. Clique em uma barra para abrir as escolas.";
+  const drillable = !scoped && !escolaData;
 
   return (
     <PainelCard
