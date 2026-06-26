@@ -19,6 +19,7 @@ import {
   getConclusao,
   getAcertoMedio,
   listDisciplinasSimulado,
+  getMyReportScope,
 } from "@/lib/relatorios.functions";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
