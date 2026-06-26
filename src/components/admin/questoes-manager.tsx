@@ -176,6 +176,9 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
                 <thead className="sticky top-0 bg-muted text-xs uppercase text-muted-foreground">
                   <tr>
                     <th className="px-3 py-2 text-left">Questão</th>
+                    {disciplinasDisponiveis.length > 0 && (
+                      <th className="px-3 py-2 text-left">Disciplina</th>
+                    )}
                     {LETTERS.map((l) => (
                       <th key={l} className="px-3 py-2 text-center">
                         {l}
@@ -191,6 +194,27 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
                     return (
                       <tr key={n} className={cn("border-t", isAnul && "bg-amber-50 dark:bg-amber-950/20")}>
                         <td className="px-3 py-1.5 font-mono font-medium">{n}</td>
+                        {disciplinasDisponiveis.length > 0 && (
+                          <td className="px-3 py-1.5">
+                            <Select
+                              value={disciplinas[n] ?? ""}
+                              onValueChange={(v) =>
+                                setDisciplinas((prev) => ({ ...prev, [n]: v }))
+                              }
+                            >
+                              <SelectTrigger className="h-8 w-40">
+                                <SelectValue placeholder="Selecione..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {disciplinasDisponiveis.map((d) => (
+                                  <SelectItem key={d} value={d}>
+                                    {d}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                        )}
                         {LETTERS.map((l) => {
                           const isSel = selected === l;
                           return (
