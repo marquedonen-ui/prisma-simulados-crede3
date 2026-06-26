@@ -236,10 +236,9 @@ function Page() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="numero">Nº da questão</SelectItem>
-                <SelectItem value="acertos_desc">Mais acertos</SelectItem>
-                <SelectItem value="acertos_asc">Menos acertos</SelectItem>
                 <SelectItem value="pct_desc">Maior % de acerto</SelectItem>
                 <SelectItem value="pct_asc">Menor % de acerto</SelectItem>
+
               </SelectContent>
             </Select>
           </div>
