@@ -34,6 +34,19 @@ export function QuestoesManager({ simulados }: { simulados: Simulado[] }) {
   const [total, setTotal] = useState<number>(20);
   const [answers, setAnswers] = useState<Record<number, Letter>>({});
   const [anuladas, setAnuladas] = useState<Record<number, boolean>>({});
+  const [disciplinas, setDisciplinas] = useState<Record<number, string>>({});
+
+  const simuladoAtual = useMemo(
+    () => simulados.find((s) => s.id === simuladoId),
+    [simulados, simuladoId],
+  );
+  const disciplinasDisponiveis = useMemo<string[]>(() => {
+    const txt = `${simuladoAtual?.subject ?? ""} ${simuladoAtual?.offer ?? ""}`.toLowerCase();
+    if (txt.includes("human")) return ["Filosofia", "Geografia", "História", "Sociologia"];
+    if (txt.includes("natureza")) return ["Biologia", "Física", "Química"];
+    return [];
+  }, [simuladoAtual]);
+
 
 
   const listFn = useServerFn(listQuestoes);
