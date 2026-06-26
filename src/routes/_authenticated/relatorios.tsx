@@ -147,17 +147,21 @@ function Page() {
 
       {simuladoId && (
         <div className="space-y-6">
+      {simuladoId && (
+        <div className="space-y-6">
           <PadraoDesempenhoPainel
             isLoading={padQ.isLoading}
             data={padQ.data ?? []}
+            scoped={scoped}
           />
-          <ConclusaoPainel isLoading={conQ.isLoading} data={conQ.data ?? []} />
+          <ConclusaoPainel isLoading={conQ.isLoading} data={conQ.data ?? []} scoped={scoped} />
           <AcertoMedioPainel
             isLoading={acQ.isLoading}
             data={acQ.data ?? []}
             disciplinas={discQ.data ?? []}
             disciplina={acDisciplina}
             onDisciplinaChange={setAcDisciplina}
+            scoped={scoped}
           />
 
         </div>
