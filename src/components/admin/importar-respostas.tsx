@@ -130,6 +130,11 @@ export function ImportarRespostas({
       let nomeCol = headers.findIndex((h) => nomePatterns.some((p) => h === p || h.includes(p)));
       if (nomeCol === -1) nomeCol = 3;
 
+      // Auto-detect coluna "Total de marcas" (col E). Fallback: índice 4.
+      const marcasPatterns = ["TOTALDEMARCAS", "TOTALMARCAS", "MARCAS", "TOTALMARCAS"];
+      let marcasCol = headers.findIndex((h) => marcasPatterns.some((p) => h === p || h.includes(p)));
+      if (marcasCol === -1) marcasCol = 4;
+
       const linhas: Array<{ numero_chamada: number; nome?: string; respostas: Record<string, string> }> = [];
       const ignoradas: Array<{ linha: number; motivo: string; nome?: string; chamadaRaw?: string }> = [];
       for (let r = headerIdx + 1; r < matrix.length; r++) {
@@ -143,6 +148,17 @@ export function ImportarRespostas({
           ignoradas.push({
             linha: linhaPlanilha,
             motivo: rawChamada ? `nº de chamada inválido ("${rawChamada}")` : "nº de chamada em branco",
+            nome,
+            chamadaRaw: rawChamada,
+          });
+          continue;
+        }
+        // Coluna E vazia => aluno ausente: não importa respostas, apenas registra.
+        const rawMarcas = String(row?.[marcasCol] ?? "").trim();
+        if (rawMarcas === "") {
+          ignoradas.push({
+            linha: linhaPlanilha,
+            motivo: "Ausente (coluna 'Total de marcas' vazia)",
             nome,
             chamadaRaw: rawChamada,
           });
