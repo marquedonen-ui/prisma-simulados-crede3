@@ -210,7 +210,10 @@ function PadraoDesempenhoPainel({
 
   const chartData = useMemo(() => {
     if (escolaData) {
-      return escolaData.turmas.map((t) => toPct(t.name, t.faixas, t.total));
+      const rows = escolaData.turmas.map((t) => toPct(t.name, t.faixas, t.total));
+      if (escolaData.total > 0)
+        rows.push(toPct(`Escola — ${escolaData.name}`, escolaData.faixas, escolaData.total));
+      return rows;
     }
     if (cidadeData) {
       return cidadeData.escolas.map((e) => toPct(e.name, e.faixas, e.total, e.school_id));
