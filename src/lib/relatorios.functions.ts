@@ -75,12 +75,16 @@ async function carregarDataset(supabase: any, simuladoId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: questoes, error: qErr } = await supabaseAdmin
     .from("questoes")
-    .select("id, resposta_correta")
+    .select("id, resposta_correta, anulada")
     .eq("simulado_id", simuladoId);
   if (qErr) throw qErr;
   const correct = new Map<string, string>(
     (questoes ?? []).map((q: any) => [q.id, q.resposta_correta]),
   );
+  const anulada = new Map<string, boolean>(
+    (questoes ?? []).map((q: any) => [q.id, !!q.anulada]),
+  );
+
   const totalQuestoes = (questoes ?? []).length;
 
   const respostas = await fetchAllRows<any>(() =>
