@@ -10,7 +10,33 @@ async function ensureProfessorOrAdmin(supabase: any, userId: string) {
   if (!roles.some((r: string) => allowed.includes(r))) {
     throw new Error("Acesso restrito.");
   }
+  return roles as string[];
 }
+
+/** Retorna o school_id ao qual o usuário está restrito (null para admin global). */
+async function getScopeSchoolId(supabase: any, userId: string): Promise<string | null> {
+  const roles = await ensureProfessorOrAdmin(supabase, userId);
+  if (roles.includes("admin")) return null;
+  const { data: prof } = await supabase
+    .from("profiles")
+    .select("school_id")
+    .eq("id", userId)
+    .maybeSingle();
+  return (prof?.school_id as string | null) ?? null;
+}
+
+export const getMyReportScope = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const schoolId = await getScopeSchoolId(context.supabase, context.userId);
+    if (!schoolId) return { scoped: false, schoolId: null as string | null, schoolName: null as string | null };
+    const { data: sch } = await context.supabase
+      .from("schools")
+      .select("id, name")
+      .eq("id", schoolId)
+      .maybeSingle();
+    return { scoped: true, schoolId, schoolName: (sch?.name as string | null) ?? null };
+  });
 
 const idInput = (d: { simuladoId: string }) =>
   z.object({ simuladoId: z.string().uuid() }).parse(d);
@@ -72,7 +98,7 @@ function faixaDeAcertos(n: number): keyof Faixas {
 async function carregarDataset(
   supabase: any,
   simuladoId: string,
-  opts?: { disciplina?: string | null },
+  opts?: { disciplina?: string | null; scopeSchoolId?: string | null },
 ) {
   // Use service role to read the answer key (resposta_correta) without exposing
   // it via RLS to professor_responsavel/gestor. Callers must enforce role checks first.
@@ -110,12 +136,16 @@ async function carregarDataset(
 
 
   const turmaIds = Array.from(new Set((respostas ?? []).map((r: any) => r.turma_id)));
-  const { data: turmas } = turmaIds.length
+  const { data: turmasRaw } = turmaIds.length
     ? await supabase
         .from("turmas")
         .select("id, nome, ano, matricula_atual, school_id, schools(id, name, city, inep)")
         .in("id", turmaIds)
     : { data: [] as any[] };
+  const scopeSchoolId = opts?.scopeSchoolId ?? null;
+  const turmas = scopeSchoolId
+    ? (turmasRaw ?? []).filter((t: any) => t.school_id === scopeSchoolId)
+    : (turmasRaw ?? []);
   const turmaById = new Map((turmas ?? []).map((t: any) => [t.id, t]));
 
   // Por aluno (turma+chamada)
@@ -132,6 +162,7 @@ async function carregarDataset(
     }
   >();
   for (const r of respostas ?? []) {
+    if (scopeSchoolId && !turmaById.has(r.turma_id)) continue;
     const key = `${r.turma_id}|${r.numero_chamada}`;
     let a = alunos.get(key);
     if (!a) {
@@ -185,8 +216,8 @@ export const getPadraoDesempenho = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator(idInput)
   .handler(async ({ data, context }) => {
-    await ensureProfessorOrAdmin(context.supabase, context.userId);
-    const { alunos } = await carregarDataset(context.supabase, data.simuladoId);
+    const scopeSchoolId = await getScopeSchoolId(context.supabase, context.userId);
+    const { alunos } = await carregarDataset(context.supabase, data.simuladoId, { scopeSchoolId });
 
     const porCidade = new Map<
       string,
@@ -267,8 +298,8 @@ export const getConclusao = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator(idInput)
   .handler(async ({ data, context }) => {
-    await ensureProfessorOrAdmin(context.supabase, context.userId);
-    const { alunos, turmas } = await carregarDataset(context.supabase, data.simuladoId);
+    const scopeSchoolId = await getScopeSchoolId(context.supabase, context.userId);
+    const { alunos, turmas } = await carregarDataset(context.supabase, data.simuladoId, { scopeSchoolId });
 
     const finPorTurma = new Map<string, number>();
     for (const a of alunos) {
@@ -388,9 +419,10 @@ export const getAcertoMedio = createServerFn({ method: "GET" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    await ensureProfessorOrAdmin(context.supabase, context.userId);
+    const scopeSchoolId = await getScopeSchoolId(context.supabase, context.userId);
     const { alunos } = await carregarDataset(context.supabase, data.simuladoId, {
       disciplina: data.disciplina ?? null,
+      scopeSchoolId,
     });
 
 
@@ -492,10 +524,11 @@ export const getResultadosAlunos = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator(idInput)
   .handler(async ({ data, context }) => {
-    await ensureProfessorOrAdmin(context.supabase, context.userId);
+    const scopeSchoolId = await getScopeSchoolId(context.supabase, context.userId);
     const { alunos, totalQuestoes } = await carregarDataset(
       context.supabase,
       data.simuladoId,
+      { scopeSchoolId },
     );
 
     return {

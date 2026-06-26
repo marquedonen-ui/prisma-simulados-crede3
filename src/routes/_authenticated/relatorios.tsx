@@ -19,6 +19,7 @@ import {
   getConclusao,
   getAcertoMedio,
   listDisciplinasSimulado,
+  getMyReportScope,
 } from "@/lib/relatorios.functions";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -55,6 +56,10 @@ function Page() {
   const getConFn = useServerFn(getConclusao);
   const getAcFn = useServerFn(getAcertoMedio);
   const listDiscFn = useServerFn(listDisciplinasSimulado);
+  const getScopeFn = useServerFn(getMyReportScope);
+
+  const scopeQ = useQuery({ queryKey: ["report-scope"], queryFn: () => getScopeFn() });
+  const scoped = !!scopeQ.data?.scoped;
 
   const [simuladoId, setSimuladoId] = useState("");
   const [acDisciplina, setAcDisciplina] = useState<string>("__all__");
@@ -95,10 +100,14 @@ function Page() {
           <BarChart3 className="h-3.5 w-3.5" /> Relatórios
         </div>
         <h1 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
-          Relatórios por município, escola e padrão de desempenho
+          {scoped
+            ? `Relatórios da escola${scopeQ.data?.schoolName ? ` — ${scopeQ.data.schoolName}` : ""}`
+            : "Relatórios por município, escola e padrão de desempenho"}
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Selecione um simulado e clique em uma barra de município para abrir o detalhamento por escola.
+          {scoped
+            ? "Os gráficos abaixo mostram apenas as turmas da sua escola."
+            : "Selecione um simulado e clique em uma barra de município para abrir o detalhamento por escola."}
         </p>
       </header>
 
@@ -141,14 +150,16 @@ function Page() {
           <PadraoDesempenhoPainel
             isLoading={padQ.isLoading}
             data={padQ.data ?? []}
+            scoped={scoped}
           />
-          <ConclusaoPainel isLoading={conQ.isLoading} data={conQ.data ?? []} />
+          <ConclusaoPainel isLoading={conQ.isLoading} data={conQ.data ?? []} scoped={scoped} />
           <AcertoMedioPainel
             isLoading={acQ.isLoading}
             data={acQ.data ?? []}
             disciplinas={discQ.data ?? []}
             disciplina={acDisciplina}
             onDisciplinaChange={setAcDisciplina}
+            scoped={scoped}
           />
 
         </div>
@@ -175,6 +186,7 @@ type SchoolPad = {
 function PadraoDesempenhoPainel({
   isLoading,
   data,
+  scoped = false,
 }: {
   isLoading: boolean;
   data: Array<{
@@ -183,12 +195,18 @@ function PadraoDesempenhoPainel({
     faixas: { muito_critico: number; critico: number; intermediario: number; adequado: number };
     escolas: SchoolPad[];
   }>;
+  scoped?: boolean;
 }) {
   const [cidade, setCidade] = useState<string | null>(null);
   const [escolaId, setEscolaId] = useState<string | null>(null);
-  const cidadeData = cidade ? data.find((c) => c.city === cidade) : null;
-  const escolaData =
-    cidadeData && escolaId ? cidadeData.escolas.find((e) => e.school_id === escolaId) : null;
+  const scopedCidade = scoped ? (data[0]?.city ?? null) : null;
+  const scopedEscola = scoped ? (data[0]?.escolas?.[0] ?? null) : null;
+  const cidadeData = scoped ? data[0] ?? null : cidade ? data.find((c) => c.city === cidade) : null;
+  const escolaData = scoped
+    ? scopedEscola
+    : cidadeData && escolaId
+      ? cidadeData.escolas.find((e) => e.school_id === escolaId)
+      : null;
 
   const chartData = useMemo(() => {
     if (escolaData) {
@@ -215,7 +233,7 @@ function PadraoDesempenhoPainel({
 
 
   const onBarClick = (d: any) => {
-    if (escolaData) return;
+    if (scoped || escolaData) return;
     if (cidadeData) {
       const e = cidadeData.escolas.find((x) => x.name === d.label);
       if (e) setEscolaId(e.school_id);
@@ -223,19 +241,24 @@ function PadraoDesempenhoPainel({
       setCidade(d.label);
     }
   };
-  const onBack = escolaData
-    ? () => setEscolaId(null)
-    : cidade
-      ? () => setCidade(null)
-      : undefined;
+  const onBack = scoped
+    ? undefined
+    : escolaData
+      ? () => setEscolaId(null)
+      : cidade
+        ? () => setCidade(null)
+        : undefined;
   const backLabel = escolaData ? "Voltar para escolas" : "Voltar para municípios";
-  const description = escolaData
-    ? `Turmas da escola ${escolaData.name}. Faixas: 0–11 Muito Crítico · 12–22 Crítico · 23–34 Intermediário · 35–45 Adequado.`
-    : cidade
-      ? `Escolas do município de ${cidade}. Clique em uma barra para ver as turmas.`
-      : "Por município. Clique em uma barra para ver as escolas. Faixas: 0–11 Muito Crítico · 12–22 Crítico · 23–34 Intermediário · 35–45 Adequado.";
+  const description = scoped
+    ? `Turmas da escola${escolaData ? ` ${escolaData.name}` : ""}. Faixas: 0–11 Muito Crítico · 12–22 Crítico · 23–34 Intermediário · 35–45 Adequado.`
+    : escolaData
+      ? `Turmas da escola ${escolaData.name}. Faixas: 0–11 Muito Crítico · 12–22 Crítico · 23–34 Intermediário · 35–45 Adequado.`
+      : cidade
+        ? `Escolas do município de ${cidade}. Clique em uma barra para ver as turmas.`
+        : "Por município. Clique em uma barra para ver as escolas. Faixas: 0–11 Muito Crítico · 12–22 Crítico · 23–34 Intermediário · 35–45 Adequado.";
 
-  const drillable = !escolaData;
+  const drillable = !scoped && !escolaData;
+  void scopedCidade;
 
   return (
     <PainelCard
@@ -318,6 +341,7 @@ function pctTooltip(value: any, name: any, item: any) {
 function ConclusaoPainel({
   isLoading,
   data,
+  scoped = false,
 }: {
   isLoading: boolean;
   data: Array<{
@@ -340,12 +364,16 @@ function ConclusaoPainel({
       }>;
     }>;
   }>;
+  scoped?: boolean;
 }) {
   const [cidade, setCidade] = useState<string | null>(null);
   const [escolaId, setEscolaId] = useState<string | null>(null);
-  const cidadeData = cidade ? data.find((c) => c.city === cidade) : null;
-  const escolaData =
-    cidadeData && escolaId ? cidadeData.escolas.find((e) => e.school_id === escolaId) : null;
+  const cidadeData = scoped ? data[0] ?? null : cidade ? data.find((c) => c.city === cidade) : null;
+  const escolaData = scoped
+    ? (data[0]?.escolas?.[0] ?? null)
+    : cidadeData && escolaId
+      ? cidadeData.escolas.find((e) => e.school_id === escolaId)
+      : null;
 
   const chartData = useMemo(() => {
     if (escolaData) {
@@ -392,7 +420,7 @@ function ConclusaoPainel({
 
 
   const onBarClick = (d: any) => {
-    if (escolaData) return;
+    if (scoped || escolaData) return;
     if (cidadeData) {
       const e = cidadeData.escolas.find((x) => x.name === d.label);
       if (e) setEscolaId(e.school_id);
@@ -400,18 +428,22 @@ function ConclusaoPainel({
       setCidade(d.label);
     }
   };
-  const onBack = escolaData
-    ? () => setEscolaId(null)
-    : cidade
-      ? () => setCidade(null)
-      : undefined;
+  const onBack = scoped
+    ? undefined
+    : escolaData
+      ? () => setEscolaId(null)
+      : cidade
+        ? () => setCidade(null)
+        : undefined;
   const backLabel = escolaData ? "Voltar para escolas" : "Voltar para municípios";
-  const description = escolaData
-    ? `Turmas da escola ${escolaData.name}. Base: matrícula atual cadastrada em cada turma.`
-    : cidade
-      ? `Escolas do município de ${cidade}. Clique em uma barra para ver as turmas.`
-      : "Por município. Clique em uma barra para abrir as escolas. Base: matrícula atual cadastrada em cada turma.";
-  const drillable = !escolaData;
+  const description = scoped
+    ? `Turmas da escola${escolaData ? ` ${escolaData.name}` : ""}. Base: matrícula atual cadastrada em cada turma.`
+    : escolaData
+      ? `Turmas da escola ${escolaData.name}. Base: matrícula atual cadastrada em cada turma.`
+      : cidade
+        ? `Escolas do município de ${cidade}. Clique em uma barra para ver as turmas.`
+        : "Por município. Clique em uma barra para abrir as escolas. Base: matrícula atual cadastrada em cada turma.";
+  const drillable = !scoped && !escolaData;
 
   return (
     <PainelCard
@@ -467,6 +499,7 @@ function AcertoMedioPainel({
   disciplinas,
   disciplina,
   onDisciplinaChange,
+  scoped = false,
 }: {
   isLoading: boolean;
   data: Array<{
@@ -495,13 +528,17 @@ function AcertoMedioPainel({
   disciplinas: string[];
   disciplina: string;
   onDisciplinaChange: (v: string) => void;
+  scoped?: boolean;
 }) {
 
   const [cidade, setCidade] = useState<string | null>(null);
   const [escolaId, setEscolaId] = useState<string | null>(null);
-  const cidadeData = cidade ? data.find((c) => c.city === cidade) : null;
-  const escolaData =
-    cidadeData && escolaId ? cidadeData.escolas.find((e) => e.school_id === escolaId) : null;
+  const cidadeData = scoped ? data[0] ?? null : cidade ? data.find((c) => c.city === cidade) : null;
+  const escolaData = scoped
+    ? (data[0]?.escolas?.[0] ?? null)
+    : cidadeData && escolaId
+      ? cidadeData.escolas.find((e) => e.school_id === escolaId)
+      : null;
 
   const chartData = useMemo(() => {
     if (escolaData) {
@@ -547,7 +584,7 @@ function AcertoMedioPainel({
   }, [data, cidadeData, escolaData]);
 
   const onBarClick = (d: any) => {
-    if (escolaData) return;
+    if (scoped || escolaData) return;
     if (cidadeData) {
       const e = cidadeData.escolas.find((x) => x.name === d.label);
       if (e) setEscolaId(e.school_id);
@@ -555,18 +592,22 @@ function AcertoMedioPainel({
       setCidade(d.label);
     }
   };
-  const onBack = escolaData
-    ? () => setEscolaId(null)
-    : cidade
-      ? () => setCidade(null)
-      : undefined;
+  const onBack = scoped
+    ? undefined
+    : escolaData
+      ? () => setEscolaId(null)
+      : cidade
+        ? () => setCidade(null)
+        : undefined;
   const backLabel = escolaData ? "Voltar para escolas" : "Voltar para municípios";
-  const description = escolaData
-    ? `Turmas da escola ${escolaData.name}.`
-    : cidade
-      ? `Escolas do município de ${cidade}. Clique em uma barra para ver as turmas.`
-      : "Por município. Clique em uma barra para abrir as escolas.";
-  const drillable = !escolaData;
+  const description = scoped
+    ? `Turmas da escola${escolaData ? ` ${escolaData.name}` : ""}.`
+    : escolaData
+      ? `Turmas da escola ${escolaData.name}.`
+      : cidade
+        ? `Escolas do município de ${cidade}. Clique em uma barra para ver as turmas.`
+        : "Por município. Clique em uma barra para abrir as escolas.";
+  const drillable = !scoped && !escolaData;
 
   return (
     <PainelCard
