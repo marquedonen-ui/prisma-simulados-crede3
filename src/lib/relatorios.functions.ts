@@ -462,9 +462,11 @@ export const getAcertoMedio = createServerFn({ method: "GET" })
   )
   .handler(async ({ data, context }) => {
     const scopeSchoolId = await getScopeSchoolId(context.supabase, context.userId);
+    const scopeTurmaIds = await getScopeTurmaIds(context.supabase, context.userId);
     const { alunos } = await carregarDataset(context.supabase, data.simuladoId, {
       disciplina: data.disciplina ?? null,
       scopeSchoolId,
+      scopeTurmaIds,
     });
 
 
