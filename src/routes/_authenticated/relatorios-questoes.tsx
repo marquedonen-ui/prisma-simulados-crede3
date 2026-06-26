@@ -143,12 +143,19 @@ function Page() {
       <Card>
         <CardHeader>
           <CardTitle>Filtros</CardTitle>
-          <CardDescription>Selecione o simulado e, se desejar, filtre por disciplina.</CardDescription>
+          <CardDescription>Selecione o simulado, escola e turma. Filtre opcionalmente por disciplina.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
           <div className="space-y-1">
             <Label>Simulado</Label>
-            <Select value={simuladoId} onValueChange={setSimuladoId}>
+            <Select
+              value={simuladoId}
+              onValueChange={(v) => {
+                setSimuladoId(v);
+                setEscolaId("__all");
+                setTurmaId("__all");
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder={simQ.isLoading ? "Carregando..." : "Selecione"} />
               </SelectTrigger>
@@ -161,6 +168,50 @@ function Page() {
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-1">
+            <Label>Escola</Label>
+            <Select
+              value={escolaId}
+              onValueChange={(v) => {
+                setEscolaId(v);
+                setTurmaId("__all");
+              }}
+              disabled={!simuladoId || escolasDisponiveis.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Todas as escolas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all">Todas as escolas</SelectItem>
+                {escolasDisponiveis.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>
+                    {e.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label>Turma</Label>
+            <Select
+              value={turmaId}
+              onValueChange={setTurmaId}
+              disabled={!simuladoId || turmasDisponiveis.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Todas as turmas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all">Todas as turmas</SelectItem>
+                {turmasDisponiveis.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-1">
             <Label>Disciplina</Label>
             <Select value={disciplina} onValueChange={setDisciplina} disabled={!simuladoId}>
