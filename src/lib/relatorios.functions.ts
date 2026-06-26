@@ -356,13 +356,43 @@ export const getConclusao = createServerFn({ method: "GET" })
       .sort((a, b) => a.city.localeCompare(b.city));
   });
 
-/** Acerto Médio — % de acerto vs % de erro (sobre respostas marcadas). */
-export const getAcertoMedio = createServerFn({ method: "GET" })
+/** Lista as disciplinas cadastradas nas questões de um simulado. */
+export const listDisciplinasSimulado = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator(idInput)
   .handler(async ({ data, context }) => {
     await ensureProfessorOrAdmin(context.supabase, context.userId);
-    const { alunos } = await carregarDataset(context.supabase, data.simuladoId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("questoes")
+      .select("disciplina")
+      .eq("simulado_id", data.simuladoId);
+    if (error) throw error;
+    const set = new Set<string>();
+    for (const r of rows ?? []) {
+      const v = String((r as any).disciplina ?? "").trim();
+      if (v) set.add(v);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  });
+
+/** Acerto Médio — % de acerto vs % de erro (sobre respostas marcadas). */
+export const getAcertoMedio = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { simuladoId: string; disciplina?: string | null }) =>
+    z
+      .object({
+        simuladoId: z.string().uuid(),
+        disciplina: z.string().nullable().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await ensureProfessorOrAdmin(context.supabase, context.userId);
+    const { alunos } = await carregarDataset(context.supabase, data.simuladoId, {
+      disciplina: data.disciplina ?? null,
+    });
+
 
     const porCidade = new Map<
       string,
