@@ -44,6 +44,25 @@ export const listManagedUsers = createServerFn({ method: "GET" })
 
 const ROLES = ["admin", "professor", "professor_responsavel", "gestor", "aluno"] as const;
 
+const PASSWORD_POLICY_MESSAGE =
+  "Senha muito fraca ou conhecida em vazamentos. Use uma senha diferente, com letras maiúsculas, minúsculas, números e símbolos.";
+
+function getPasswordErrorMessage(error: unknown) {
+  const err = error as { code?: string; message?: string; name?: string } | null | undefined;
+  const text = `${err?.code ?? ""} ${err?.name ?? ""} ${err?.message ?? ""}`.toLowerCase();
+  if (
+    text.includes("weak_password") ||
+    text.includes("weakpassword") ||
+    text.includes("weak password") ||
+    text.includes("known to be weak") ||
+    text.includes("easy to guess") ||
+    text.includes("pwned")
+  ) {
+    return PASSWORD_POLICY_MESSAGE;
+  }
+  return null;
+}
+
 const createSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(72),
@@ -62,20 +81,27 @@ export const createManagedUser = createServerFn({ method: "POST" })
     }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
-      email: data.email,
-      password: data.password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: data.full_name,
-        created_by_admin: true,
-        school_id: data.school_id ?? null,
-      },
-    });
-    if (error) {
-      if ((error as any).code === "weak_password" || /weak/i.test(error.message)) {
-        throw new Error("Senha muito fraca. Use ao menos 8 caracteres com letras, números e símbolos.");
+    let created;
+    try {
+      const response = await supabaseAdmin.auth.admin.createUser({
+        email: data.email,
+        password: data.password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: data.full_name,
+          created_by_admin: true,
+          school_id: data.school_id ?? null,
+        },
+      });
+      if (response.error) {
+        const passwordMessage = getPasswordErrorMessage(response.error);
+        if (passwordMessage) return { ok: false, error: passwordMessage };
+        throw response.error;
       }
+      created = response.data;
+    } catch (error) {
+      const passwordMessage = getPasswordErrorMessage(error);
+      if (passwordMessage) return { ok: false, error: passwordMessage };
       throw error;
     }
 
@@ -89,7 +115,7 @@ export const createManagedUser = createServerFn({ method: "POST" })
 
     await supabaseAdmin.from("user_roles").insert({ user_id: userId, role: data.role });
 
-    return { id: userId };
+    return { ok: true, id: userId };
   });
 
 const updateSchema = z.object({
@@ -121,13 +147,18 @@ export const updateManagedUser = createServerFn({ method: "POST" })
     }
 
     if (data.new_password) {
-      const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
-        password: data.new_password,
-      });
-      if (error) {
-        if ((error as any).code === "weak_password" || /weak/i.test(error.message)) {
-          throw new Error("Senha muito fraca. Use ao menos 8 caracteres com letras, números e símbolos.");
+      try {
+        const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+          password: data.new_password,
+        });
+        if (error) {
+          const passwordMessage = getPasswordErrorMessage(error);
+          if (passwordMessage) return { ok: false, error: passwordMessage };
+          throw error;
         }
+      } catch (error) {
+        const passwordMessage = getPasswordErrorMessage(error);
+        if (passwordMessage) return { ok: false, error: passwordMessage };
         throw error;
       }
     }
