@@ -150,8 +150,7 @@ export const saveGabarito = createServerFn({ method: "POST" })
 
     const rows = data.answers.map((a) => {
       const prev = byNumero.get(a.numero);
-      return {
-        id: prev?.id,
+      const base: any = {
         simulado_id: data.simulado_id,
         numero: a.numero,
         ordem: a.numero,
@@ -164,6 +163,8 @@ export const saveGabarito = createServerFn({ method: "POST" })
         pontos: prev?.pontos ?? 1,
         resposta_correta: a.resposta_correta,
       };
+      if (prev?.id) base.id = prev.id;
+      return base;
     });
 
     const { error } = await context.supabase
