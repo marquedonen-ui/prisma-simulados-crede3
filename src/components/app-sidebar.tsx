@@ -1,7 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Home, BookOpen, ClipboardList, BarChart3, FileCheck, Shield, Users, ListChecks, CalendarDays, LogOut } from "lucide-react";
+import { Home, BookOpen, ClipboardList, BarChart3, FileCheck, Shield, Users, ListChecks, CalendarDays, LogOut, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 
