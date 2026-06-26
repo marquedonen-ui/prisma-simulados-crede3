@@ -9,7 +9,7 @@ import { ImportarRespostas } from "@/components/admin/importar-respostas";
 import { ImportacoesManager } from "@/components/admin/importacoes-manager";
 import logoUrl from "@/assets/prisma-logo.png";
 
-export const Route = createFileRoute("/_authenticated/admin/escola")({
+export const Route = createFileRoute("/_authenticated/admin-escola")({
   head: () => ({ meta: [{ title: "Administração da Escola — PRISMA" }] }),
   component: AdminEscolaPage,
 });
