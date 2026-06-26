@@ -120,6 +120,7 @@ export function UsersManager({ schools }: { schools: School[] }) {
       role: u.roles?.[0] ?? "professor_responsavel",
       school_id: u.school_id ?? "",
       email: u.email,
+      password: "",
     });
     setOpen(true);
   }
@@ -133,6 +134,10 @@ export function UsersManager({ schools }: { schools: School[] }) {
       return;
     }
     if (editing._new) {
+      if (!editing.password || editing.password.length < 8) {
+        toast.error("A senha deve ter pelo menos 8 caracteres.");
+        return;
+      }
       create.mutate({
         email: editing.email.trim(),
         password: editing.password,
@@ -141,11 +146,16 @@ export function UsersManager({ schools }: { schools: School[] }) {
         school_id,
       });
     } else {
+      if (editing.password && editing.password.length < 8) {
+        toast.error("A nova senha deve ter pelo menos 8 caracteres.");
+        return;
+      }
       update.mutate({
         user_id: editing.user_id,
         full_name: editing.full_name.trim(),
         role: editing.role,
         school_id,
+        new_password: editing.password ? editing.password : null,
       });
     }
   }
@@ -269,20 +279,33 @@ export function UsersManager({ schools }: { schools: School[] }) {
                     disabled={!editing._new}
                   />
                 </div>
-                {editing._new && (
-                  <div className="space-y-1.5">
-                    <Label>Senha temporária</Label>
-                    <PasswordInput
-                      value={editing.password}
-                      onChange={(e) => setEditing({ ...editing, password: e.target.value })}
-                      required
-                      minLength={8}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Informe esta senha ao usuário — ele poderá alterá-la depois.
-                    </p>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label>{editing._new ? "Senha de acesso" : "Nova senha (opcional)"}</Label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditing({ ...editing, password: genTempPassword() })}
+                    >
+                      Gerar
+                    </Button>
                   </div>
-                )}
+                  <PasswordInput
+                    value={editing.password ?? ""}
+                    onChange={(e) => setEditing({ ...editing, password: e.target.value })}
+                    required={editing._new}
+                    minLength={8}
+                    placeholder={editing._new ? "Mínimo 8 caracteres" : "Deixe em branco para manter a atual"}
+                    autoComplete="new-password"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {editing._new
+                      ? "Informe esta senha ao usuário — ele poderá alterá-la depois."
+                      : "Preencha apenas se desejar redefinir a senha deste usuário."}
+                  </p>
+                </div>
+
                 <div className="space-y-1.5">
                   <Label>Papel</Label>
                   <Select
