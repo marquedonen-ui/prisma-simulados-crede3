@@ -551,3 +551,67 @@ export const getGabaritoAluno = createServerFn({ method: "GET" })
     return { nome, acertos, total: itens.length, itens };
   });
 
+/** Relatório por questão: acertos, erros, brancos, % e disciplina. */
+export const getRelatorioQuestoes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(idInput)
+  .handler(async ({ data, context }) => {
+    await ensureProfessorOrAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: questoes, error: qErr } = await supabaseAdmin
+      .from("questoes")
+      .select("id, numero, resposta_correta, anulada, disciplina")
+      .eq("simulado_id", data.simuladoId)
+      .order("numero", { ascending: true });
+    if (qErr) throw qErr;
+
+    const respostas = await fetchAllRows<any>(() =>
+      context.supabase
+        .from("respostas_alunos")
+        .select("questao_id, resposta_escolhida")
+        .eq("simulado_id", data.simuladoId)
+        .not("turma_id", "is", null),
+    );
+
+    const byId = new Map<string, any>((questoes ?? []).map((q: any) => [q.id, q]));
+    const stats = new Map<string, { acertos: number; erros: number; brancos: number }>();
+    for (const q of questoes ?? []) {
+      stats.set(q.id, { acertos: 0, erros: 0, brancos: 0 });
+    }
+    for (const r of respostas ?? []) {
+      const s = stats.get(r.questao_id);
+      const q = byId.get(r.questao_id);
+      if (!s || !q) continue;
+      const alt = String(r.resposta_escolhida ?? "").toUpperCase();
+      const correta = String(q.resposta_correta ?? "").toUpperCase();
+      const isAnulada = !!q.anulada;
+      if (!["A", "B", "C", "D", "E"].includes(alt)) s.brancos += 1;
+      else if (isAnulada || alt === correta) s.acertos += 1;
+      else s.erros += 1;
+    }
+
+    return (questoes ?? []).map((q: any, idx: number) => {
+      const s = stats.get(q.id) ?? { acertos: 0, erros: 0, brancos: 0 };
+      const respondidas = s.acertos + s.erros;
+      const pct = respondidas > 0 ? Number(((s.acertos / respondidas) * 100).toFixed(1)) : 0;
+      let padrao: "muito_critico" | "critico" | "intermediario" | "adequado";
+      if (pct <= 25) padrao = "muito_critico";
+      else if (pct <= 50) padrao = "critico";
+      else if (pct <= 75) padrao = "intermediario";
+      else padrao = "adequado";
+      return {
+        questao_id: q.id,
+        numero: q.numero ?? idx + 1,
+        disciplina: (q.disciplina ?? null) as string | null,
+        anulada: !!q.anulada,
+        acertos: s.acertos,
+        erros: s.erros,
+        brancos: s.brancos,
+        total_respondentes: s.acertos + s.erros + s.brancos,
+        pct_acerto: pct,
+        padrao,
+      };
+    });
+  });
+
+
