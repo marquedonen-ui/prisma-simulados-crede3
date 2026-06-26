@@ -19,6 +19,20 @@ async function ensureAdmin(supabase: any, userId: string) {
   }
 }
 
+const PAGE_SIZE = 1000;
+
+async function fetchAllRows<T>(buildQuery: () => any): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await buildQuery().range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    const batch = (data ?? []) as T[];
+    rows.push(...batch);
+    if (batch.length < PAGE_SIZE) break;
+  }
+  return rows;
+}
+
 // ============== QUESTÕES ==============
 
 export const listQuestoes = createServerFn({ method: "GET" })
@@ -383,12 +397,12 @@ export const listImportacoes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await ensureProfessorOrAdmin(context.supabase, context.userId);
-    const { data, error } = await context.supabase
-      .from("respostas_alunos")
-      .select("simulado_id, turma_id, numero_chamada, data_resposta")
-      .not("turma_id", "is", null)
-      .limit(50000);
-    if (error) throw error;
+    const data = await fetchAllRows<any>(() =>
+      context.supabase
+        .from("respostas_alunos")
+        .select("simulado_id, turma_id, numero_chamada, data_resposta")
+        .not("turma_id", "is", null),
+    );
 
     const map = new Map<
       string,
@@ -470,14 +484,14 @@ export const listImportacaoAlunos = createServerFn({ method: "GET" })
   )
   .handler(async ({ data, context }) => {
     await ensureProfessorOrAdmin(context.supabase, context.userId);
-    const { data: rows, error } = await context.supabase
-      .from("respostas_alunos")
-      .select("numero_chamada, nome")
-      .eq("simulado_id", data.simuladoId)
-      .eq("turma_id", data.turmaId)
-      .not("numero_chamada", "is", null)
-      .range(0, 49999);
-    if (error) throw error;
+    const rows = await fetchAllRows<any>(() =>
+      context.supabase
+        .from("respostas_alunos")
+        .select("numero_chamada, nome")
+        .eq("simulado_id", data.simuladoId)
+        .eq("turma_id", data.turmaId)
+        .not("numero_chamada", "is", null),
+    );
     const map = new Map<number, { numero_chamada: number; nome: string | null; respostas: number }>();
     for (const r of (rows ?? []) as any[]) {
       const k = r.numero_chamada as number;

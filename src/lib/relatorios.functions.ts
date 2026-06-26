@@ -15,6 +15,20 @@ async function ensureProfessorOrAdmin(supabase: any, userId: string) {
 const idInput = (d: { simuladoId: string }) =>
   z.object({ simuladoId: z.string().uuid() }).parse(d);
 
+const PAGE_SIZE = 1000;
+
+async function fetchAllRows<T>(buildQuery: () => any): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await buildQuery().range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    const batch = (data ?? []) as T[];
+    rows.push(...batch);
+    if (batch.length < PAGE_SIZE) break;
+  }
+  return rows;
+}
+
 /** Lista simulados que já têm respostas anônimas importadas. */
 export const listSimuladosComRespostas = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -27,12 +41,13 @@ export const listSimuladosComRespostas = createServerFn({ method: "GET" })
     if (error) throw error;
     const ids = (simulados ?? []).map((s: any) => s.id);
     if (ids.length === 0) return [];
-    const { data: resp } = await context.supabase
-      .from("respostas_alunos")
-      .select("simulado_id, turma_id, numero_chamada")
-      .in("simulado_id", ids)
-      .not("turma_id", "is", null)
-      .range(0, 49999);
+    const resp = await fetchAllRows<any>(() =>
+      context.supabase
+        .from("respostas_alunos")
+        .select("simulado_id, turma_id, numero_chamada")
+        .in("simulado_id", ids)
+        .not("turma_id", "is", null),
+    );
     return (simulados ?? []).map((s: any) => {
       const rs = (resp ?? []).filter((r: any) => r.simulado_id === s.id);
       const alunos = new Set(rs.map((r: any) => `${r.turma_id}|${r.numero_chamada}`));
@@ -68,14 +83,14 @@ async function carregarDataset(supabase: any, simuladoId: string) {
   );
   const totalQuestoes = (questoes ?? []).length;
 
-  const { data: respostas, error: rErr } = await supabase
-    .from("respostas_alunos")
-    .select("turma_id, numero_chamada, nome, questao_id, resposta_escolhida")
-    .eq("simulado_id", simuladoId)
-    .not("turma_id", "is", null)
-    .not("numero_chamada", "is", null)
-    .range(0, 49999);
-  if (rErr) throw rErr;
+  const respostas = await fetchAllRows<any>(() =>
+    supabase
+      .from("respostas_alunos")
+      .select("turma_id, numero_chamada, nome, questao_id, resposta_escolhida")
+      .eq("simulado_id", simuladoId)
+      .not("turma_id", "is", null)
+      .not("numero_chamada", "is", null),
+  );
 
 
   const turmaIds = Array.from(new Set((respostas ?? []).map((r: any) => r.turma_id)));
