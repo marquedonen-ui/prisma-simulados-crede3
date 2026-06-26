@@ -7,6 +7,7 @@ import {
   listSimuladosComRespostas,
   getResultadosAlunos,
   getGabaritoAluno,
+  getMyReportScope,
 } from "@/lib/relatorios.functions";
 import {
   Card,
