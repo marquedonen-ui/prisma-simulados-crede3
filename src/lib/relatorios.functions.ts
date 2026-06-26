@@ -129,7 +129,11 @@ function faixaDeAcertos(n: number): keyof Faixas {
 async function carregarDataset(
   supabase: any,
   simuladoId: string,
-  opts?: { disciplina?: string | null; scopeSchoolId?: string | null },
+  opts?: {
+    disciplina?: string | null;
+    scopeSchoolId?: string | null;
+    scopeTurmaIds?: string[] | null;
+  },
 ) {
   // Use service role to read the answer key (resposta_correta) without exposing
   // it via RLS to professor_responsavel/gestor. Callers must enforce role checks first.
@@ -155,7 +159,6 @@ async function carregarDataset(
 
   const totalQuestoes = questoesFiltradas.length;
 
-
   const respostas = await fetchAllRows<any>(() =>
     supabase
       .from("respostas_alunos")
@@ -165,7 +168,6 @@ async function carregarDataset(
       .not("numero_chamada", "is", null),
   );
 
-
   const turmaIds = Array.from(new Set((respostas ?? []).map((r: any) => r.turma_id)));
   const { data: turmasRaw } = turmaIds.length
     ? await supabase
@@ -174,9 +176,16 @@ async function carregarDataset(
         .in("id", turmaIds)
     : { data: [] as any[] };
   const scopeSchoolId = opts?.scopeSchoolId ?? null;
-  const turmas = scopeSchoolId
+  const scopeTurmaSet =
+    opts?.scopeTurmaIds && opts.scopeTurmaIds.length >= 0
+      ? new Set(opts.scopeTurmaIds)
+      : null;
+  let turmas = scopeSchoolId
     ? (turmasRaw ?? []).filter((t: any) => t.school_id === scopeSchoolId)
     : (turmasRaw ?? []);
+  if (scopeTurmaSet) {
+    turmas = turmas.filter((t: any) => scopeTurmaSet.has(t.id));
+  }
   const turmaById = new Map((turmas ?? []).map((t: any) => [t.id, t]));
 
   // Por aluno (turma+chamada)
@@ -193,7 +202,7 @@ async function carregarDataset(
     }
   >();
   for (const r of respostas ?? []) {
-    if (scopeSchoolId && !turmaById.has(r.turma_id)) continue;
+    if ((scopeSchoolId || scopeTurmaSet) && !turmaById.has(r.turma_id)) continue;
     const key = `${r.turma_id}|${r.numero_chamada}`;
     let a = alunos.get(key);
     if (!a) {
