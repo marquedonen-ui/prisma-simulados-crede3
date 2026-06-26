@@ -30,7 +30,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
     const [{ data: profile }, { data: rolesData }] = await Promise.all([
       context.supabase
         .from("profiles")
-        .select("full_name, email, school_id, schools(name, inep)")
+        .select("full_name, email, school_id, cargo, disciplinas, serie, turno, schools(name, inep)")
         .eq("id", context.userId)
         .maybeSingle(),
       context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
@@ -43,6 +43,10 @@ export const getMyProfile = createServerFn({ method: "GET" })
       schoolId: profile?.school_id ?? null,
       schoolName: (profile as any)?.schools?.name ?? null,
       schoolInep: (profile as any)?.schools?.inep ?? null,
+      cargo: (profile as any)?.cargo ?? null,
+      disciplinas: ((profile as any)?.disciplinas as string[] | null) ?? null,
+      serie: (profile as any)?.serie ?? null,
+      turno: (profile as any)?.turno ?? null,
     };
   });
 
