@@ -40,13 +40,8 @@ export function AppSidebar() {
   const profileQ = useQuery({ queryKey: ["my-profile"], queryFn: () => getProfile() });
   const roles: string[] = roleQ.data?.roles ?? [];
   const isAdmin = roles.includes("admin");
-  const isProfResp = roles.includes("professor_responsavel");
-  const canCorrect = isAdmin || isProfResp || roles.includes("professor");
   const items = [
     ...baseItems,
-    ...(canCorrect
-      ? [{ title: "Correção de Simulados", url: "/correcao", icon: CheckSquare }]
-      : []),
     ...(isAdmin ? [{ title: "Administração", url: "/admin", icon: Shield }] : []),
   ];
 
