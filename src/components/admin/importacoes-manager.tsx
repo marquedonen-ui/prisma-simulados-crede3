@@ -238,10 +238,10 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
                     </div>
                   </button>
                   <div className="flex flex-wrap gap-2">
-                    {!l.fechado && (
+                    {!l.fechado && isAdmin && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="default" size="sm" disabled={fechar.isPending || bloqueadoPorPrazo}>
+                          <Button variant="default" size="sm" disabled={fechar.isPending}>
                             <Lock className="mr-1 h-4 w-4" /> Fechar avaliação
                           </Button>
                         </AlertDialogTrigger>
@@ -261,6 +261,7 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
                         </AlertDialogContent>
                       </AlertDialog>
                     )}
+
                     {l.fechado && isAdmin && (
                       <Button
                         variant="outline"
