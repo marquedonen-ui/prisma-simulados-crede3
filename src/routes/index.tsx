@@ -6,9 +6,18 @@ import { validateCode } from "@/lib/prisma.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import logoUrl from "@/assets/prisma-logo.png";
 
 export const Route = createFileRoute("/")({
@@ -158,10 +167,12 @@ function CredentialsForm() {
         </div>
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="password">Senha</Label>
-        <Input
+        <div className="flex items-center justify-between">
+          <Label htmlFor="password">Senha</Label>
+          {mode === "signin" && <ForgotPasswordLink defaultUser={user} />}
+        </div>
+        <PasswordInput
           id="password"
-          type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete={mode === "signin" ? "current-password" : "new-password"}
@@ -178,6 +189,80 @@ function CredentialsForm() {
         {mode === "signin" ? "Não tem conta? Cadastrar-se" : "Já tem conta? Entrar"}
       </button>
     </form>
+  );
+}
+
+function ForgotPasswordLink({ defaultUser }: { defaultUser: string }) {
+  const [open, setOpen] = useState(false);
+  const [user, setUser] = useState(defaultUser);
+  const [loading, setLoading] = useState(false);
+
+  async function send(e: React.FormEvent) {
+    e.preventDefault();
+    const name = user.trim().toLowerCase();
+    if (!name) return toast.error("Informe o usuário.");
+    setLoading(true);
+    try {
+      const email = `${name}@prof.ce.gov.br`;
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success("Enviamos um link de recuperação para o seu e-mail.");
+      setOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao enviar e-mail");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setUser(defaultUser);
+          setOpen(true);
+        }}
+        className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+      >
+        Esqueci minha senha
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Recuperar senha</DialogTitle>
+            <DialogDescription>
+              Informe seu usuário para receber um link de recuperação no e-mail institucional.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={send} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="recover-user">Usuário</Label>
+              <div className="flex items-stretch overflow-hidden rounded-md border border-input">
+                <Input
+                  id="recover-user"
+                  value={user}
+                  onChange={(e) => setUser(e.target.value.replace(/\s/g, ""))}
+                  placeholder="seu.usuario"
+                  className="border-0 shadow-none focus-visible:ring-0"
+                  autoComplete="username"
+                />
+                <span className="flex items-center bg-muted px-3 text-sm text-muted-foreground">
+                  @prof.ce.gov.br
+                </span>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={loading} className="w-full">
+                {loading ? "Enviando..." : "Enviar link de recuperação"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
