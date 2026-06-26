@@ -135,7 +135,7 @@ export function ImportarRespostas({
       let marcasCol = headers.findIndex((h) => marcasPatterns.some((p) => h === p || h.includes(p)));
       if (marcasCol === -1) marcasCol = 4;
 
-      const linhas: Array<{ numero_chamada: number; nome?: string; respostas: Record<string, string> }> = [];
+      const linhas: Array<{ numero_chamada: number; nome?: string; respostas: Record<string, string>; ausente?: boolean }> = [];
       const ignoradas: Array<{ linha: number; motivo: string; nome?: string; chamadaRaw?: string }> = [];
       for (let r = headerIdx + 1; r < matrix.length; r++) {
         const row = matrix[r];
@@ -153,15 +153,10 @@ export function ImportarRespostas({
           });
           continue;
         }
-        // Coluna E vazia => aluno ausente: não importa respostas, apenas registra.
+        // Coluna E vazia => aluno ausente: registra como ausente (sem respostas) para 2ª chamada manual.
         const rawMarcas = String(row?.[marcasCol] ?? "").trim();
         if (rawMarcas === "") {
-          ignoradas.push({
-            linha: linhaPlanilha,
-            motivo: "Ausente (coluna 'Total de marcas' vazia)",
-            nome,
-            chamadaRaw: rawChamada,
-          });
+          linhas.push({ numero_chamada, nome, respostas: {}, ausente: true });
           continue;
         }
         const respostas: Record<string, string> = {};
@@ -176,6 +171,7 @@ export function ImportarRespostas({
         }
         linhas.push({ numero_chamada, nome, respostas });
       }
+
 
       if (linhas.length === 0)
         throw new Error(
@@ -406,7 +402,13 @@ export function ImportarRespostas({
                   <p className="text-sm text-muted-foreground">
                     {resultado.respostas_importadas} respostas de {resultado.alunos_processados}{" "}
                     aluno(s) foram importadas para o simulado ({resultado.total_questoes} questões).
+                    {resultado.alunos_ausentes ? (
+                      <> · <span className="font-medium text-amber-700 dark:text-amber-400">
+                        {resultado.alunos_ausentes} aluno(s) ausente(s)
+                      </span> registrado(s) para 2ª chamada.</>
+                    ) : null}
                   </p>
+
                 </div>
               </div>
             </div>
@@ -474,7 +476,7 @@ export function ImportarRespostas({
                         const total = resultado.total_questoes || 1;
                         const pct = ((a.acertos / total) * 100).toFixed(1);
                         return (
-                          <tr key={`${a.numero_chamada}-${i}`} className="border-t">
+                          <tr key={`${a.numero_chamada}-${i}`} className={"border-t " + (a.ausente ? "bg-amber-500/5" : "")}>
                             <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
                             <td className="px-3 py-2 font-mono text-xs">{a.numero_chamada}</td>
                             <td className="px-3 py-2">
@@ -483,17 +485,23 @@ export function ImportarRespostas({
                               ) : (
                                 <span className="text-muted-foreground italic">—</span>
                               )}
+                              {a.ausente ? (
+                                <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
+                                  Ausente
+                                </span>
+                              ) : null}
                             </td>
                             <td className="px-3 py-2 text-center font-semibold text-green-600">
-                              {a.acertos}
+                              {a.ausente ? "—" : a.acertos}
                             </td>
-                            <td className="px-3 py-2 text-center text-destructive">{a.erros}</td>
+                            <td className="px-3 py-2 text-center text-destructive">{a.ausente ? "—" : a.erros}</td>
                             <td className="px-3 py-2 text-center text-muted-foreground">
-                              {a.em_branco}
+                              {a.ausente ? "—" : a.em_branco}
                             </td>
-                            <td className="px-3 py-2 text-center">{pct}%</td>
+                            <td className="px-3 py-2 text-center">{a.ausente ? "—" : `${pct}%`}</td>
                           </tr>
                         );
+
                       })}
                     </tbody>
                   </table>

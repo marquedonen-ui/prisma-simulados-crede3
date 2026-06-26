@@ -237,11 +237,13 @@ const importSchema = z.object({
         numero_chamada: z.number().int().min(1).max(9999),
         nome: z.string().trim().max(200).optional(),
         respostas: z.record(z.string(), z.string()),
+        ausente: z.boolean().optional(),
       }),
     )
     .min(1)
     .max(5000),
 });
+
 
 export const importarRespostas = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -284,6 +286,17 @@ export const importarRespostas = createServerFn({ method: "POST" })
       }
       console.log(`${tag} respostas anteriores removidas: ${delCount ?? 0}`);
 
+      // Limpa registros anteriores de ausentes deste simulado+turma
+      const { error: delAusErr } = await context.supabase
+        .from("alunos_ausentes")
+        .delete()
+        .eq("simulado_id", data.simuladoId)
+        .eq("turma_id", data.turmaId);
+      if (delAusErr) {
+        console.error(`${tag} erro ao limpar ausentes anteriores`, delAusErr);
+        throw delAusErr;
+      }
+
       const inserir: Array<{
         simulado_id: string;
         turma_id: string;
@@ -293,13 +306,37 @@ export const importarRespostas = createServerFn({ method: "POST" })
         resposta_escolhida: string;
       }> = [];
 
+      const ausentes: Array<{
+        simulado_id: string;
+        turma_id: string;
+        numero_chamada: number;
+        nome: string | null;
+      }> = [];
+
       const statsPorAluno = new Map<
         number,
-        { numero_chamada: number; nome?: string; respondidas: number; em_branco: number; acertos: number }
+        { numero_chamada: number; nome?: string; respondidas: number; em_branco: number; acertos: number; ausente?: boolean }
       >();
 
       let questoesNaoEncontradas = 0;
       for (const linha of data.linhas) {
+        if (linha.ausente) {
+          ausentes.push({
+            simulado_id: data.simuladoId,
+            turma_id: data.turmaId,
+            numero_chamada: linha.numero_chamada,
+            nome: linha.nome ?? null,
+          });
+          statsPorAluno.set(linha.numero_chamada, {
+            numero_chamada: linha.numero_chamada,
+            nome: linha.nome,
+            respondidas: 0,
+            em_branco: 0,
+            acertos: 0,
+            ausente: true,
+          });
+          continue;
+        }
         let respondidas = 0;
         let emBranco = 0;
         let acertos = 0;
@@ -345,27 +382,39 @@ export const importarRespostas = createServerFn({ method: "POST" })
       }
 
       console.log(
-        `${tag} parsing: alunos=${statsPorAluno.size} inserir=${inserir.length} questoes_ignoradas=${questoesNaoEncontradas}`,
+        `${tag} parsing: alunos=${statsPorAluno.size} inserir=${inserir.length} ausentes=${ausentes.length} questoes_ignoradas=${questoesNaoEncontradas}`,
       );
 
-      if (inserir.length === 0) {
+      if (inserir.length === 0 && ausentes.length === 0) {
         throw new Error(
           "Nenhuma resposta válida encontrada. Verifique as colunas de alternativas (Q N Options).",
         );
       }
 
-      const { error: upErr } = await context.supabase
-        .from("respostas_alunos")
-        .insert(inserir);
-      if (upErr) {
-        console.error(
-          `${tag} erro ao inserir respostas (code=${(upErr as any).code} message=${upErr.message} details=${(upErr as any).details} hint=${(upErr as any).hint})`,
-        );
-        throw upErr;
+      if (inserir.length > 0) {
+        const { error: upErr } = await context.supabase
+          .from("respostas_alunos")
+          .insert(inserir);
+        if (upErr) {
+          console.error(
+            `${tag} erro ao inserir respostas (code=${(upErr as any).code} message=${upErr.message} details=${(upErr as any).details} hint=${(upErr as any).hint})`,
+          );
+          throw upErr;
+        }
+      }
+
+      if (ausentes.length > 0) {
+        const { error: ausErr } = await context.supabase
+          .from("alunos_ausentes")
+          .insert(ausentes);
+        if (ausErr) {
+          console.error(`${tag} erro ao inserir ausentes`, ausErr);
+          throw ausErr;
+        }
       }
 
       console.log(
-        `${tag} sucesso: ${inserir.length} respostas inseridas para ${statsPorAluno.size} aluno(s)`,
+        `${tag} sucesso: ${inserir.length} respostas / ${ausentes.length} ausentes para ${statsPorAluno.size} aluno(s)`,
       );
 
       const detalhes_alunos = Array.from(statsPorAluno.values())
@@ -376,12 +425,14 @@ export const importarRespostas = createServerFn({ method: "POST" })
           acertos: s.acertos,
           erros: Math.max(0, s.respondidas - s.acertos),
           em_branco: s.em_branco,
+          ausente: !!s.ausente,
         }))
         .sort((a, b) => b.acertos - a.acertos);
 
       return {
         respostas_importadas: inserir.length,
         alunos_processados: statsPorAluno.size,
+        alunos_ausentes: ausentes.length,
         total_questoes: questoes.length,
         detalhes_alunos,
       };
@@ -390,6 +441,7 @@ export const importarRespostas = createServerFn({ method: "POST" })
       throw err;
     }
   });
+
 
 // ============== GERENCIAR IMPORTAÇÕES ==============
 
@@ -410,26 +462,45 @@ export const listImportacoes = createServerFn({ method: "GET" })
         simulado_id: string;
         turma_id: string;
         _alunos: Set<number>;
+        _ausentes: Set<number>;
         respostas: number;
         ultima: string;
       }
     >();
-    for (const r of (data ?? []) as any[]) {
-      const key = `${r.simulado_id}::${r.turma_id}`;
+    const getOrCreate = (sim: string, tur: string, ultima?: string) => {
+      const key = `${sim}::${tur}`;
       let item = map.get(key);
       if (!item) {
         item = {
-          simulado_id: r.simulado_id,
-          turma_id: r.turma_id,
+          simulado_id: sim,
+          turma_id: tur,
           _alunos: new Set<number>(),
+          _ausentes: new Set<number>(),
           respostas: 0,
-          ultima: r.data_resposta,
+          ultima: ultima ?? new Date(0).toISOString(),
         };
         map.set(key, item);
       }
+      return item;
+    };
+
+    for (const r of (data ?? []) as any[]) {
+      const item = getOrCreate(r.simulado_id, r.turma_id, r.data_resposta);
       if (r.numero_chamada != null) item._alunos.add(r.numero_chamada);
       item.respostas++;
       if (r.data_resposta > item.ultima) item.ultima = r.data_resposta;
+    }
+
+    // merge alunos ausentes
+    const ausentes = await fetchAllRows<any>(() =>
+      context.supabase
+        .from("alunos_ausentes")
+        .select("simulado_id, turma_id, numero_chamada, created_at"),
+    );
+    for (const a of ausentes) {
+      const item = getOrCreate(a.simulado_id, a.turma_id, a.created_at);
+      item._ausentes.add(a.numero_chamada);
+      if (a.created_at > item.ultima) item.ultima = a.created_at;
     }
 
     const simIds = Array.from(new Set(Array.from(map.values()).map((i) => i.simulado_id)));
@@ -459,6 +530,7 @@ export const listImportacoes = createServerFn({ method: "GET" })
       .map((i) => {
         const s = simMap.get(i.simulado_id);
         const t = turmaMap.get(i.turma_id);
+        const totalAlunos = new Set<number>([...i._alunos, ...i._ausentes]).size;
         return {
           simulado_id: i.simulado_id,
           turma_id: i.turma_id,
@@ -468,7 +540,8 @@ export const listImportacoes = createServerFn({ method: "GET" })
           turma: t?.nome ?? "(turma removida)",
           escola: t?.schools?.name ?? "—",
           inep: t?.schools?.inep ?? "",
-          alunos: i._alunos.size,
+          alunos: totalAlunos,
+          ausentes: i._ausentes.size,
           respostas: i.respostas,
           ultima: i.ultima,
         };
@@ -492,7 +565,10 @@ export const listImportacaoAlunos = createServerFn({ method: "GET" })
         .eq("turma_id", data.turmaId)
         .not("numero_chamada", "is", null),
     );
-    const map = new Map<number, { numero_chamada: number; nome: string | null; respostas: number }>();
+    const map = new Map<
+      number,
+      { numero_chamada: number; nome: string | null; respostas: number; ausente: boolean }
+    >();
     for (const r of (rows ?? []) as any[]) {
       const k = r.numero_chamada as number;
       const cur = map.get(k);
@@ -500,9 +576,24 @@ export const listImportacaoAlunos = createServerFn({ method: "GET" })
         cur.respostas++;
         if (!cur.nome && r.nome) cur.nome = r.nome;
       } else {
-        map.set(k, { numero_chamada: k, nome: r.nome ?? null, respostas: 1 });
+        map.set(k, { numero_chamada: k, nome: r.nome ?? null, respostas: 1, ausente: false });
       }
     }
+
+    const ausentes = await fetchAllRows<any>(() =>
+      context.supabase
+        .from("alunos_ausentes")
+        .select("numero_chamada, nome")
+        .eq("simulado_id", data.simuladoId)
+        .eq("turma_id", data.turmaId),
+    );
+    for (const a of ausentes as any[]) {
+      const k = a.numero_chamada as number;
+      if (!map.has(k)) {
+        map.set(k, { numero_chamada: k, nome: a.nome ?? null, respostas: 0, ausente: true });
+      }
+    }
+
     return Array.from(map.values()).sort((a, b) => a.numero_chamada - b.numero_chamada);
   });
 
@@ -519,6 +610,11 @@ export const deleteImportacao = createServerFn({ method: "POST" })
       .eq("simulado_id", data.simuladoId)
       .eq("turma_id", data.turmaId);
     if (error) throw error;
+    await context.supabase
+      .from("alunos_ausentes")
+      .delete()
+      .eq("simulado_id", data.simuladoId)
+      .eq("turma_id", data.turmaId);
     return { ok: true, removidas: count ?? 0 };
   });
 
@@ -531,8 +627,13 @@ export const deleteTodasImportacoes = createServerFn({ method: "POST" })
       .delete({ count: "exact" })
       .not("turma_id", "is", null);
     if (error) throw error;
+    await context.supabase
+      .from("alunos_ausentes")
+      .delete()
+      .not("turma_id", "is", null);
     return { ok: true, removidas: count ?? 0 };
   });
+
 
 export const deleteImportacaoAluno = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -554,8 +655,15 @@ export const deleteImportacaoAluno = createServerFn({ method: "POST" })
       .eq("turma_id", data.turmaId)
       .eq("numero_chamada", data.numeroChamada);
     if (error) throw error;
+    await context.supabase
+      .from("alunos_ausentes")
+      .delete()
+      .eq("simulado_id", data.simuladoId)
+      .eq("turma_id", data.turmaId)
+      .eq("numero_chamada", data.numeroChamada);
     return { ok: true, removidas: count ?? 0 };
   });
+
 
 export const updateImportacaoAluno = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -592,8 +700,16 @@ export const updateImportacaoAluno = createServerFn({ method: "POST" })
       .eq("turma_id", data.turmaId)
       .eq("numero_chamada", data.numeroChamada);
     if (error) throw error;
+    // Aplica o mesmo patch em alunos_ausentes (caso o aluno esteja marcado como ausente).
+    await context.supabase
+      .from("alunos_ausentes")
+      .update(patch)
+      .eq("simulado_id", data.simuladoId)
+      .eq("turma_id", data.turmaId)
+      .eq("numero_chamada", data.numeroChamada);
     return { ok: true, atualizadas: count ?? 0 };
   });
+
 
 export const getRespostasAluno = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -661,6 +777,7 @@ export const updateRespostasAluno = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await ensureProfessorOrAdmin(context.supabase, context.userId);
 
+    // Tenta obter nome existente em respostas ou na lista de ausentes.
     const { data: existente } = await context.supabase
       .from("respostas_alunos")
       .select("nome")
@@ -668,7 +785,17 @@ export const updateRespostasAluno = createServerFn({ method: "POST" })
       .eq("turma_id", data.turmaId)
       .eq("numero_chamada", data.numeroChamada)
       .limit(1);
-    const nome = (existente?.[0] as any)?.nome ?? null;
+    let nome = (existente?.[0] as any)?.nome ?? null;
+    if (!nome) {
+      const { data: aus } = await context.supabase
+        .from("alunos_ausentes")
+        .select("nome")
+        .eq("simulado_id", data.simuladoId)
+        .eq("turma_id", data.turmaId)
+        .eq("numero_chamada", data.numeroChamada)
+        .limit(1);
+      nome = (aus?.[0] as any)?.nome ?? null;
+    }
 
     const { error: delErr } = await context.supabase
       .from("respostas_alunos")
@@ -698,8 +825,16 @@ export const updateRespostasAluno = createServerFn({ method: "POST" })
         .from("respostas_alunos")
         .insert(inserir);
       if (insErr) throw insErr;
+      // Saiu da lista de ausentes ao ter pelo menos uma resposta marcada.
+      await context.supabase
+        .from("alunos_ausentes")
+        .delete()
+        .eq("simulado_id", data.simuladoId)
+        .eq("turma_id", data.turmaId)
+        .eq("numero_chamada", data.numeroChamada);
     }
 
     return { ok: true, total: inserir.length };
   });
+
 
