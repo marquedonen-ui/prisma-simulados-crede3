@@ -594,3 +594,36 @@ function Page() {
     </div>
   );
 }
+
+function SortBtn<K extends string>({
+  label,
+  k,
+  sortKey,
+  sortDir,
+  onClick,
+  align = "left",
+}: {
+  label: string;
+  k: K;
+  sortKey: K;
+  sortDir: "asc" | "desc";
+  onClick: (k: K) => void;
+  align?: "left" | "right";
+}) {
+  const active = sortKey === k;
+  const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(k)}
+      className={cn(
+        "inline-flex items-center gap-1 font-medium hover:text-foreground",
+        active ? "text-foreground" : "text-muted-foreground",
+        align === "right" && "flex-row-reverse",
+      )}
+    >
+      <span>{label}</span>
+      <Icon className="h-3.5 w-3.5" />
+    </button>
+  );
+}
