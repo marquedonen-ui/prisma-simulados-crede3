@@ -6,6 +6,8 @@ import {
   getMyRole,
   listSchools,
   createSchool,
+  updateSchool,
+  deleteSchool,
 } from "@/lib/prisma.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +36,8 @@ function AdminPage() {
   const getRole = useServerFn(getMyRole);
   const listFn = useServerFn(listSchools);
   const createFn = useServerFn(createSchool);
+  const updateFn = useServerFn(updateSchool);
+  const deleteFn = useServerFn(deleteSchool);
 
   const roleQ = useQuery({ queryKey: ["my-role"], queryFn: () => getRole({}) });
   const schoolsQ = useQuery({ queryKey: ["schools"], queryFn: () => listFn({}) });
@@ -47,6 +51,11 @@ function AdminPage() {
   const [inep, setInep] = useState("");
   const [city, setCity] = useState("");
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editInep, setEditInep] = useState("");
+  const [editCity, setEditCity] = useState("");
+
   const create = useMutation({
     mutationFn: () => createFn({ data: { name, inep, city } }),
     onSuccess: () => {
@@ -55,6 +64,26 @@ function AdminPage() {
       qc.invalidateQueries({ queryKey: ["schools"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
+
+  const update = useMutation({
+    mutationFn: (vars: { id: string; name: string; inep: string; city: string }) =>
+      updateFn({ data: vars }),
+    onSuccess: () => {
+      toast.success("Escola atualizada.");
+      setEditingId(null);
+      qc.invalidateQueries({ queryKey: ["schools"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: string) => deleteFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Escola excluída.");
+      qc.invalidateQueries({ queryKey: ["schools"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Não foi possível excluir. Verifique se há turmas/usuários vinculados."),
   });
 
   if (roleQ.isLoading) return <div className="p-10 text-center">Carregando...</div>;
@@ -130,16 +159,75 @@ function AdminPage() {
               <CardDescription>{schoolsQ.data?.length ?? 0} escola(s)</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="max-h-72 space-y-2 overflow-auto text-sm">
+              <div className="max-h-96 space-y-2 overflow-auto text-sm">
                 {schoolsQ.data?.length === 0 && (
                   <p className="text-muted-foreground">Nenhuma escola cadastrada ainda.</p>
                 )}
                 {schoolsQ.data?.map((s) => (
                   <div key={s.id} className="rounded-md border p-3">
-                    <p className="font-medium">{s.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      INEP {s.inep}{s.city ? ` · ${s.city}` : ""}
-                    </p>
+                    {editingId === s.id ? (
+                      <form
+                        className="space-y-2"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          update.mutate({ id: s.id, name: editName, inep: editInep, city: editCity });
+                        }}
+                      >
+                        <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Nome" required />
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            value={editInep}
+                            onChange={(e) => setEditInep(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                            placeholder="INEP"
+                            required
+                          />
+                          <Input value={editCity} onChange={(e) => setEditCity(e.target.value)} placeholder="Município" />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button type="submit" size="sm" disabled={update.isPending}>
+                            {update.isPending ? "Salvando..." : "Salvar"}
+                          </Button>
+                          <Button type="button" size="sm" variant="outline" onClick={() => setEditingId(null)}>
+                            Cancelar
+                          </Button>
+                        </div>
+                      </form>
+                    ) : (
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium">{s.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            INEP {s.inep}{s.city ? ` · ${s.city}` : ""}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditingId(s.id);
+                              setEditName(s.name);
+                              setEditInep(s.inep);
+                              setEditCity(s.city ?? "");
+                            }}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              if (confirm(`Excluir a escola "${s.name}"? Esta ação não pode ser desfeita.`)) {
+                                remove.mutate(s.id);
+                              }
+                            }}
+                            disabled={remove.isPending}
+                          >
+                            Excluir
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
