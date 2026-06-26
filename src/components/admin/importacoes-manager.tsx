@@ -148,6 +148,22 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {!bloqueadoPorPrazo && !isAdmin && (
+          <div className="mb-4 flex items-start gap-2 rounded-md border border-amber-400/60 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+            <Lock className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-semibold">Prazo para inserção dos resultados</p>
+              <p className="text-xs">
+                Conforme o cronograma oficial, a inserção dos resultados das avaliações
+                na plataforma PRISMA deve ser concluída até
+                {deadlineFmt ? ` ${deadlineFmt}` : " a data limite definida no cronograma"}.
+                Após esta data, o registro, a edição e a exclusão das respostas dos alunos
+                serão automaticamente bloqueados para os professores responsáveis pelas
+                escolas. Somente o administrador geral poderá realizar alterações.
+              </p>
+            </div>
+          </div>
+        )}
         {bloqueadoPorPrazo && (
           <div className="mb-4 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
             <Lock className="mt-0.5 h-4 w-4 shrink-0" />
@@ -162,6 +178,7 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
             </div>
           </div>
         )}
+
         {lotesQ.isLoading && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
