@@ -41,8 +41,13 @@ export function AppSidebar() {
   const profileQ = useQuery({ queryKey: ["my-profile"], queryFn: () => getProfile() });
   const roles: string[] = roleQ.data?.roles ?? [];
   const isAdmin = roles.includes("admin");
+  const profileRoles: string[] = (profileQ.data?.roles as string[] | undefined) ?? [];
+  const isProfResp = profileRoles.includes("professor_responsavel") || roles.includes("professor_responsavel");
   const items = [
     ...baseItems,
+    ...(isProfResp && !isAdmin
+      ? [{ title: "Administração / Escola", url: "/admin-escola", icon: Shield }]
+      : []),
     ...(isAdmin ? [{ title: "Administração", url: "/admin", icon: Shield }] : []),
   ];
 
