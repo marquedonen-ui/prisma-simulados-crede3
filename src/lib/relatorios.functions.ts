@@ -10,7 +10,33 @@ async function ensureProfessorOrAdmin(supabase: any, userId: string) {
   if (!roles.some((r: string) => allowed.includes(r))) {
     throw new Error("Acesso restrito.");
   }
+  return roles as string[];
 }
+
+/** Retorna o school_id ao qual o usuário está restrito (null para admin global). */
+async function getScopeSchoolId(supabase: any, userId: string): Promise<string | null> {
+  const roles = await ensureProfessorOrAdmin(supabase, userId);
+  if (roles.includes("admin")) return null;
+  const { data: prof } = await supabase
+    .from("profiles")
+    .select("school_id")
+    .eq("id", userId)
+    .maybeSingle();
+  return (prof?.school_id as string | null) ?? null;
+}
+
+export const getMyReportScope = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const schoolId = await getScopeSchoolId(context.supabase, context.userId);
+    if (!schoolId) return { scoped: false, schoolId: null as string | null, schoolName: null as string | null };
+    const { data: sch } = await context.supabase
+      .from("schools")
+      .select("id, name")
+      .eq("id", schoolId)
+      .maybeSingle();
+    return { scoped: true, schoolId, schoolName: (sch?.name as string | null) ?? null };
+  });
 
 const idInput = (d: { simuladoId: string }) =>
   z.object({ simuladoId: z.string().uuid() }).parse(d);
