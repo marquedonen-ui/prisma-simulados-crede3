@@ -148,11 +148,13 @@ async function carregarDataset(
       alunos.set(key, a);
     }
     if (!a.nome && r.nome) a.nome = r.nome;
+    if (!allowedIds.has(r.questao_id)) continue;
     const alt = String(r.resposta_escolhida ?? "").toUpperCase();
     if (["A", "B", "C", "D", "E"].includes(alt)) {
       a.respondidas += 1;
       if (anulada.get(r.questao_id) || correct.get(r.questao_id) === alt) a.acertos += 1;
     }
+
   }
 
 
