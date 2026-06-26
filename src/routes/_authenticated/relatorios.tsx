@@ -556,13 +556,23 @@ function AcertoMedioPainel({
 
   const chartData = useMemo(() => {
     if (escolaData) {
-      return escolaData.turmas.map((t) => ({
+      const rows = escolaData.turmas.map((t) => ({
         label: t.name,
         "% Acerto": t.pct_acerto,
         "% Erro": t.pct_erro,
         _acertos: t.acertos,
         _erros: t.erros,
       }));
+      if (escolaData.acertos + escolaData.erros > 0) {
+        rows.push({
+          label: `Escola — ${escolaData.name}`,
+          "% Acerto": escolaData.pct_acerto,
+          "% Erro": escolaData.pct_erro,
+          _acertos: escolaData.acertos,
+          _erros: escolaData.erros,
+        });
+      }
+      return rows;
     }
     if (cidadeData) {
       return cidadeData.escolas.map((e) => ({
