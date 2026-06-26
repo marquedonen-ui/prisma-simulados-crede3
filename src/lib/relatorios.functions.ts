@@ -139,9 +139,10 @@ async function carregarDataset(supabase: any, simuladoId: string) {
     const alt = String(r.resposta_escolhida ?? "").toUpperCase();
     if (["A", "B", "C", "D", "E"].includes(alt)) {
       a.respondidas += 1;
-      if (correct.get(r.questao_id) === alt) a.acertos += 1;
+      if (anulada.get(r.questao_id) || correct.get(r.questao_id) === alt) a.acertos += 1;
     }
   }
+
 
   return {
     totalQuestoes,
