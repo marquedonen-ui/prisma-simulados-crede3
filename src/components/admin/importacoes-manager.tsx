@@ -60,7 +60,9 @@ type AlunoLote = {
   numero_chamada: number;
   nome: string | null;
   respostas: number;
+  ausente: boolean;
 };
+
 
 export function ImportacoesManager() {
   const qc = useQueryClient();
