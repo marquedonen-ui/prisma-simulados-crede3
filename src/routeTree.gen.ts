@@ -9,27 +9,31 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as AlunoRouteImport } from './routes/aluno'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedTutoriaisRouteImport } from './routes/_authenticated/tutoriais'
-import { Route as AuthenticatedRelatoriosQuestoesRouteImport } from './routes/_authenticated/relatorios-questoes'
-import { Route as AuthenticatedRelatoriosAlunosRouteImport } from './routes/_authenticated/relatorios-alunos'
-import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
-import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
-import { Route as AuthenticatedGabaritoRouteImport } from './routes/_authenticated/gabarito'
-import { Route as AuthenticatedDevolutivasRouteImport } from './routes/_authenticated/devolutivas'
-import { Route as AuthenticatedCronogramaRouteImport } from './routes/_authenticated/cronograma'
-import { Route as AuthenticatedCorrecaoRouteImport } from './routes/_authenticated/correcao'
-import { Route as AuthenticatedAdminEscolaRouteImport } from './routes/_authenticated/admin-escola'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AlunoRouteImport } from './routes/aluno'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAdminEscolaRouteImport } from './routes/_authenticated/admin-escola'
+import { Route as AuthenticatedCorrecaoRouteImport } from './routes/_authenticated/correcao'
+import { Route as AuthenticatedCronogramaRouteImport } from './routes/_authenticated/cronograma'
+import { Route as AuthenticatedDevolutivasRouteImport } from './routes/_authenticated/devolutivas'
+import { Route as AuthenticatedGabaritoRouteImport } from './routes/_authenticated/gabarito'
+import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
+import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
+import { Route as AuthenticatedRelatoriosAlunosRouteImport } from './routes/_authenticated/relatorios-alunos'
+import { Route as AuthenticatedRelatoriosQuestoesRouteImport } from './routes/_authenticated/relatorios-questoes'
+import { Route as AuthenticatedTutoriaisRouteImport } from './routes/_authenticated/tutoriais'
 import { Route as AuthenticatedAvaliacaoDiagnosticaIndexRouteImport } from './routes/_authenticated/avaliacao-diagnostica.index'
 import { Route as AuthenticatedAvaliacaoDiagnosticaIdRouteImport } from './routes/_authenticated/avaliacao-diagnostica.$id'
 
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AlunoRoute = AlunoRouteImport.update({
@@ -37,61 +41,14 @@ const AlunoRoute = AlunoRouteImport.update({
   path: '/aluno',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedTutoriaisRoute = AuthenticatedTutoriaisRouteImport.update({
-  id: '/tutoriais',
-  path: '/tutoriais',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedRelatoriosQuestoesRoute =
-  AuthenticatedRelatoriosQuestoesRouteImport.update({
-    id: '/relatorios-questoes',
-    path: '/relatorios-questoes',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedRelatoriosAlunosRoute =
-  AuthenticatedRelatoriosAlunosRouteImport.update({
-    id: '/relatorios-alunos',
-    path: '/relatorios-alunos',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
-  id: '/relatorios',
-  path: '/relatorios',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedPainelRoute = AuthenticatedPainelRouteImport.update({
-  id: '/painel',
-  path: '/painel',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedGabaritoRoute = AuthenticatedGabaritoRouteImport.update({
-  id: '/gabarito',
-  path: '/gabarito',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedDevolutivasRoute =
-  AuthenticatedDevolutivasRouteImport.update({
-    id: '/devolutivas',
-    path: '/devolutivas',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedCronogramaRoute = AuthenticatedCronogramaRouteImport.update({
-  id: '/cronograma',
-  path: '/cronograma',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedCorrecaoRoute = AuthenticatedCorrecaoRouteImport.update({
-  id: '/correcao',
-  path: '/correcao',
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAdminEscolaRoute =
@@ -100,9 +57,52 @@ const AuthenticatedAdminEscolaRoute =
     path: '/admin-escola',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const AuthenticatedCorrecaoRoute = AuthenticatedCorrecaoRouteImport.update({
+  id: '/correcao',
+  path: '/correcao',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCronogramaRoute = AuthenticatedCronogramaRouteImport.update({
+  id: '/cronograma',
+  path: '/cronograma',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDevolutivasRoute =
+  AuthenticatedDevolutivasRouteImport.update({
+    id: '/devolutivas',
+    path: '/devolutivas',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedGabaritoRoute = AuthenticatedGabaritoRouteImport.update({
+  id: '/gabarito',
+  path: '/gabarito',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPainelRoute = AuthenticatedPainelRouteImport.update({
+  id: '/painel',
+  path: '/painel',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRelatoriosAlunosRoute =
+  AuthenticatedRelatoriosAlunosRouteImport.update({
+    id: '/relatorios-alunos',
+    path: '/relatorios-alunos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedRelatoriosQuestoesRoute =
+  AuthenticatedRelatoriosQuestoesRouteImport.update({
+    id: '/relatorios-questoes',
+    path: '/relatorios-questoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedTutoriaisRoute = AuthenticatedTutoriaisRouteImport.update({
+  id: '/tutoriais',
+  path: '/tutoriais',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAvaliacaoDiagnosticaIndexRoute =
@@ -241,18 +241,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/aluno': {
-      id: '/aluno'
-      path: '/aluno'
-      fullPath: '/aluno'
-      preLoaderRoute: typeof AlunoRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -262,74 +255,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/aluno': {
+      id: '/aluno'
+      path: '/aluno'
+      fullPath: '/aluno'
+      preLoaderRoute: typeof AlunoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/tutoriais': {
-      id: '/_authenticated/tutoriais'
-      path: '/tutoriais'
-      fullPath: '/tutoriais'
-      preLoaderRoute: typeof AuthenticatedTutoriaisRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/relatorios-questoes': {
-      id: '/_authenticated/relatorios-questoes'
-      path: '/relatorios-questoes'
-      fullPath: '/relatorios-questoes'
-      preLoaderRoute: typeof AuthenticatedRelatoriosQuestoesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/relatorios-alunos': {
-      id: '/_authenticated/relatorios-alunos'
-      path: '/relatorios-alunos'
-      fullPath: '/relatorios-alunos'
-      preLoaderRoute: typeof AuthenticatedRelatoriosAlunosRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/relatorios': {
-      id: '/_authenticated/relatorios'
-      path: '/relatorios'
-      fullPath: '/relatorios'
-      preLoaderRoute: typeof AuthenticatedRelatoriosRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/painel': {
-      id: '/_authenticated/painel'
-      path: '/painel'
-      fullPath: '/painel'
-      preLoaderRoute: typeof AuthenticatedPainelRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/gabarito': {
-      id: '/_authenticated/gabarito'
-      path: '/gabarito'
-      fullPath: '/gabarito'
-      preLoaderRoute: typeof AuthenticatedGabaritoRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/devolutivas': {
-      id: '/_authenticated/devolutivas'
-      path: '/devolutivas'
-      fullPath: '/devolutivas'
-      preLoaderRoute: typeof AuthenticatedDevolutivasRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/cronograma': {
-      id: '/_authenticated/cronograma'
-      path: '/cronograma'
-      fullPath: '/cronograma'
-      preLoaderRoute: typeof AuthenticatedCronogramaRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/correcao': {
-      id: '/_authenticated/correcao'
-      path: '/correcao'
-      fullPath: '/correcao'
-      preLoaderRoute: typeof AuthenticatedCorrecaoRouteImport
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin-escola': {
@@ -339,11 +283,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminEscolaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin': {
-      id: '/_authenticated/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+    '/_authenticated/correcao': {
+      id: '/_authenticated/correcao'
+      path: '/correcao'
+      fullPath: '/correcao'
+      preLoaderRoute: typeof AuthenticatedCorrecaoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cronograma': {
+      id: '/_authenticated/cronograma'
+      path: '/cronograma'
+      fullPath: '/cronograma'
+      preLoaderRoute: typeof AuthenticatedCronogramaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/devolutivas': {
+      id: '/_authenticated/devolutivas'
+      path: '/devolutivas'
+      fullPath: '/devolutivas'
+      preLoaderRoute: typeof AuthenticatedDevolutivasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/gabarito': {
+      id: '/_authenticated/gabarito'
+      path: '/gabarito'
+      fullPath: '/gabarito'
+      preLoaderRoute: typeof AuthenticatedGabaritoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/painel': {
+      id: '/_authenticated/painel'
+      path: '/painel'
+      fullPath: '/painel'
+      preLoaderRoute: typeof AuthenticatedPainelRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/relatorios': {
+      id: '/_authenticated/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof AuthenticatedRelatoriosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/relatorios-alunos': {
+      id: '/_authenticated/relatorios-alunos'
+      path: '/relatorios-alunos'
+      fullPath: '/relatorios-alunos'
+      preLoaderRoute: typeof AuthenticatedRelatoriosAlunosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/relatorios-questoes': {
+      id: '/_authenticated/relatorios-questoes'
+      path: '/relatorios-questoes'
+      fullPath: '/relatorios-questoes'
+      preLoaderRoute: typeof AuthenticatedRelatoriosQuestoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tutoriais': {
+      id: '/_authenticated/tutoriais'
+      path: '/tutoriais'
+      fullPath: '/tutoriais'
+      preLoaderRoute: typeof AuthenticatedTutoriaisRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/avaliacao-diagnostica/': {
