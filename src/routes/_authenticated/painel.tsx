@@ -89,10 +89,14 @@ function Painel() {
       <header className="border-b bg-card">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <img src={logoUrl} alt="Governo do Ceará" className="h-12 w-auto" />
-            <div>
+            {/* Logo do Governo do Ceará temporariamente removida devido ao período eleitoral */}
+            {/* <img src={logoUrl} alt="Governo do Ceará" className="h-12 w-auto" /> */}
+            <div className="flex flex-col">
               <p className="text-sm font-semibold">PRISMA</p>
               <p className="text-xs text-muted-foreground">CREDE 3</p>
+              <span className="mt-1 text-[9px] font-bold uppercase tracking-wider text-amber-600/80">
+                Logomarca suspensa (Período Eleitoral)
+              </span>
             </div>
           </div>
         </div>
