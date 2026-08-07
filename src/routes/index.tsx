@@ -57,22 +57,20 @@ function LandingPage() {
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-6 pt-10 text-center">
         <div className="rounded-xl bg-amber-500/10 px-4 py-3 text-amber-200 ring-1 ring-amber-500/30 backdrop-blur-sm">
           <p className="text-sm font-medium">
-            Execute esta instrucao no projeto: Retire, momentaneamente, TODAS as logomarcas (estado,
-            seduc e crede 3) do sistema (com avisos) debido ao período eleitoral!
+            Execute esta instrucao no projeto: A logomarca do estado continua no sistema (anexo)
           </p>
         </div>
       </div>
 
       <div className="mx-auto grid min-h-[calc(100-80px)] max-w-6xl items-center gap-12 px-6 py-10 lg:grid-cols-2">
         <header className="flex flex-col items-center text-center lg:items-start lg:text-left">
-          {/* Logo temporarily removed due to electoral period */}
-          {/* <div className="rounded-3xl bg-white/95 p-6 shadow-2xl ring-1 ring-white/40 backdrop-blur">
+          <div className="rounded-3xl bg-white/95 p-6 shadow-2xl ring-1 ring-white/40 backdrop-blur">
             <img
               src={logoUrl}
               alt="Logomarca PRISMA — Plataforma Regional de Simulados e Monitoramento da Aprendizagem"
               className="h-56 w-auto md:h-72"
             />
-          </div> */}
+          </div>
           <h1 className="mt-8 text-3xl font-bold tracking-tight md:text-4xl">
             Plataforma Regional de Simulados e Monitoramento da Aprendizagem
           </h1>
