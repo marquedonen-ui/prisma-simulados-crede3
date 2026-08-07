@@ -57,7 +57,7 @@ function LandingPage() {
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-6 pt-10 text-center">
         <div className="rounded-xl bg-amber-500/10 px-4 py-3 text-amber-200 ring-1 ring-amber-500/30 backdrop-blur-sm">
           <p className="text-sm font-medium">
-            Execute esta instrucao no projeto: retire TODAS as logomarcas do sistema (estado, seduc e crede 3), momentaneamente, por conta do período eleitoiral e coloque avisos
+            Execute esta instrucao no projeto: A LOGOMARCA do estado do ceará/seduc permanece no sistema (anexo). retire agora
           </p>
         </div>
       </div>
