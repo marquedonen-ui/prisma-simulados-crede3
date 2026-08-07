@@ -115,8 +115,12 @@ export function AppSidebar() {
       }
     >
       <SidebarHeader className="p-0">
-        <div className="flex items-center justify-center bg-sidebar">
-          <img
+        <div className="flex flex-col items-center justify-center bg-sidebar p-4 text-center">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-widest text-sidebar-foreground opacity-90">
+            PRISMA
+          </div>
+          {/* Logo temporarily removed due to electoral period */}
+          {/* <img
             src={logoUrl}
             alt="PRISMA — CREDE 3"
             className={
@@ -124,7 +128,7 @@ export function AppSidebar() {
                 ? "h-12 w-auto object-contain"
                 : "block h-auto w-full object-contain"
             }
-          />
+          /> */}
         </div>
       </SidebarHeader>
 
@@ -204,12 +208,16 @@ export function AppSidebar() {
             )}
           </div>
         )}
-        <div className="flex items-center justify-center bg-white p-3">
-          <img
+        <div className="flex flex-col items-center justify-center bg-white/10 p-4 text-center">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-white/90">
+            Logomarcas suspensas
+          </p>
+          <p className="mt-1 text-[9px] text-white/60">Período Eleitoral</p>
+          {/* <img
             src={crede3LogoUrl}
             alt="CREDE 3"
             className={collapsed ? "h-8 w-auto object-contain" : "h-16 w-auto object-contain"}
-          />
+          /> */}
         </div>
       </SidebarFooter>
     </Sidebar>
