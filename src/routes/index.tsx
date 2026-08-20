@@ -56,8 +56,8 @@ function LandingPage() {
 
       {/* Banner removed by request */}
 
-      <div className="mx-auto grid min-h-[calc(100-80px)] max-w-6xl items-center gap-12 px-6 py-10 lg:grid-cols-2">
-        <header className="flex flex-col items-center text-center lg:items-start lg:text-left">
+      <div className="mx-auto flex min-h-[calc(100vh-80px)] max-w-2xl flex-col items-center justify-center gap-12 px-6 py-10">
+        <header className="flex flex-col items-center text-center">
           {/* Logo temporarily removed due to electoral period */}
           {/* <div className="rounded-3xl bg-white/95 p-6 shadow-2xl ring-1 ring-white/40 backdrop-blur">
             <img
@@ -67,7 +67,7 @@ function LandingPage() {
             />
           </div> */}
           <h1 className="mt-8 text-3xl font-bold tracking-tight md:text-4xl">
-            Plataforma Regional de Simulados e Monitoramento da Aprendizagem
+            PRISMA — Plataforma Regional de Simulados e Monitoramento da Aprendizagem
           </h1>
           <p className="mt-3 max-w-md text-base text-primary-foreground/80">
             CREDE 3 — acompanhamento de resultados de simulados regionais, com acesso para
@@ -75,10 +75,10 @@ function LandingPage() {
           </p>
         </header>
 
-        <Card className="w-full border-white/10 bg-white text-foreground shadow-2xl">
+        <Card className="w-full max-w-md border-white/10 bg-white text-foreground shadow-2xl">
           <CardHeader>
-            <CardTitle className="text-2xl">Acessar a plataforma</CardTitle>
-            <CardDescription>Entre com suas credenciais.</CardDescription>
+            <CardTitle className="text-2xl text-center">Acessar a plataforma</CardTitle>
+            <CardDescription className="text-center">Entre com suas credenciais.</CardDescription>
           </CardHeader>
           <CardContent>
             <CredentialsForm />
