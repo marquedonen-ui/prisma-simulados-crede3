@@ -75,9 +75,13 @@ function LandingPage() {
           </p>
         </header>
 
-        <Card className="w-full max-w-md border-white/10 bg-white text-foreground shadow-2xl">
-          <CardHeader>
-            <CardTitle className="text-2xl text-center">Acessar a plataforma</CardTitle>
+        <div className="w-full max-w-md space-y-4">
+          <p className="text-center text-sm font-medium text-primary-foreground/90">
+            Seja bem-vindo(a)! Utilize seu usuário e senha institucional para acessar os simulados e relatórios.
+          </p>
+          <Card className="border-white/10 bg-white text-foreground shadow-2xl">
+            <CardHeader>
+              <CardTitle className="text-2xl text-center">Acessar a plataforma</CardTitle>
             <CardDescription className="text-center">Entre com suas credenciais.</CardDescription>
           </CardHeader>
           <CardContent>
