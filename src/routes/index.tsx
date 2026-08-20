@@ -297,4 +297,6 @@ function CodeForm() {
         Voltar
       </Link>
     </form>
+  );
 }
+
