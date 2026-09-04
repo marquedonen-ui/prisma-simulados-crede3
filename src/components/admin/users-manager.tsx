@@ -102,6 +102,25 @@ export function UsersManager({ schools }: { schools: School[] }) {
 
   const usersQ = useQuery({ queryKey: ["managed-users"], queryFn: () => listFn() });
 
+  const groupedUsers = useMemo(() => {
+    const map = new Map<string, { key: string; label: string; users: any[] }>();
+    for (const u of (usersQ.data ?? []) as any[]) {
+      const key = u.school_id ?? "__crede__";
+      const label = u.school_name
+        ? `${u.school_name}${u.school_inep ? ` (${u.school_inep})` : ""}`
+        : "CREDE 3";
+      if (!map.has(key)) map.set(key, { key, label, users: [] });
+      map.get(key)!.users.push(u);
+    }
+    return [...map.values()].sort((a, b) => {
+      if (a.key === "__crede__") return -1;
+      if (b.key === "__crede__") return 1;
+      return a.label.localeCompare(b.label, "pt-BR");
+    });
+  }, [usersQ.data]);
+
+
+
   const create = useMutation({
     mutationFn: (payload: any) => createFn({ data: payload }),
     onSuccess: (result: any) => {
