@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Pencil, UserCog, KeyRound } from "lucide-react";
@@ -101,6 +101,25 @@ export function UsersManager({ schools }: { schools: School[] }) {
   const [newPw, setNewPw] = useState("");
 
   const usersQ = useQuery({ queryKey: ["managed-users"], queryFn: () => listFn() });
+
+  const groupedUsers = useMemo(() => {
+    const map = new Map<string, { key: string; label: string; users: any[] }>();
+    for (const u of (usersQ.data ?? []) as any[]) {
+      const key = u.school_id ?? "__crede__";
+      const label = u.school_name
+        ? `${u.school_name}${u.school_inep ? ` (${u.school_inep})` : ""}`
+        : "CREDE 3";
+      if (!map.has(key)) map.set(key, { key, label, users: [] });
+      map.get(key)!.users.push(u);
+    }
+    return [...map.values()].sort((a, b) => {
+      if (a.key === "__crede__") return -1;
+      if (b.key === "__crede__") return 1;
+      return a.label.localeCompare(b.label, "pt-BR");
+    });
+  }, [usersQ.data]);
+
+
 
   const create = useMutation({
     mutationFn: (payload: any) => createFn({ data: payload }),
@@ -258,7 +277,7 @@ export function UsersManager({ schools }: { schools: School[] }) {
                 <th className="px-3 py-2">Nome</th>
                 <th className="px-3 py-2">E-mail</th>
                 <th className="px-3 py-2">Papel</th>
-                <th className="px-3 py-2">Escola</th>
+                <th className="px-3 py-2">Escola/CREDE</th>
                 <th className="px-3 py-2 text-right">Ações</th>
               </tr>
             </thead>
@@ -270,52 +289,63 @@ export function UsersManager({ schools }: { schools: School[] }) {
                   </td>
                 </tr>
               )}
-              {usersQ.data?.map((u: any) => (
-                <tr key={u.id} className="border-t">
-                  <td className="px-3 py-2">{u.full_name ?? "—"}</td>
-                  <td className="px-3 py-2">{u.email ?? "—"}</td>
-                  <td className="px-3 py-2">
-                    {u.roles?.length ? (
-                      u.roles.map((r: string) => (
-                        <Badge key={r} variant="secondary" className="mr-1">
-                          {ROLE_LABELS[r] ?? r}
-                        </Badge>
-                      ))
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    {u.school_name ? `${u.school_name} (${u.school_inep})` : "—"}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <Button size="icon" variant="ghost" onClick={() => openEdit(u)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      title="Redefinir senha"
-                      onClick={() => {
-                        setEditing({ user_id: u.id, full_name: u.full_name });
-                        setNewPw(genTempPassword());
-                        setPwOpen(true);
-                      }}
-                    >
-                      <KeyRound className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => {
-                        if (confirm(`Excluir ${u.full_name ?? u.email}?`)) del.mutate(u.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </td>
-                </tr>
+              {groupedUsers.map((group) => (
+                <Fragment key={group.key}>
+                  <tr className="border-t bg-muted/50">
+                    <td colSpan={5} className="px-3 py-2 text-xs font-semibold uppercase tracking-wide">
+                      {group.label}
+                      <span className="ml-2 font-normal text-muted-foreground">
+                        ({group.users.length})
+                      </span>
+                    </td>
+                  </tr>
+                  {group.users.map((u: any) => (
+                    <tr key={u.id} className="border-t">
+                      <td className="px-3 py-2">{u.full_name ?? "—"}</td>
+                      <td className="px-3 py-2">{u.email ?? "—"}</td>
+                      <td className="px-3 py-2">
+                        {u.roles?.length ? (
+                          u.roles.map((r: string) => (
+                            <Badge key={r} variant="secondary" className="mr-1">
+                              {ROLE_LABELS[r] ?? r}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">{group.label}</td>
+                      <td className="px-3 py-2 text-right">
+                        <Button size="icon" variant="ghost" onClick={() => openEdit(u)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          title="Redefinir senha"
+                          onClick={() => {
+                            setEditing({ user_id: u.id, full_name: u.full_name });
+                            setNewPw(genTempPassword());
+                            setPwOpen(true);
+                          }}
+                        >
+                          <KeyRound className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => {
+                            if (confirm(`Excluir ${u.full_name ?? u.email}?`)) del.mutate(u.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </Fragment>
               ))}
+
             </tbody>
           </table>
         </div>
