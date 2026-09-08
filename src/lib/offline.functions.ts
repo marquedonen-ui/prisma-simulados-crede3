@@ -547,12 +547,12 @@ export const listImportacoes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await ensureProfessorOrAdmin(context.supabase, context.userId);
-    const data = await fetchAllRows<any>(() =>
-      context.supabase
-        .from("respostas_alunos")
-        .select("simulado_id, turma_id, numero_chamada, data_resposta")
-        .not("turma_id", "is", null),
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: agg, error: aggErr } = await supabaseAdmin.rpc(
+      "rel_importacoes_agg" as any,
+      {} as any,
     );
+    if (aggErr) throw aggErr;
 
     const map = new Map<
       string,
@@ -563,6 +563,7 @@ export const listImportacoes = createServerFn({ method: "GET" })
         _ausentes: Set<number>;
         respostas: number;
         ultima: string;
+        _alunosCount: number;
       }
     >();
     const getOrCreate = (sim: string, tur: string, ultima?: string) => {
@@ -576,18 +577,20 @@ export const listImportacoes = createServerFn({ method: "GET" })
           _ausentes: new Set<number>(),
           respostas: 0,
           ultima: ultima ?? new Date(0).toISOString(),
+          _alunosCount: 0,
         };
         map.set(key, item);
       }
       return item;
     };
 
-    for (const r of (data ?? []) as any[]) {
-      const item = getOrCreate(r.simulado_id, r.turma_id, r.data_resposta);
-      if (r.numero_chamada != null) item._alunos.add(r.numero_chamada);
-      item.respostas++;
-      if (r.data_resposta > item.ultima) item.ultima = r.data_resposta;
+    for (const r of (agg ?? []) as any[]) {
+      const item = getOrCreate(r.simulado_id, r.turma_id, r.ultima);
+      item.respostas = Number(r.respostas ?? 0);
+      item._alunosCount = Number(r.alunos ?? 0);
+      if (r.ultima && r.ultima > item.ultima) item.ultima = r.ultima;
     }
+
 
     // merge alunos ausentes
     const ausentes = await fetchAllRows<any>(() =>
@@ -651,7 +654,7 @@ export const listImportacoes = createServerFn({ method: "GET" })
       .map((i) => {
         const s = simMap.get(i.simulado_id);
         const t = turmaMap.get(i.turma_id);
-        const totalAlunos = new Set<number>([...i._alunos, ...i._ausentes]).size;
+        const totalAlunos = i._alunosCount + i._ausentes.size;
         const key = `${i.simulado_id}::${i.turma_id}`;
         return {
           simulado_id: i.simulado_id,

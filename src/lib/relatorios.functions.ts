@@ -98,18 +98,24 @@ export const listSimuladosComRespostas = createServerFn({ method: "GET" })
     if (error) throw error;
     const ids = (simulados ?? []).map((s: any) => s.id);
     if (ids.length === 0) return [];
-    const resp = await fetchAllRows<any>(() =>
-      context.supabase
-        .from("respostas_alunos")
-        .select("simulado_id, turma_id, numero_chamada")
-        .in("simulado_id", ids)
-        .not("turma_id", "is", null),
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: resumo, error: rErr } = await supabaseAdmin.rpc(
+      "rel_simulados_resumo" as any,
+      {} as any,
+    );
+    if (rErr) throw rErr;
+    const byId = new Map<string, any>(
+      ((resumo ?? []) as any[]).map((r) => [r.simulado_id, r]),
     );
     return (simulados ?? []).map((s: any) => {
-      const rs = (resp ?? []).filter((r: any) => r.simulado_id === s.id);
-      const alunos = new Set(rs.map((r: any) => `${r.turma_id}|${r.numero_chamada}`));
-      return { ...s, total_respostas: rs.length, alunos_distintos: alunos.size };
+      const r = byId.get(s.id);
+      return {
+        ...s,
+        total_respostas: Number(r?.total_respostas ?? 0),
+        alunos_distintos: Number(r?.alunos_distintos ?? 0),
+      };
     });
+
   });
 
 type Faixas = { muito_critico: number; critico: number; intermediario: number; adequado: number };
@@ -135,40 +141,30 @@ async function carregarDataset(
     scopeTurmaIds?: string[] | null;
   },
 ) {
-  // Use service role to read the answer key (resposta_correta) without exposing
-  // it via RLS to professor_responsavel/gestor. Callers must enforce role checks first.
+  // Agregação feita no banco (uma única chamada) — muito mais rápido do que
+  // baixar todas as respostas linha por linha.
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: questoes, error: qErr } = await supabaseAdmin
-    .from("questoes")
-    .select("id, resposta_correta, anulada, disciplina")
-    .eq("simulado_id", simuladoId);
-  if (qErr) throw qErr;
   const disciplinaFilter = (opts?.disciplina ?? "").trim();
-  const questoesFiltradas = disciplinaFilter
-    ? (questoes ?? []).filter(
-        (q: any) => String(q.disciplina ?? "").trim() === disciplinaFilter,
-      )
-    : (questoes ?? []);
-  const allowedIds = new Set<string>(questoesFiltradas.map((q: any) => q.id));
-  const correct = new Map<string, string>(
-    questoesFiltradas.map((q: any) => [q.id, q.resposta_correta]),
-  );
-  const anulada = new Map<string, boolean>(
-    questoesFiltradas.map((q: any) => [q.id, !!q.anulada]),
-  );
 
-  const totalQuestoes = questoesFiltradas.length;
+  const { data: aggRows, error: aggErr } = await supabaseAdmin.rpc("rel_alunos_agg" as any, {
+    p_simulado: simuladoId,
+    p_disciplina: disciplinaFilter ? disciplinaFilter : null,
+  } as any);
+  if (aggErr) throw aggErr;
+  const rows = (aggRows ?? []) as any[];
 
-  const respostas = await fetchAllRows<any>(() =>
-    supabase
-      .from("respostas_alunos")
-      .select("turma_id, numero_chamada, nome, questao_id, resposta_escolhida")
-      .eq("simulado_id", simuladoId)
-      .not("turma_id", "is", null)
-      .not("numero_chamada", "is", null),
-  );
+  let totalQuestoes = rows.length ? Number(rows[0].total_questoes ?? 0) : 0;
+  if (!rows.length) {
+    let q = supabaseAdmin
+      .from("questoes")
+      .select("id", { count: "exact", head: true })
+      .eq("simulado_id", simuladoId);
+    if (disciplinaFilter) q = q.eq("disciplina", disciplinaFilter);
+    const { count } = await q;
+    totalQuestoes = count ?? 0;
+  }
 
-  const turmaIds = Array.from(new Set((respostas ?? []).map((r: any) => r.turma_id)));
+  const turmaIds = Array.from(new Set(rows.map((r) => r.turma_id).filter(Boolean)));
   const { data: turmasRaw } = turmaIds.length
     ? await supabase
         .from("turmas")
@@ -188,53 +184,28 @@ async function carregarDataset(
   }
   const turmaById = new Map((turmas ?? []).map((t: any) => [t.id, t]));
 
-  // Por aluno (turma+chamada)
-  const alunos = new Map<
-    string,
-    {
-      turma_id: string;
-      numero_chamada: number;
-      nome: string | null;
-      acertos: number;
-      respondidas: number;
-      escola: any;
-      turma: any;
-    }
-  >();
-  for (const r of respostas ?? []) {
-    if ((scopeSchoolId || scopeTurmaSet) && !turmaById.has(r.turma_id)) continue;
-    const key = `${r.turma_id}|${r.numero_chamada}`;
-    let a = alunos.get(key);
-    if (!a) {
+  const alunos = rows
+    .filter((r) => (scopeSchoolId || scopeTurmaSet ? turmaById.has(r.turma_id) : true))
+    .map((r) => {
       const turma: any = turmaById.get(r.turma_id);
-      a = {
-        turma_id: r.turma_id,
-        numero_chamada: r.numero_chamada,
-        nome: r.nome ?? null,
-        acertos: 0,
-        respondidas: 0,
+      return {
+        turma_id: r.turma_id as string,
+        numero_chamada: Number(r.numero_chamada),
+        nome: (r.nome as string | null) ?? null,
+        acertos: Number(r.acertos ?? 0),
+        respondidas: Number(r.respondidas ?? 0),
         escola: turma?.schools ?? null,
         turma,
       };
-      alunos.set(key, a);
-    }
-    if (!a.nome && r.nome) a.nome = r.nome;
-    if (!allowedIds.has(r.questao_id)) continue;
-    const alt = String(r.resposta_escolhida ?? "").toUpperCase();
-    if (["A", "B", "C", "D", "E"].includes(alt)) {
-      a.respondidas += 1;
-      if (anulada.get(r.questao_id) || correct.get(r.questao_id) === alt) a.acertos += 1;
-    }
-
-  }
-
+    });
 
   return {
     totalQuestoes,
-    alunos: Array.from(alunos.values()),
+    alunos,
     turmas: turmas ?? [],
   };
 }
+
 
 
 const CITY_DESCONHECIDA = "Sem município";
@@ -695,50 +666,28 @@ export const getRelatorioQuestoes = createServerFn({ method: "GET" })
       .order("numero", { ascending: true });
     if (qErr) throw qErr;
 
-    const respostas = await fetchAllRows<any>(() =>
-      context.supabase
-        .from("respostas_alunos")
-        .select("questao_id, resposta_escolhida, turma_id")
-        .eq("simulado_id", data.simuladoId)
-        .not("turma_id", "is", null),
+    const { data: aggRows, error: aggErr } = await supabaseAdmin.rpc(
+      "rel_questoes_agg" as any,
+      {
+        p_simulado: data.simuladoId,
+        p_turma: data.turmaId ?? null,
+        p_escola: data.turmaId ? null : (data.escolaId ?? null),
+      } as any,
     );
+    if (aggErr) throw aggErr;
 
-    // Filtro escola/turma: descobrir turma_ids permitidos.
-    let allowedTurmaIds: Set<string> | null = null;
-    if (data.turmaId) {
-      allowedTurmaIds = new Set([data.turmaId]);
-    } else if (data.escolaId) {
-      const turmaIds = Array.from(new Set((respostas ?? []).map((r: any) => r.turma_id)));
-      if (turmaIds.length) {
-        const { data: turmas } = await context.supabase
-          .from("turmas")
-          .select("id, school_id")
-          .in("id", turmaIds);
-        allowedTurmaIds = new Set(
-          (turmas ?? []).filter((t: any) => t.school_id === data.escolaId).map((t: any) => t.id),
-        );
-      } else {
-        allowedTurmaIds = new Set();
-      }
-    }
-
-    const byId = new Map<string, any>((questoes ?? []).map((q: any) => [q.id, q]));
     const stats = new Map<string, { acertos: number; erros: number; brancos: number }>();
     for (const q of questoes ?? []) {
       stats.set(q.id, { acertos: 0, erros: 0, brancos: 0 });
     }
-    for (const r of respostas ?? []) {
-      if (allowedTurmaIds && !allowedTurmaIds.has(r.turma_id)) continue;
-      const s = stats.get(r.questao_id);
-      const q = byId.get(r.questao_id);
-      if (!s || !q) continue;
-      const alt = String(r.resposta_escolhida ?? "").toUpperCase();
-      const correta = String(q.resposta_correta ?? "").toUpperCase();
-      const isAnulada = !!q.anulada;
-      if (!["A", "B", "C", "D", "E"].includes(alt)) s.brancos += 1;
-      else if (isAnulada || alt === correta) s.acertos += 1;
-      else s.erros += 1;
+    for (const r of (aggRows ?? []) as any[]) {
+      stats.set(r.questao_id, {
+        acertos: Number(r.acertos ?? 0),
+        erros: Number(r.erros ?? 0),
+        brancos: Number(r.brancos ?? 0),
+      });
     }
+
 
     return (questoes ?? []).map((q: any, idx: number) => {
       const s = stats.get(q.id) ?? { acertos: 0, erros: 0, brancos: 0 };
