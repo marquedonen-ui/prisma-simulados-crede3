@@ -800,6 +800,44 @@ export type Database = {
         Returns: boolean
       }
       minhas_turmas_ids: { Args: never; Returns: string[] }
+      rel_alunos_agg: {
+        Args: { p_disciplina?: string; p_simulado: string }
+        Returns: {
+          acertos: number
+          nome: string
+          numero_chamada: number
+          respondidas: number
+          total_questoes: number
+          turma_id: string
+        }[]
+      }
+      rel_importacoes_agg: {
+        Args: never
+        Returns: {
+          alunos: number
+          respostas: number
+          simulado_id: string
+          turma_id: string
+          ultima: string
+        }[]
+      }
+      rel_questoes_agg: {
+        Args: { p_escola?: string; p_simulado: string; p_turma?: string }
+        Returns: {
+          acertos: number
+          brancos: number
+          erros: number
+          questao_id: string
+        }[]
+      }
+      rel_simulados_resumo: {
+        Args: never
+        Returns: {
+          alunos_distintos: number
+          simulado_id: string
+          total_respostas: number
+        }[]
+      }
       validate_student_code: {
         Args: { _code: string }
         Returns: {
