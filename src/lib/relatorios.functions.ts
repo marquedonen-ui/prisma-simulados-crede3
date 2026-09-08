@@ -98,18 +98,24 @@ export const listSimuladosComRespostas = createServerFn({ method: "GET" })
     if (error) throw error;
     const ids = (simulados ?? []).map((s: any) => s.id);
     if (ids.length === 0) return [];
-    const resp = await fetchAllRows<any>(() =>
-      context.supabase
-        .from("respostas_alunos")
-        .select("simulado_id, turma_id, numero_chamada")
-        .in("simulado_id", ids)
-        .not("turma_id", "is", null),
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: resumo, error: rErr } = await supabaseAdmin.rpc(
+      "rel_simulados_resumo" as any,
+      {} as any,
+    );
+    if (rErr) throw rErr;
+    const byId = new Map<string, any>(
+      ((resumo ?? []) as any[]).map((r) => [r.simulado_id, r]),
     );
     return (simulados ?? []).map((s: any) => {
-      const rs = (resp ?? []).filter((r: any) => r.simulado_id === s.id);
-      const alunos = new Set(rs.map((r: any) => `${r.turma_id}|${r.numero_chamada}`));
-      return { ...s, total_respostas: rs.length, alunos_distintos: alunos.size };
+      const r = byId.get(s.id);
+      return {
+        ...s,
+        total_respostas: Number(r?.total_respostas ?? 0),
+        alunos_distintos: Number(r?.alunos_distintos ?? 0),
+      };
     });
+
   });
 
 type Faixas = { muito_critico: number; critico: number; intermediario: number; adequado: number };
