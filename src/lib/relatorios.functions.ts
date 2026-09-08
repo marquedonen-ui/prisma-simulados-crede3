@@ -135,40 +135,30 @@ async function carregarDataset(
     scopeTurmaIds?: string[] | null;
   },
 ) {
-  // Use service role to read the answer key (resposta_correta) without exposing
-  // it via RLS to professor_responsavel/gestor. Callers must enforce role checks first.
+  // Agregação feita no banco (uma única chamada) — muito mais rápido do que
+  // baixar todas as respostas linha por linha.
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: questoes, error: qErr } = await supabaseAdmin
-    .from("questoes")
-    .select("id, resposta_correta, anulada, disciplina")
-    .eq("simulado_id", simuladoId);
-  if (qErr) throw qErr;
   const disciplinaFilter = (opts?.disciplina ?? "").trim();
-  const questoesFiltradas = disciplinaFilter
-    ? (questoes ?? []).filter(
-        (q: any) => String(q.disciplina ?? "").trim() === disciplinaFilter,
-      )
-    : (questoes ?? []);
-  const allowedIds = new Set<string>(questoesFiltradas.map((q: any) => q.id));
-  const correct = new Map<string, string>(
-    questoesFiltradas.map((q: any) => [q.id, q.resposta_correta]),
-  );
-  const anulada = new Map<string, boolean>(
-    questoesFiltradas.map((q: any) => [q.id, !!q.anulada]),
-  );
 
-  const totalQuestoes = questoesFiltradas.length;
+  const { data: aggRows, error: aggErr } = await supabaseAdmin.rpc("rel_alunos_agg" as any, {
+    p_simulado: simuladoId,
+    p_disciplina: disciplinaFilter ? disciplinaFilter : null,
+  } as any);
+  if (aggErr) throw aggErr;
+  const rows = (aggRows ?? []) as any[];
 
-  const respostas = await fetchAllRows<any>(() =>
-    supabase
-      .from("respostas_alunos")
-      .select("turma_id, numero_chamada, nome, questao_id, resposta_escolhida")
-      .eq("simulado_id", simuladoId)
-      .not("turma_id", "is", null)
-      .not("numero_chamada", "is", null),
-  );
+  let totalQuestoes = rows.length ? Number(rows[0].total_questoes ?? 0) : 0;
+  if (!rows.length) {
+    let q = supabaseAdmin
+      .from("questoes")
+      .select("id", { count: "exact", head: true })
+      .eq("simulado_id", simuladoId);
+    if (disciplinaFilter) q = q.eq("disciplina", disciplinaFilter);
+    const { count } = await q;
+    totalQuestoes = count ?? 0;
+  }
 
-  const turmaIds = Array.from(new Set((respostas ?? []).map((r: any) => r.turma_id)));
+  const turmaIds = Array.from(new Set(rows.map((r) => r.turma_id).filter(Boolean)));
   const { data: turmasRaw } = turmaIds.length
     ? await supabase
         .from("turmas")
@@ -188,53 +178,28 @@ async function carregarDataset(
   }
   const turmaById = new Map((turmas ?? []).map((t: any) => [t.id, t]));
 
-  // Por aluno (turma+chamada)
-  const alunos = new Map<
-    string,
-    {
-      turma_id: string;
-      numero_chamada: number;
-      nome: string | null;
-      acertos: number;
-      respondidas: number;
-      escola: any;
-      turma: any;
-    }
-  >();
-  for (const r of respostas ?? []) {
-    if ((scopeSchoolId || scopeTurmaSet) && !turmaById.has(r.turma_id)) continue;
-    const key = `${r.turma_id}|${r.numero_chamada}`;
-    let a = alunos.get(key);
-    if (!a) {
+  const alunos = rows
+    .filter((r) => (scopeSchoolId || scopeTurmaSet ? turmaById.has(r.turma_id) : true))
+    .map((r) => {
       const turma: any = turmaById.get(r.turma_id);
-      a = {
-        turma_id: r.turma_id,
-        numero_chamada: r.numero_chamada,
-        nome: r.nome ?? null,
-        acertos: 0,
-        respondidas: 0,
+      return {
+        turma_id: r.turma_id as string,
+        numero_chamada: Number(r.numero_chamada),
+        nome: (r.nome as string | null) ?? null,
+        acertos: Number(r.acertos ?? 0),
+        respondidas: Number(r.respondidas ?? 0),
         escola: turma?.schools ?? null,
         turma,
       };
-      alunos.set(key, a);
-    }
-    if (!a.nome && r.nome) a.nome = r.nome;
-    if (!allowedIds.has(r.questao_id)) continue;
-    const alt = String(r.resposta_escolhida ?? "").toUpperCase();
-    if (["A", "B", "C", "D", "E"].includes(alt)) {
-      a.respondidas += 1;
-      if (anulada.get(r.questao_id) || correct.get(r.questao_id) === alt) a.acertos += 1;
-    }
-
-  }
-
+    });
 
   return {
     totalQuestoes,
-    alunos: Array.from(alunos.values()),
+    alunos,
     turmas: turmas ?? [],
   };
 }
+
 
 
 const CITY_DESCONHECIDA = "Sem município";
