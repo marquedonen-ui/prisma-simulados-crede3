@@ -654,7 +654,7 @@ export const listImportacoes = createServerFn({ method: "GET" })
       .map((i) => {
         const s = simMap.get(i.simulado_id);
         const t = turmaMap.get(i.turma_id);
-        const totalAlunos = new Set<number>([...i._alunos, ...i._ausentes]).size;
+        const totalAlunos = i._alunosCount + i._ausentes.size;
         const key = `${i.simulado_id}::${i.turma_id}`;
         return {
           simulado_id: i.simulado_id,
