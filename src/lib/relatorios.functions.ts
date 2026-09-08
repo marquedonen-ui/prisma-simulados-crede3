@@ -660,50 +660,28 @@ export const getRelatorioQuestoes = createServerFn({ method: "GET" })
       .order("numero", { ascending: true });
     if (qErr) throw qErr;
 
-    const respostas = await fetchAllRows<any>(() =>
-      context.supabase
-        .from("respostas_alunos")
-        .select("questao_id, resposta_escolhida, turma_id")
-        .eq("simulado_id", data.simuladoId)
-        .not("turma_id", "is", null),
+    const { data: aggRows, error: aggErr } = await supabaseAdmin.rpc(
+      "rel_questoes_agg" as any,
+      {
+        p_simulado: data.simuladoId,
+        p_turma: data.turmaId ?? null,
+        p_escola: data.turmaId ? null : (data.escolaId ?? null),
+      } as any,
     );
+    if (aggErr) throw aggErr;
 
-    // Filtro escola/turma: descobrir turma_ids permitidos.
-    let allowedTurmaIds: Set<string> | null = null;
-    if (data.turmaId) {
-      allowedTurmaIds = new Set([data.turmaId]);
-    } else if (data.escolaId) {
-      const turmaIds = Array.from(new Set((respostas ?? []).map((r: any) => r.turma_id)));
-      if (turmaIds.length) {
-        const { data: turmas } = await context.supabase
-          .from("turmas")
-          .select("id, school_id")
-          .in("id", turmaIds);
-        allowedTurmaIds = new Set(
-          (turmas ?? []).filter((t: any) => t.school_id === data.escolaId).map((t: any) => t.id),
-        );
-      } else {
-        allowedTurmaIds = new Set();
-      }
-    }
-
-    const byId = new Map<string, any>((questoes ?? []).map((q: any) => [q.id, q]));
     const stats = new Map<string, { acertos: number; erros: number; brancos: number }>();
     for (const q of questoes ?? []) {
       stats.set(q.id, { acertos: 0, erros: 0, brancos: 0 });
     }
-    for (const r of respostas ?? []) {
-      if (allowedTurmaIds && !allowedTurmaIds.has(r.turma_id)) continue;
-      const s = stats.get(r.questao_id);
-      const q = byId.get(r.questao_id);
-      if (!s || !q) continue;
-      const alt = String(r.resposta_escolhida ?? "").toUpperCase();
-      const correta = String(q.resposta_correta ?? "").toUpperCase();
-      const isAnulada = !!q.anulada;
-      if (!["A", "B", "C", "D", "E"].includes(alt)) s.brancos += 1;
-      else if (isAnulada || alt === correta) s.acertos += 1;
-      else s.erros += 1;
+    for (const r of (aggRows ?? []) as any[]) {
+      stats.set(r.questao_id, {
+        acertos: Number(r.acertos ?? 0),
+        erros: Number(r.erros ?? 0),
+        brancos: Number(r.brancos ?? 0),
+      });
     }
+
 
     return (questoes ?? []).map((q: any, idx: number) => {
       const s = stats.get(q.id) ?? { acertos: 0, erros: 0, brancos: 0 };
