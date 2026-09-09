@@ -96,6 +96,22 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
     : null;
 
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const [filtroEscola, setFiltroEscola] = useState<string>("");
+  const [filtroSimulado, setFiltroSimulado] = useState<string>("");
+
+  const lotes = (lotesQ.data ?? []) as Lote[];
+  const escolasOpcoes = Array.from(
+    new Map(lotes.map((l) => [l.inep || l.escola, l.escola])).entries(),
+  ).sort((a, b) => a[1].localeCompare(b[1], "pt-BR"));
+  const simuladosOpcoes = Array.from(
+    new Map(lotes.map((l) => [l.simulado_id, l.simulado])).entries(),
+  ).sort((a, b) => a[1].localeCompare(b[1], "pt-BR"));
+  const lotesFiltrados = lotes.filter(
+    (l) =>
+      (!filtroEscola || (l.inep || l.escola) === filtroEscola) &&
+      (!filtroSimulado || l.simulado_id === filtroSimulado),
+  );
+
 
   const delLote = useMutation({
     mutationFn: (l: Lote) =>
