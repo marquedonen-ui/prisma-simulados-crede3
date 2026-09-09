@@ -96,6 +96,22 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
     : null;
 
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const [filtroEscola, setFiltroEscola] = useState<string>("");
+  const [filtroSimulado, setFiltroSimulado] = useState<string>("");
+
+  const lotes = (lotesQ.data ?? []) as Lote[];
+  const escolasOpcoes = Array.from(
+    new Map(lotes.map((l) => [l.inep || l.escola, l.escola])).entries(),
+  ).sort((a, b) => a[1].localeCompare(b[1], "pt-BR"));
+  const simuladosOpcoes = Array.from(
+    new Map(lotes.map((l) => [l.simulado_id, l.simulado])).entries(),
+  ).sort((a, b) => a[1].localeCompare(b[1], "pt-BR"));
+  const lotesFiltrados = lotes.filter(
+    (l) =>
+      (!filtroEscola || (l.inep || l.escola) === filtroEscola) &&
+      (!filtroSimulado || l.simulado_id === filtroSimulado),
+  );
+
 
   const delLote = useMutation({
     mutationFn: (l: Lote) =>
@@ -218,8 +234,72 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
         {lotesQ.data?.length === 0 && !isAdmin && (
           <p className="text-sm text-muted-foreground">Nenhuma importação ainda para a sua escola.</p>
         )}
+        {lotes.length > 0 && (
+          <div className="mb-4 grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Escola</label>
+              <select
+                value={filtroEscola}
+                onChange={(e) => {
+                  setFiltroEscola(e.target.value);
+                  setOpenKey(null);
+                }}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="">Todas as escolas</option>
+                {escolasOpcoes.map(([value, nome]) => (
+                  <option key={value} value={value}>
+                    {nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Simulado</label>
+              <select
+                value={filtroSimulado}
+                onChange={(e) => {
+                  setFiltroSimulado(e.target.value);
+                  setOpenKey(null);
+                }}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="">Todos os simulados</option>
+                {simuladosOpcoes.map(([value, nome]) => (
+                  <option key={value} value={value}>
+                    {nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="sm:col-span-2 flex items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                Mostrando {lotesFiltrados.length} de {lotes.length} planilha(s) importada(s).
+              </p>
+              {(filtroEscola || filtroSimulado) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setFiltroEscola("");
+                    setFiltroSimulado("");
+                    setOpenKey(null);
+                  }}
+                >
+                  Limpar filtros
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+        {lotes.length > 0 && lotesFiltrados.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            Nenhuma importação encontrada para os filtros selecionados.
+          </p>
+        )}
         <div className="space-y-2">
-          {(lotesQ.data ?? []).map((l) => {
+          {lotesFiltrados.map((l) => {
+
             const key = `${l.simulado_id}::${l.turma_id}`;
             const open = openKey === key;
             return (
