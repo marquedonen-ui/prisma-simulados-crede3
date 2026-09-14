@@ -71,6 +71,22 @@ type AlunoLote = {
   ausente: boolean;
 };
 
+const REPORT_QUERY_KEYS = new Set([
+  "rel-sims",
+  "padrao",
+  "conclusao",
+  "acerto",
+  "resultados-alunos",
+  "rel-questoes-alunos",
+  "rel-questoes",
+]);
+
+function invalidateReportQueries(queryClient: ReturnType<typeof useQueryClient>) {
+  void queryClient.invalidateQueries({
+    predicate: (query) => REPORT_QUERY_KEYS.has(String(query.queryKey[0] ?? "")),
+  });
+}
+
 
 export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {}) {
   const qc = useQueryClient();
@@ -119,6 +135,7 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
     onSuccess: (r) => {
       toast.success(`Lote excluído (${r.removidas} respostas).`);
       qc.invalidateQueries({ queryKey: ["importacoes"] });
+      invalidateReportQueries(qc);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
@@ -128,6 +145,7 @@ export function ImportacoesManager({ isAdmin = true }: { isAdmin?: boolean } = {
     onSuccess: (r) => {
       toast.success(`Importações zeradas (${r.removidas} respostas removidas).`);
       qc.invalidateQueries({ queryKey: ["importacoes"] });
+      invalidateReportQueries(qc);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
@@ -450,6 +468,7 @@ function LoteAlunos({ lote, bloqueadoPorPrazo = false }: { lote: Lote; bloqueado
       setEditing(null);
       qc.invalidateQueries({ queryKey: ["importacao-alunos", lote.simulado_id, lote.turma_id] });
       qc.invalidateQueries({ queryKey: ["importacoes"] });
+      invalidateReportQueries(qc);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
@@ -467,6 +486,7 @@ function LoteAlunos({ lote, bloqueadoPorPrazo = false }: { lote: Lote; bloqueado
       toast.success(`Aluno removido (${r.removidas} respostas).`);
       qc.invalidateQueries({ queryKey: ["importacao-alunos", lote.simulado_id, lote.turma_id] });
       qc.invalidateQueries({ queryKey: ["importacoes"] });
+      invalidateReportQueries(qc);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
@@ -490,6 +510,7 @@ function LoteAlunos({ lote, bloqueadoPorPrazo = false }: { lote: Lote; bloqueado
       setNovoNome("");
       qc.invalidateQueries({ queryKey: ["importacao-alunos", lote.simulado_id, lote.turma_id] });
       qc.invalidateQueries({ queryKey: ["importacoes"] });
+      invalidateReportQueries(qc);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
@@ -719,6 +740,7 @@ function EditAnswersDialog({
       qc.invalidateQueries({ queryKey: ["importacao-alunos", simuladoId, turmaId] });
       qc.invalidateQueries({ queryKey: ["importacoes"] });
       qc.invalidateQueries({ queryKey: ["respostas-aluno", simuladoId, turmaId, numeroChamada] });
+      invalidateReportQueries(qc);
       onClose();
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),

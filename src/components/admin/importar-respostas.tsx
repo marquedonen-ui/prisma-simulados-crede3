@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Upload, Download, FileSpreadsheet, Loader2, CheckCircle2, BarChart3, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -37,6 +37,7 @@ export function ImportarRespostas({
   schools: School[];
   fixedSchoolId?: string;
 }) {
+  const queryClient = useQueryClient();
   const [simuladoId, setSimuladoId] = useState("");
   const [schoolId, setSchoolId] = useState(fixedSchoolId ?? "");
   const [turmaId, setTurmaId] = useState("");
@@ -185,6 +186,19 @@ export function ImportarRespostas({
     },
     onSuccess: (r) => {
       setResultado(r);
+      void queryClient.invalidateQueries({
+        predicate: (query) =>
+          [
+            "rel-sims",
+            "padrao",
+            "conclusao",
+            "acerto",
+            "resultados-alunos",
+            "rel-questoes-alunos",
+            "rel-questoes",
+            "importacoes",
+          ].includes(String(query.queryKey[0] ?? "")),
+      });
       const ign = r.linhas_ignoradas?.length ?? 0;
       toast.success(
         `${r.respostas_importadas} respostas de ${r.alunos_processados} aluno(s) importadas${ign ? ` · ${ign} linha(s) ignorada(s)` : ""}.`,

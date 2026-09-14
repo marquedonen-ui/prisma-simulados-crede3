@@ -66,12 +66,12 @@ function Page() {
 
   const simQ = useQuery({ queryKey: ["rel-sims"], queryFn: () => listSimFn() });
   const padQ = useQuery({
-    queryKey: ["padrao", simuladoId],
+    queryKey: ["padrao", "contagem-v2", simuladoId],
     queryFn: () => getPadFn({ data: { simuladoId } }),
     enabled: !!simuladoId,
   });
   const conQ = useQuery({
-    queryKey: ["conclusao", simuladoId],
+    queryKey: ["conclusao", "contagem-v2", simuladoId],
     queryFn: () => getConFn({ data: { simuladoId } }),
     enabled: !!simuladoId,
   });
@@ -81,7 +81,7 @@ function Page() {
     enabled: !!simuladoId,
   });
   const acQ = useQuery({
-    queryKey: ["acerto", simuladoId, acDisciplina],
+    queryKey: ["acerto", "contagem-v2", simuladoId, acDisciplina],
     queryFn: () =>
       getAcFn({
         data: {
