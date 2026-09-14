@@ -57,12 +57,12 @@ function Page() {
 
   const simQ = useQuery({ queryKey: ["rel-sims"], queryFn: () => listSimFn() });
   const alunosQ = useQuery({
-    queryKey: ["rel-questoes-alunos", simuladoId],
+    queryKey: ["rel-questoes-alunos", "contagem-v2", simuladoId],
     queryFn: () => getResFn({ data: { simuladoId } }),
     enabled: !!simuladoId,
   });
   const dataQ = useQuery({
-    queryKey: ["rel-questoes", simuladoId, escolaId, turmaId],
+    queryKey: ["rel-questoes", "contagem-v2", simuladoId, escolaId, turmaId],
     queryFn: () =>
       getQFn({
         data: {
