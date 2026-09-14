@@ -141,17 +141,20 @@ async function carregarDataset(
     scopeTurmaIds?: string[] | null;
   },
 ) {
-  // Agregação feita no banco (uma única chamada) — muito mais rápido do que
-  // baixar todas as respostas linha por linha.
+  // A função retorna uma linha por aluno. O Data API limita cada resposta a
+  // 1.000 linhas, então buscamos todas as páginas antes de aplicar o escopo.
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const disciplinaFilter = (opts?.disciplina ?? "").trim();
 
-  const { data: aggRows, error: aggErr } = await supabaseAdmin.rpc("rel_alunos_agg" as any, {
-    p_simulado: simuladoId,
-    p_disciplina: disciplinaFilter ? disciplinaFilter : null,
-  } as any);
-  if (aggErr) throw aggErr;
-  const rows = (aggRows ?? []) as any[];
+  const rows = await fetchAllRows<any>(() =>
+    supabaseAdmin
+      .rpc("rel_alunos_agg" as any, {
+        p_simulado: simuladoId,
+        p_disciplina: disciplinaFilter ? disciplinaFilter : null,
+      } as any)
+      .order("turma_id", { ascending: true })
+      .order("numero_chamada", { ascending: true }),
+  );
 
   let totalQuestoes = rows.length ? Number(rows[0].total_questoes ?? 0) : 0;
   if (!rows.length) {
