@@ -23,6 +23,7 @@ import { ImportarRespostas } from "@/components/admin/importar-respostas";
 import { ImportacoesManager } from "@/components/admin/importacoes-manager";
 import { UsersManager } from "@/components/admin/users-manager";
 import { TurmasManager } from "@/components/admin/turmas-manager";
+import { AcompanhamentoAvaliacoes } from "@/components/admin/acompanhamento-avaliacoes";
 import { listAssessments } from "@/lib/assessments.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -252,6 +253,8 @@ function AdminPage() {
         />
 
         <ImportacoesManager />
+
+        <AcompanhamentoAvaliacoes />
       </main>
     </div>
   );

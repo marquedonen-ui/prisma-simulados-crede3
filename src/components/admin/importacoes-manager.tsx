@@ -79,6 +79,7 @@ const REPORT_QUERY_KEYS = new Set([
   "resultados-alunos",
   "rel-questoes-alunos",
   "rel-questoes",
+  "acompanhamento-avaliacoes",
 ]);
 
 function invalidateReportQueries(queryClient: ReturnType<typeof useQueryClient>) {
