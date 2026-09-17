@@ -151,7 +151,6 @@ export function AcompanhamentoAvaliacoes() {
   });
   const [simuladoId, setSimuladoId] = useState("");
   const [escolaId, setEscolaId] = useState("");
-  const [statusGeral, setStatusGeral] = useState<StatusFilter>("todas");
   const [statusSimulado, setStatusSimulado] = useState<StatusFilter>("todas");
   const [statusEscola, setStatusEscola] = useState<StatusFilter>("todas");
 
@@ -162,7 +161,6 @@ export function AcompanhamentoAvaliacoes() {
   const selectedEscola = escolaId || escolas[0]?.id || "";
   const filterStatus = (rows: Registro[], status: StatusFilter) =>
     status === "todas" ? rows : rows.filter((row) => row.status === status);
-  const geralRows = filterStatus(registros, statusGeral);
   const simuladoRows = filterStatus(registros.filter((row) => row.simulado_id === selectedSimulado), statusSimulado);
   const escolaRows = filterStatus(registros.filter((row) => row.escola_id === selectedEscola), statusEscola);
 
@@ -192,8 +190,6 @@ export function AcompanhamentoAvaliacoes() {
 
             <TabsContent value="geral" className="space-y-4">
               <Summary registros={registros} />
-              <div className="flex justify-end"><StatusFilterSelect value={statusGeral} onChange={setStatusGeral} /></div>
-              <RecordsTable registros={geralRows} groupColumn="simulado" />
               <div className="grid gap-4 lg:grid-cols-2">
                 <Breakdown title="Progresso por escola" rows={porEscola.map((row) => ({ id: row.escola.id, label: row.escola.name, ...row }))} />
                 <Breakdown title="Progresso por simulado" rows={porSimulado.map((row) => ({ id: row.simulado.id, label: [row.simulado.offer, row.simulado.subject, row.simulado.grade].filter(Boolean).join(" · "), ...row }))} />

@@ -27,7 +27,16 @@ import { AcompanhamentoAvaliacoes } from "@/components/admin/acompanhamento-aval
 import { listAssessments } from "@/lib/assessments.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({
-  head: () => ({ meta: [{ title: "Admin — PRISMA" }] }),
+  head: () => ({
+    meta: [
+      { title: "Administração — PRISMA" },
+      { name: "description", content: "Administração de escolas, usuários, avaliações, importações e acompanhamento de turmas no PRISMA." },
+      { property: "og:title", content: "Administração — PRISMA" },
+      { property: "og:description", content: "Gestão e acompanhamento das avaliações da Plataforma Regional de Simulados." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: AdminPage,
 });
 
